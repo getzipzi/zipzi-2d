@@ -96,6 +96,9 @@ struct EditorView {
     requests: Option<preview::RequestSender>,
     gpu_device: Option<preview::Device>,
     _frames: Option<Task<()>>,
+    #[cfg(target_os = "windows")]
+    ready_previews:
+        Option<worker_queue::MailboxDrain<Option<zipzi_editor_core::ViewportId>, preview::Frame>>,
     status_bar: Entity<workspace::status_bar::StatusBar>,
     dev_session: Option<dev_session::DevSession>,
 }
@@ -170,6 +173,8 @@ impl EditorView {
             requests: None,
             gpu_device: None,
             _frames: None,
+            #[cfg(target_os = "windows")]
+            ready_previews: None,
             status_bar: workspace::status_bar::StatusBar::new(cx.weak_entity(), cx),
             dev_session: dev_session::DevSession::from_env(),
         };

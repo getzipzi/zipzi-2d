@@ -19,6 +19,15 @@ newer, uv 0.10.7 or newer, and CPython 3.14. See the
   Build with `--features wgpu-backend` to compare with the wgpu/DX12 preview.
   Desktop validation is still in progress.
 
+Windows modeling viewports also check the completed preview mailbox immediately
+before building their content. A ready frame supplies both the model image and
+its matching editing overlay, without waiting for the worker or GPU. This avoids
+delaying a result until the next UI frame when its normal callback is waiting
+behind the current draw. Async delivery remains active for later results and
+animation; existing binding/version checks reject obsolete frames. Set
+`ZIPZI_PREVIEW_LATCH=0` to compare the previous callback-only delivery path.
+Rendering stays on the preview worker; GPUI itself is unchanged.
+
 Start the editor with Cargo on either platform:
 
 ```sh

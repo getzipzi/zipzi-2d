@@ -81,6 +81,64 @@ fn mesh_appearance_scrubs_keep_unrelated_editor_views_retained(cx: &mut TestAppC
 }
 
 #[gpui_kit::test]
+fn newer_canvas_pose_is_not_replaced_by_a_late_worker_frame(cx: &mut TestAppContext) {
+    use zipzi_editor_core::EditorCommand;
+    let (document, assets) = super::document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    let h = setup_with_document(cx, document, assets);
+    h.view.update(cx, |view, _| {
+        view._frames = None;
+        view.requests = Some(crate::preview::RequestSender::deferred());
+    });
+    let mut frames = Vec::new();
+    for value in [0.25, 0.75] {
+        h.view.update(cx, |view, cx| {
+            let result = view.editor.execute(EditorCommand::SetPreviewParameter {
+                parameter_id: parameter.clone(),
+                value,
+            });
+            view.complete_preview_edit(result, cx);
+            let request = view.requests.as_ref().unwrap().take_pending().unwrap();
+            frames.push(crate::preview::Frame {
+                binding: Some(request.binding),
+                trace_id: request.trace_id,
+                revision: request.revision,
+                canvas: request.canvas,
+                animation: None,
+                stats: (0, 0, 0),
+                image: Ok(crate::preview::test_image()),
+            });
+        });
+    }
+    let latest = frames.pop().unwrap();
+    let version = latest.canvas.as_ref().unwrap().version;
+    h.view.update(cx, |view, cx| {
+        #[cfg(target_os = "windows")]
+        {
+            let viewport = latest.binding.unwrap().viewport;
+            let (sender, receiver) = crate::worker_queue::mailbox();
+            view.ready_previews = Some(receiver.drain_handle());
+            sender.send(Some(viewport), latest).unwrap();
+            view.latch_ready_preview(viewport, cx);
+        }
+        #[cfg(not(target_os = "windows"))]
+        view.receive_viewport_frame(latest, cx);
+        view.receive_viewport_frame(frames.pop().unwrap(), cx);
+        assert_eq!(view.modeling_frame().unwrap().canvas.version, version);
+        assert!(std::sync::Arc::ptr_eq(
+            &view
+                .modeling_frame()
+                .unwrap()
+                .canvas
+                .geometry
+                .source
+                .viewport_frame,
+            &view.editor.evaluated_frame().unwrap()
+        ));
+    });
+}
+
+#[gpui_kit::test]
 fn parameter_previews_refresh_the_canvas_only_when_the_new_frame_arrives(cx: &mut TestAppContext) {
     use std::{cell::Cell, rc::Rc};
     use zipzi_editor_core::EditorCommand;

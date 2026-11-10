@@ -331,6 +331,10 @@ impl Render for ViewportSurface {
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };
+        // A worker result can arrive after this UI frame has started. Adopt it
+        // before deriving both the image and its overlay from the displayed pose.
+        #[cfg(target_os = "windows")]
+        owner.update(cx, |owner, cx| owner.latch_ready_preview(self.viewport, cx));
         let dialog = window.has_active_dialog(cx);
         let state = owner.read(cx);
         let SurfaceContent {

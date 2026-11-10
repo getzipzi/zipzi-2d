@@ -121,6 +121,10 @@ impl EditorView {
 
     pub(crate) fn connect_preview(&mut self, window: &Window, cx: &mut Context<Self>) {
         self._frames = None;
+        #[cfg(target_os = "windows")]
+        {
+            self.ready_previews = None;
+        }
         self.requests = None;
         self.reset_viewport_images();
         self.editor.invalidate_animation();
@@ -151,6 +155,10 @@ impl EditorView {
             self.init_animation(cx);
         }
         self.gpu_device = device;
+        #[cfg(target_os = "windows")]
+        if !std::env::var("ZIPZI_PREVIEW_LATCH").is_ok_and(|value| value == "0") {
+            self.ready_previews = Some(frames.drain_handle());
+        }
         self._frames = Some(cx.spawn(async move |this, cx| {
             while let Ok(frame) = frames.recv().await {
                 if this
@@ -164,7 +172,11 @@ impl EditorView {
         self.requests = Some(requests);
         self.redraw(cx);
     }
-    pub(crate) fn receive_viewport_frame(&mut self, frame: preview::Frame, cx: &mut Context<Self>) {
+    pub(crate) fn receive_viewport_frame(
+        &mut self,
+        mut frame: preview::Frame,
+        cx: &mut Context<Self>,
+    ) {
         frame_trace::emit(frame.trace_id, "ui_received", &[]);
         let Some(binding) = frame.binding else {
             if let Err(error) = frame.image {
@@ -182,7 +194,7 @@ impl EditorView {
         if !self.editor.viewport_binding_valid(binding) {
             return;
         }
-        if let Some(state) = frame.animation {
+        if let Some(state) = frame.animation.take() {
             if state.viewport.binding != binding {
                 return;
             }
@@ -224,17 +236,34 @@ impl EditorView {
             }
             return;
         }
+        let trace_id = frame.trace_id;
+        if !self.install_modeling_frame(frame) {
+            return;
+        }
+        self.sync_viewport_notice(cx);
+        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
+        frame_trace::emit(trace_id, "preview_frame_refresh", &[]);
+        self.notify_viewport(binding.viewport, cx);
+    }
+
+    fn install_modeling_frame(&mut self, frame: preview::Frame) -> bool {
+        let Some(binding) = frame
+            .binding
+            .filter(|binding| self.editor.viewport_binding_valid(*binding))
+        else {
+            return false;
+        };
         match frame.image {
             Ok(image) => {
                 let Some(canvas) = frame.canvas else {
-                    return;
+                    return false;
                 };
                 if canvas.version.binding != binding {
-                    return;
+                    return false;
                 }
                 if !self.editor.present_frame(canvas.clone()) {
                     frame_trace::emit(frame.trace_id, "rejected", &[]);
-                    return;
+                    return false;
                 }
                 let state = self.viewport_frames.entry(binding.viewport).or_default();
                 state.modeling = Some(preview::Presented { image, canvas });
@@ -247,7 +276,7 @@ impl EditorView {
                     .editor
                     .accepts_viewport_preview(binding, frame.revision)
                 {
-                    return;
+                    return false;
                 }
                 self.viewport_frames
                     .entry(binding.viewport)
@@ -255,10 +284,7 @@ impl EditorView {
                     .error = Some(error);
             }
         }
-        self.sync_viewport_notice(cx);
-        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
-        frame_trace::emit(frame.trace_id, "preview_frame_refresh", &[]);
-        self.notify_viewport(binding.viewport, cx);
+        true
     }
     pub(crate) fn notify_viewport(&self, viewport: ViewportId, cx: &mut Context<Self>) {
         if let Some(dock) = &self.dock {
@@ -375,5 +401,31 @@ impl EditorView {
             return false;
         }
         true
+    }
+
+    #[cfg(target_os = "windows")]
+    pub(crate) fn latch_ready_preview(&mut self, viewport: ViewportId, cx: &mut Context<Self>) {
+        if !self
+            .editor
+            .viewport_binding(viewport)
+            .is_some_and(|b| b.kind == ViewportKind::Modeling)
+        {
+            return;
+        }
+        let Some(frame) = self
+            .ready_previews
+            .as_ref()
+            .and_then(|ready| ready.try_take(Some(viewport)))
+        else {
+            return;
+        };
+        frame_trace::emit(frame.trace_id, "preview_latched", &[]);
+        frame_trace::emit(frame.trace_id, "ui_received", &[]);
+        if self.install_modeling_frame(frame) {
+            // This viewport is already rendering the adopted pose. Async
+            // delivery still notifies when a result arrives after this point.
+            self.sync_viewport_notice(cx);
+            workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
+        }
     }
 }
