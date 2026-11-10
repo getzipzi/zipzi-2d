@@ -1,5 +1,32 @@
 use super::*;
 
+/// Payload checks shared by whole-binding admission and edits to an already
+/// admitted keyform. The caller proves the coordinate grid separately.
+pub(crate) fn validate_mesh_keyform_payload(
+    id: &str,
+    vertices: usize,
+    form: &MeshKeyform,
+) -> Status {
+    if form.positions.len() != vertices {
+        return Status::error(
+            "INVALID_LENGTH",
+            format!("{id}.keyforms: positions must match mesh"),
+        );
+    }
+    let status = validate_positions(&form.positions);
+    if !status.is_ok() {
+        return Status::error(status.code, format!("{id}.keyforms: {}", status.message));
+    }
+    let status = validate_appearance(&form.appearance, id);
+    if !status.is_ok() {
+        return status;
+    }
+    if let Some(order) = form.draw_order {
+        return validate_draw_order(order, id);
+    }
+    Status::ok()
+}
+
 #[cfg(test)]
 thread_local! {
     static VALIDATION_COUNTS: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };
@@ -148,19 +175,9 @@ impl Model<'_> {
                     ),
                 );
             }
-            let s = validate_positions(&form.positions);
-            if !s.is_ok() {
-                return Status::error(s.code, format!("{}.keyforms: {}", b.id, s.message));
-            }
-            let s = validate_appearance(&form.appearance, &b.id);
+            let s = validate_mesh_keyform_payload(&b.id, mesh.vertex_ids.len(), &form);
             if !s.is_ok() {
                 return s;
-            }
-            if let Some(order) = form.draw_order {
-                let s = validate_draw_order(order, &b.id);
-                if !s.is_ok() {
-                    return s;
-                }
             }
             let mut index = 0usize;
             let mut stride = 1usize;

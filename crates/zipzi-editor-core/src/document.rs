@@ -879,6 +879,8 @@ impl Document {
     }
 
     pub fn snapshot(&mut self) -> Result<SceneSnapshot> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = zipzi_core::benchmark::span("editor.snapshot");
         let frame = if let Some(pending) = &mut self.generation_pending {
             let document = pending.edit.snapshot().snapshot.document();
             pending

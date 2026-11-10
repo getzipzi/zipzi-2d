@@ -38,6 +38,11 @@ evaluation storage.
 
 Candidate validation explicitly distinguishes pending work, a valid candidate
 requiring new evaluation layout, and a valid candidate sharing the base layout.
+Updating the positions or appearance of an existing mesh keyform in an already
+validated candidate checks that form's payload and preserves the validation proof.
+Coordinates still resolve against the admitted sample grid; draw-order changes
+and intervening ordinary writes require full binding admission. Repeated vertex
+drags therefore avoid normalizing and validating the entire binding on each move.
 The payload differential tests force full normalization/graph validation as an
 independent oracle, then compare records and evaluated frames through cold/warm
 caches and snapshot restoration. Run the focused gate with

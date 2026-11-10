@@ -285,6 +285,126 @@ fn freeze_full(mut builder: DocumentBuilder) -> Result<DocumentState, Status> {
     Ok(builder.freeze()?.state)
 }
 
+#[test]
+fn admitted_keyform_drags_match_full_validation_and_retain_old_snapshots() {
+    let base = fixture(true);
+    let original = frame(&mut FrameEvaluator::default(), &base, 0.5);
+    let mut builder = base.builder();
+    builder.validate_candidate().unwrap();
+    for step in 0..12 {
+        let mut form = builder.binding(&id(7)).unwrap().keyforms[step % 2].clone();
+        form.positions[0].x = step as f32 * 0.2;
+        form.appearance.opacity = 0.3 + step as f32 * 0.05;
+        // Numeric and stable-sample addressing both preserve the admitted grid.
+        if step % 2 == 0 {
+            form.samples.clear();
+        } else {
+            form.keys.clear();
+        }
+        builder.set_mesh_keyform(&id(7), form).unwrap();
+        assert_eq!(
+            builder.validation,
+            CandidateValidation::ValidatedWithSharedLayout
+        );
+        let actual = builder.preview().unwrap();
+        let expected = freeze_full(builder.clone()).unwrap();
+        assert_eq!(actual.binding(&id(7)), expected.binding(&id(7)));
+        for value in [0., 0.35, 1.] {
+            assert_eq!(
+                frame(&mut FrameEvaluator::default(), &actual, value),
+                frame(&mut FrameEvaluator::default(), &expected, value)
+            );
+        }
+        assert_eq!(frame(&mut FrameEvaluator::default(), &base, 0.5), original);
+    }
+    let frozen = builder.freeze().unwrap();
+    assert!(!frozen.writes.is_empty());
+}
+
+#[test]
+fn admitted_keyform_drag_rejects_bad_payload_and_poisoned_candidates() {
+    for (edit, code) in [
+        (
+            (|f: &mut MeshKeyform| {
+                f.positions.pop();
+            }) as fn(&mut MeshKeyform),
+            "INVALID_LENGTH",
+        ),
+        (|f| f.positions[0].x = f32::NAN, "NON_FINITE"),
+        (|f| f.appearance.opacity = f32::NAN, "INVALID_OPACITY"),
+        (|f| f.keys[0] = 0.5, "STALE_SAMPLE_VALUES"),
+    ] {
+        let base = fixture(true);
+        let mut builder = base.builder();
+        builder.validate_candidate().unwrap();
+        let mut form = builder.binding(&id(7)).unwrap().keyforms[0].clone();
+        edit(&mut form);
+        let error = builder.set_mesh_keyform(&id(7), form).unwrap_err();
+        assert_eq!(error.code, code);
+        assert_eq!(builder.freeze().unwrap_err().code, code);
+    }
+}
+
+#[test]
+fn keyform_drag_revalidates_after_dependency_or_draw_order_changes() {
+    let base = fixture(true);
+    let mut builder = base.builder();
+    builder.validate_candidate().unwrap();
+    let mut parameter = builder.parameter(&id(3)).unwrap().clone();
+    parameter.maximum = 0.5;
+    builder.replace_parameter(parameter).unwrap();
+    let form = builder.binding(&id(7)).unwrap().keyforms[0].clone();
+    assert_eq!(
+        builder.set_mesh_keyform(&id(7), form).unwrap_err().code,
+        "INVALID_KEYS"
+    );
+
+    let mut builder = base.builder();
+    builder.validate_candidate().unwrap();
+    let mut form = builder.binding(&id(7)).unwrap().keyforms[0].clone();
+    form.draw_order = Some(750.);
+    builder.set_mesh_keyform(&id(7), form).unwrap();
+    assert_eq!(builder.validation, CandidateValidation::NeedsValidation);
+    let expected = freeze_full(builder.clone()).unwrap();
+    let actual = builder.freeze().unwrap().state;
+    for value in [0., 0.5, 1.] {
+        assert_eq!(
+            frame(&mut FrameEvaluator::default(), &actual, value),
+            frame(&mut FrameEvaluator::default(), &expected, value)
+        );
+    }
+}
+
+#[test]
+fn admitted_keyform_drag_keeps_prior_structural_changes_and_new_layout() {
+    let base = fixture(true);
+    let mut builder = base.builder();
+    let mut mesh = builder.mesh(&id(6)).unwrap().clone();
+    mesh.deformer_id = id(4);
+    builder.replace_mesh(mesh).unwrap();
+    builder.validate_candidate().unwrap();
+    assert_eq!(
+        builder.validation,
+        CandidateValidation::ValidatedWithNewLayout
+    );
+    let mut form = builder.binding(&id(7)).unwrap().keyforms[1].clone();
+    form.positions[0].x += 2.;
+    builder.set_mesh_keyform(&id(7), form).unwrap();
+    assert_eq!(
+        builder.validation,
+        CandidateValidation::ValidatedWithNewLayout
+    );
+    let expected = freeze_full(builder.clone()).unwrap();
+    let actual = builder.freeze().unwrap().state;
+    assert_ne!(base.evaluation_layout_id(), actual.evaluation_layout_id());
+    for value in [0., 0.5, 1.] {
+        assert_eq!(
+            frame(&mut FrameEvaluator::default(), &actual, value),
+            frame(&mut FrameEvaluator::default(), &expected, value)
+        );
+    }
+}
+
 fn frame(evaluator: &mut FrameEvaluator, state: &DocumentState, value: f32) -> DrawableFrame {
     let values: PreviewValues = [(id(3), value)].into();
     let mut frame = DrawableFrame::default();

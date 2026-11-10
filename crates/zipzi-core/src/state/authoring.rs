@@ -29,6 +29,8 @@ impl DocumentBuilder {
     }
 
     pub fn set_mesh_keyform(&mut self, id: &str, mut form: MeshKeyform) -> Result<(), Status> {
+        let validation = self.validation;
+        let mut preserve_validation = false;
         self.write(|this| {
             this.authoring_unlocked(id)?;
             let mut binding = this
@@ -41,10 +43,32 @@ impl DocumentBuilder {
                 .iter_mut()
                 .find(|f| f.samples == form.samples)
                 .ok_or_else(|| Status::error("INVALID_KEY_COMBINATION", id))?;
+            // A validated candidate already proves all identities, references,
+            // grids and untouched forms. Position/appearance edits cannot change
+            // those facts or the prepared layout. Any intervening ordinary write
+            // clears that proof, and draw-order edits require full admission.
+            preserve_validation = validation != CandidateValidation::NeedsValidation
+                && existing.keys == form.keys
+                && existing.draw_order == form.draw_order;
+            if preserve_validation {
+                checked(
+                    crate::model_validation::bindings::validate_mesh_keyform_payload(
+                        id,
+                        existing.positions.len(),
+                        &form,
+                    ),
+                )?;
+            }
             *existing = form;
-            this.canonicalize_binding(&mut binding)?;
+            if !preserve_validation {
+                this.canonicalize_binding(&mut binding)?;
+            }
             this.replace_binding(binding)
-        })
+        })?;
+        if preserve_validation {
+            self.validation = validation;
+        }
+        Ok(())
     }
 
     pub fn set_scene_keyform(&mut self, id: &str, mut form: SceneKeyform) -> Result<(), Status> {

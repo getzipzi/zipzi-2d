@@ -712,6 +712,8 @@ impl HostedDraft {
         &mut self,
         session: &mut HostedSession,
     ) -> zipzi_runtime::Result<Publication> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = zipzi_core::benchmark::span("editor.commit_to");
         if session.id != self.source.base.session || !session.host.same_host(&self.host) {
             return Err(Status::error(
                 "NOT_OWNER",

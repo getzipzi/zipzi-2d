@@ -30,6 +30,7 @@
 - [Mesh Edit 保留绑定与变形依赖实施方案](archive/plans/mesh-edit-preserve-dependencies.md): source-image/UV editing, shape transfer, preserved deformers and bindings, and operation-specific Glue limits
 - [Windows 原生开发支持实施方案](archive/plans/windows-development.md): tooling, platform services, Runtime IPC and Python validation first; GPUI/WGPU desktop integration last
 - [Windows 原生 D3D11 验证记录](archive/benchmarks/2026-11-10-windows-d3d11.md): 与 wgpu/DX12 的窗口对照、显存、像素一致性和 SDK 捕获
+- [Mesh 拖动求值和提交开销](archive/benchmarks/2026-11-10-control-drag-costs.md): keyform 候选校验与松手索引复用的独立对照
 - [Current topic references](references/README.md) and [benchmark guides](../tools/benchmarks/README.md)
 - [Tooling tests](../tools/tests/README.md) and [shared fixtures](../fixtures/README.md)
 

@@ -668,6 +668,78 @@ mod tests {
     }
 
     #[test]
+    fn control_commit_retains_current_index_and_history_restores_fresh_properties()
+    -> anyhow::Result<()> {
+        for deformer in [false, true] {
+            for cancel in [false, true] {
+                let (mut doc, _dir) = fixture_with_parent(0.5, false, true)?;
+                let object = if deformer {
+                    ObjectRef::new(ObjectKind::Deformer, id(12))
+                } else {
+                    target()
+                };
+                doc.select_object(object.clone())?;
+                let scene = capture_scene(&mut doc)?;
+                let edit = ControlEdit::prepare(&doc, &scene, &object)?;
+                let selected = vec![ComponentRef {
+                    object: object.clone(),
+                    id: edit.ids[0],
+                }];
+                let original = doc.object_index();
+                let original_properties = original.get(&object).unwrap().properties.clone();
+                doc.begin_control_edit(std::slice::from_ref(&edit))?;
+                doc.preview_control_edit(
+                    std::slice::from_ref(&edit),
+                    &selected,
+                    ControlChange::Translate(d(5., 2.)),
+                )?;
+                let candidate = doc.object_index();
+                let assert_fresh = |doc: &Document| {
+                    let cached = doc.object_index();
+                    let rebuilt = crate::ObjectIndex::build(&doc.model());
+                    assert_eq!(cached.objects.len(), rebuilt.objects.len());
+                    for object in &rebuilt.objects {
+                        let actual = cached.get(&object.reference).unwrap();
+                        assert_eq!(actual.properties, object.properties);
+                        assert_eq!(actual.name, object.name);
+                        assert_eq!(actual.enabled, object.enabled);
+                    }
+                    assert_eq!(cached.relations.len(), rebuilt.relations.len());
+                    assert_eq!(cached.draw_groups, rebuilt.draw_groups);
+                };
+                if cancel {
+                    doc.cancel_edit();
+                    assert_fresh(&doc);
+                    assert_eq!(
+                        doc.object_index().get(&object).unwrap().properties,
+                        original_properties
+                    );
+                } else {
+                    let last_frame = doc.snapshot()?.runtime_frame;
+                    doc.finish_edit()?;
+                    assert!(std::sync::Arc::ptr_eq(&candidate, &doc.object_index()));
+                    assert_fresh(&doc);
+                    assert_eq!(last_frame.as_ref(), doc.snapshot()?.runtime_frame.as_ref());
+                    doc.undo()?;
+                    assert_fresh(&doc);
+                    assert_eq!(
+                        doc.object_index().get(&object).unwrap().properties,
+                        original_properties
+                    );
+                    doc.redo()?;
+                    assert_fresh(&doc);
+                    assert_eq!(last_frame.as_ref(), doc.snapshot()?.runtime_frame.as_ref());
+                }
+                assert_eq!(
+                    original.get(&object).unwrap().properties,
+                    original_properties
+                );
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
     fn glue_preview_writes_only_selected_source_and_has_one_undo_or_cancel() -> anyhow::Result<()> {
         for cancel in [false, true] {
             let (mut doc, _dir) = fixture(0.5, false)?;
