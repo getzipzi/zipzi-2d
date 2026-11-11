@@ -43,7 +43,7 @@ pub(super) fn lockup(window: &mut Window, cx: &mut App) -> Div {
                 scale,
                 color,
                 icon: rasterize(
-                    include_bytes!("../../assets/app-icons/zipzi-editor-icon.svg"),
+                    include_bytes!("../../assets/branding/zipzi-logo.svg"),
                     64. * scale,
                     64. * scale,
                     cx,
@@ -85,7 +85,7 @@ mod tests {
             for scale in [1., 2.] {
                 for (bytes, aspect) in [
                     (
-                        include_bytes!("../../assets/app-icons/zipzi-editor-icon.svg").as_slice(),
+                        include_bytes!("../../assets/branding/zipzi-logo.svg").as_slice(),
                         1.,
                     ),
                     (
@@ -100,15 +100,39 @@ mod tests {
                         DevicePixels((64. * aspect * scale).round() as i32)
                     );
                     let pixels = image.as_bytes(0).unwrap();
+                    assert_eq!(
+                        pixels[3], 0,
+                        "brand artwork must have a transparent background"
+                    );
                     assert!(
-                        pixels.chunks_exact(4).any(|pixel| {
-                            (pixel[3] > 0 && pixel[3] < 255)
-                                || (pixel[3] == 255
-                                    && pixel[..3].iter().all(|channel| *channel >= 240)
-                                    && pixel[..3].iter().any(|channel| *channel < 255))
-                        }),
+                        pixels
+                            .chunks_exact(4)
+                            .any(|pixel| pixel[3] > 0 && pixel[3] < 255),
                         "brand edges must retain antialiased pixel coverage"
                     );
+                    if aspect == 1. {
+                        let side = (64. * scale) as usize;
+                        let factor = side as f32 / 537.;
+                        let inset = (side as f32 - 531.5 * factor) / 2.;
+                        for (start, end) in [
+                            ((632., 334.), (425., 474.)),
+                            ((689., 407.), (522.017_7, 519.934_9)),
+                            ((632., 165.), (632., 334.)),
+                        ] {
+                            for step in 1..10 {
+                                let t = step as f32 / 10.;
+                                let x = start.0 + (end.0 - start.0) * t;
+                                let y = start.1 + (end.1 - start.1) * t;
+                                let px = (inset + (916.25 - x) * factor) as usize;
+                                let py = ((y - 140.) * factor) as usize;
+                                assert_eq!(
+                                    pixels[(py * side + px) * 4 + 3],
+                                    255,
+                                    "fold seams must not expose the background"
+                                );
+                            }
+                        }
+                    }
                 }
             }
         });

@@ -62,12 +62,14 @@ def make_bundle(binary, directory, *, finder_default=False):
     shutil.copy2(binary, contents / 'MacOS/zipzi-editor')
     shutil.copy2(ROOT / 'crates/zipzi-editor/assets/app-icons/zipzi-editor-icon-vector.icns',
                  contents / 'Resources/AppIcon.icns')
+    shutil.copy2(ROOT / 'crates/zipzi-editor/assets/app-icons/Assets.car',
+                 contents / 'Resources/Assets.car')
     spec = importlib.util.spec_from_file_location('release', ROOT / 'tools/packaging/release.py')
     release = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(release)
     metadata = dict(CFBundleIdentifier='dev.zipzi.native-acceptance.' + uuid.uuid4().hex,
         CFBundleName='Zipzi Native Acceptance', CFBundleExecutable='zipzi-editor',
-        CFBundlePackageType='APPL', CFBundleVersion='1', CFBundleIconFile='AppIcon',
+        CFBundlePackageType='APPL', CFBundleVersion='1', CFBundleIconFile='AppIcon', CFBundleIconName='ZipziEditor',
         NSHighResolutionCapable=True,
         **release.project_document_types(development=not finder_default))
     (contents / 'Info.plist').write_bytes(plistlib.dumps(metadata))

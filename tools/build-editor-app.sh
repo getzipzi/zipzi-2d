@@ -41,6 +41,7 @@ find "$repo_root/vendor" -type f \( -iname 'license*' -o -iname 'notice*' -o -in
 done
 cp "$repo_root/vendor/README.md" "$app/Contents/Resources/vendor-notices/README.md"
 cp "$icon_asset" "$app/Contents/Resources/AppIcon.icns"
+cp "$repo_root/crates/zipzi-editor/assets/app-icons/Assets.car" "$app/Contents/Resources/Assets.car"
 python3 "$repo_root/tools/packaging/release.py" app-plist "$app/Contents/Info.plist"
 python3 "$repo_root/tools/packaging/build_project_preview.py" --app "$app" --profile "$profile"
 printf '%s\n' "$app"

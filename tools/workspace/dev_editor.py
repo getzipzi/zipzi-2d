@@ -67,6 +67,9 @@ class Editor:
             icon = self.root / 'crates/zipzi-editor/assets/app-icons/zipzi-editor-icon-vector.icns'
             if icon.exists():
                 shutil.copy2(icon, resources / 'AppIcon.icns')
+            catalog = self.root / 'crates/zipzi-editor/assets/app-icons/Assets.car'
+            if catalog.exists():
+                shutil.copy2(catalog, resources / 'Assets.car')
             spec = importlib.util.spec_from_file_location('zipzi_release', ROOT / 'tools/packaging/release.py')
             release = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(release)
@@ -74,6 +77,7 @@ class Editor:
                 plistlib.dump(dict(CFBundleIdentifier='dev.zipzi.editor.watch', CFBundleName='Zipzi Editor Dev',
                     CFBundleExecutable='zipzi-editor', CFBundlePackageType='APPL', CFBundleVersion='0.1.0',
                     CFBundleIconFile='AppIcon', NSHighResolutionCapable=True,
+                    **({'CFBundleIconName': 'ZipziEditor'} if catalog.exists() else {}),
                     **release.project_document_types(development=True)), stream)
         elif sys.platform == 'win32':
             # The executable embeds UI assets, its icon and the GPUI DPI manifest.

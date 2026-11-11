@@ -48,6 +48,7 @@ class PackagingPaths(unittest.TestCase):
         (self.root / 'Cargo.toml').write_text('[workspace.package]\nversion = "0.1.0-alpha.1"\n')
         (self.root / 'Cargo.lock').write_text('version = 4')
         (self.app / 'assets/app-icons/zipzi-editor-icon-vector.icns').write_bytes(b'icon')
+        (self.app / 'assets/app-icons/Assets.car').write_bytes(b'icon catalog')
         self.outside = Path(self.temp.name).resolve() / 'elsewhere'
         self.outside.mkdir()
         self.bin = Path(self.temp.name).resolve() / 'bin'
@@ -85,12 +86,14 @@ print(json.dumps({'reason':'compiler-artifact','target':{'name':'zipzi-editor','
                     self.assertEqual((bundle/'Contents/MacOS/zipzi-editor').read_bytes(), b'actual artifact')
                     self.assertEqual((bundle/'Contents/Resources/LICENSE').read_text(), 'Editor GPL fixture')
                     self.assertEqual((bundle/'Contents/Resources/AppIcon.icns').read_bytes(), b'icon')
+                    self.assertEqual((bundle/'Contents/Resources/Assets.car').read_bytes(), b'icon catalog')
                     self.assertEqual((bundle/'Contents/Resources/preview-fixture-profile').read_text(), profile)
                     self.assertEqual((bundle/'Contents/Resources/LICENSE-MIT').read_text(), 'SDK MIT fixture')
                     self.assertEqual((bundle/'Contents/Resources/THIRD_PARTY_NOTICES.md').read_text(), 'THIRD_PARTY_NOTICES.md')
                     self.assertEqual((bundle/'Contents/Resources/vendor-notices/library/LICENSE').read_text(), 'third-party license')
                     info = plistlib.loads((bundle/'Contents/Info.plist').read_bytes())
                     self.assertEqual(info['CFBundleShortVersionString'], '0.1.0')
+                    self.assertEqual(info['CFBundleIconName'], 'ZipziEditor')
                     self.assertEqual(info['ZipziReleaseVersion'], '0.1.0-alpha.1')
                     self.assertEqual(info['CFBundleVersion'], '1')
                     call = json.loads((self.root/'invocation.json').read_text())

@@ -139,7 +139,7 @@ def app_plist(output, root=ROOT):
                 CFBundleExecutable='zipzi-editor', CFBundlePackageType='APPL',
                 CFBundleShortVersionString=info['app_version'], CFBundleVersion=build,
                 ZipziReleaseVersion=info['version'], ZipziSourceRevision=revision,
-                CFBundleIconFile='AppIcon', NSHighResolutionCapable=True)
+                CFBundleIconFile='AppIcon', CFBundleIconName='ZipziEditor', NSHighResolutionCapable=True)
     data.update(project_document_types())
     output.write_bytes(plistlib.dumps(data))
 

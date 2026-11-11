@@ -45,6 +45,8 @@ def check_app(path):
         assert (resources/name).read_bytes() == (ROOT/name).read_bytes(), name
     assert (resources/'LICENSE').read_bytes() == (ROOT/'LICENSE-GPL-3.0').read_bytes()
     assert (resources/'AppIcon.icns').read_bytes() == (EDITOR_ASSETS/'app-icons/zipzi-editor-icon-vector.icns').read_bytes()
+    assert (resources/'Assets.car').read_bytes() == (EDITOR_ASSETS/'app-icons/Assets.car').read_bytes()
+    assert plist['CFBundleIconName'] == 'ZipziEditor'
     for path in (EDITOR_ASSETS/'icons').glob('*.svg'):
         assert path.read_bytes() in data, f'Missing embedded icon: {path.name}'
     for path in (EDITOR_ASSETS/'locales').glob('*.toml'):

@@ -1,6 +1,7 @@
 """Build/publication controls without compiling graphical dependencies."""
 import json
 import os
+import plistlib
 from pathlib import Path
 import subprocess
 import sys
@@ -33,6 +34,26 @@ class EditorBuild(unittest.TestCase):
             self.assertEqual(editor.binary.read_bytes(), b'fixture binary')
             if sys.platform == 'win32':
                 self.assertEqual((editor.binary.parent / 'THIRD_PARTY_NOTICES.md').read_text(), 'fixture')
+
+    def test_macos_bundle_includes_layered_and_legacy_icons(self):
+        with tempfile.TemporaryDirectory() as folder, patch('dev_editor.sys.platform', 'darwin'):
+            editor = Editor(Path(folder))
+            (editor.root / 'LICENSE-GPL-3.0').write_text('fixture')
+            icons = editor.root / 'crates/zipzi-editor/assets/app-icons'
+            icons.mkdir(parents=True)
+            (icons / 'zipzi-editor-icon-vector.icns').write_bytes(b'legacy icon')
+            (icons / 'Assets.car').write_bytes(b'layered icon catalog')
+            binary = editor.root / 'editor-binary'
+            binary.write_bytes(b'fixture binary')
+
+            editor.publish([str(binary)])
+
+            contents = editor.bundle / 'Contents'
+            self.assertEqual((contents / 'Resources/AppIcon.icns').read_bytes(), b'legacy icon')
+            self.assertEqual((contents / 'Resources/Assets.car').read_bytes(), b'layered icon catalog')
+            info = plistlib.loads((contents / 'Info.plist').read_bytes())
+            self.assertEqual(info['CFBundleIconFile'], 'AppIcon')
+            self.assertEqual(info['CFBundleIconName'], 'ZipziEditor')
 
     def test_build_failure_preserves_published_binary(self):
         with tempfile.TemporaryDirectory() as folder:
