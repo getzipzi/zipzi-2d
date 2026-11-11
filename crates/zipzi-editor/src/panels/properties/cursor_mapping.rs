@@ -8,7 +8,6 @@ use gpui_kit::component::tooltip::Tooltip;
 use zipzi_editor_core::{CursorPreviewAxis, CursorPreviewBinding, CursorPreviewBindings};
 
 const WIDTHS: [Option<f32>; 5] = [None, Some(80.), Some(60.), Some(26.), Some(26.)];
-const SCROLLBAR_GUTTER: f32 = 12.;
 
 pub(super) struct CursorMappingPicker {
     document: DocumentId,
@@ -81,7 +80,6 @@ impl PropertiesPanel {
             .flex()
             .flex_col()
             .p(compact::rem(compact::PADDING))
-            .pr(compact::rem(compact::PADDING + SCROLLBAR_GUTTER))
             .gap(compact::rem(compact::PADDING))
             .child(
                 div()
