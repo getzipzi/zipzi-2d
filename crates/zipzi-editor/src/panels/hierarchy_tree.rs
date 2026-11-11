@@ -2,6 +2,7 @@ mod filter;
 mod locking;
 mod management;
 mod selection;
+mod state_sweep;
 mod visibility;
 
 use super::sorting::{self, SortItem, SortState};
@@ -17,6 +18,7 @@ use gpui_kit::component::{
     input::{InputEvent, InputState},
 };
 use gpui_kit::{prelude::*, *};
+use state_sweep::{StateColumn, StateSweep};
 use std::{
     collections::{HashMap, HashSet},
     rc::Rc,
@@ -47,6 +49,8 @@ pub struct HierarchyTreePanel<const DEFORMER: bool> {
     locate_target: Option<zipzi_editor_core::ObjectRef>,
     selection: selection::TreeSelection,
     selection_context: Option<zipzi_editor_core::EditingContextToken>,
+    state_sweep: Option<StateSweep>,
+    _activation: Subscription,
     nodes: Vec<TreeNode>,
     rows: Rc<Vec<VisibleRow>>,
     rows_dirty: bool,
@@ -108,6 +112,12 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
                 locate_target: None,
                 selection: selection::TreeSelection::default(),
                 selection_context: None,
+                state_sweep: None,
+                _activation: cx.observe_window_activation(window, |this: &mut Self, window, cx| {
+                    if !window.is_window_active() {
+                        this.cancel_state_sweep(cx);
+                    }
+                }),
                 nodes: Vec::new(),
                 rows: Rc::new(Vec::new()),
                 rows_dirty: true,
@@ -295,6 +305,7 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
         if self.selection_context != context {
             self.selection_context = context;
             self.selection = selection::TreeSelection::default();
+            self.cancel_state_sweep(cx);
         }
         let document_changed = self.document_id != target;
         if document_changed {
@@ -931,7 +942,8 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                         })
                                         .when_some(visibility_object, |element, object| {
                                             element.when_some(target, |element, target| {
-                                                element.child(visibility::button(
+                                                let column = StateColumn::Visibility;
+                                                let button = visibility::button(
                                                     this.owner.clone(),
                                                     target,
                                                     object,
@@ -940,13 +952,18 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                         Self::prefix()
                                                     )),
                                                     disabled,
+                                                    this.preview_state(column, index),
                                                     cx,
+                                                );
+                                                element.child(this.state_control(
+                                                    target, column, index, disabled, button, cx,
                                                 ))
                                             })
                                         })
                                         .when_some(lock_object.clone(), |element, object| {
                                             element.when_some(target, |element, target| {
-                                                element.child(locking::button(
+                                                let column = StateColumn::Lock;
+                                                let button = locking::button(
                                                     lock_owner.clone(),
                                                     target,
                                                     object,
@@ -955,7 +972,11 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                         Self::prefix()
                                                     )),
                                                     disabled,
+                                                    this.preview_state(column, index),
                                                     cx,
+                                                );
+                                                element.child(this.state_control(
+                                                    target, column, index, disabled, button, cx,
                                                 ))
                                             })
                                         })
@@ -1025,6 +1046,27 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                 target,
             ))
         })
+        .child(
+            canvas(|_, _, _| (), {
+                let panel = cx.weak_entity();
+                move |_, _, window, _| {
+                    let panel = panel.clone();
+                    // Run after the row buttons clear their pressed state and before they click.
+                    window.on_mouse_event(move |event: &MouseUpEvent, phase, window, cx| {
+                        if phase == DispatchPhase::Capture
+                            && event.button == MouseButton::Left
+                            && panel
+                                .update(cx, |panel, cx| panel.release_state_sweep(window, cx))
+                                .unwrap_or(false)
+                        {
+                            cx.stop_propagation();
+                        }
+                    });
+                }
+            })
+            .absolute()
+            .size_full(),
+        )
         .into_any_element()
     }
 }

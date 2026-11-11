@@ -1,6 +1,10 @@
 use super::{Harness, setup_with_document};
-use gpui_kit::{AppContext as _, Modifiers, TestAppContext, test::TestWindowExt};
-use zipzi_editor_core::{Document, ObjectRef, SceneObjectType as T};
+use gpui_kit::{
+    AppContext as _, InputEvent as _, Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent,
+    MouseUpEvent, TestAppContext,
+    test::{ClickOptions, TestWindowExt},
+};
+use zipzi_editor_core::{Document, EditorCommand, ObjectRef, SceneObjectType as T};
 
 fn fixture(cx: &mut TestAppContext) -> (Harness, ObjectRef, Vec<ObjectRef>) {
     let mut document = Document::new_blank().unwrap();
@@ -117,6 +121,142 @@ fn filtered_range_uses_visible_rows_and_collapsing_keeps_hidden_selection(cx: &m
     })
     .unwrap();
     assert_eq!(selected(&h, cx), [m[0].clone(), m[2].clone()]);
+}
+
+#[gpui_kit::test]
+fn state_menu_targets_selection_and_other_branches_through_search(cx: &mut TestAppContext) {
+    let (h, part, meshes) = fixture(cx);
+    cx.update(|cx| cx.set_reduce_motion(true));
+    cx.update_window(h.window, |_, window, cx| {
+        window.click(row(&meshes[0]), cx);
+        window.click_with_modifiers(row(&meshes[2]), cmd(), cx);
+        window.click("parts-tree-search", cx);
+        window.input("Match", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    let selection = selected(&h, cx);
+    for (label, hidden, locked) in [
+        ("Hide others", [false, true, false, true], [false; 4]),
+        ("Toggle visibility", [true; 4], [false; 4]),
+        ("Show others", [true, false, true, false], [false; 4]),
+        (
+            "Lock others",
+            [true, false, true, false],
+            [false, true, false, true],
+        ),
+        ("Toggle lock", [true, false, true, false], [true; 4]),
+        (
+            "Unlock others",
+            [true, false, true, false],
+            [true, false, true, false],
+        ),
+    ] {
+        cx.update_window(h.window, |_, window, cx| {
+            assert!(window.try_find(row(&meshes[1])).is_none());
+            window.click_with_options(
+                row(&meshes[0]),
+                ClickOptions::new().with_button(MouseButton::Right),
+                cx,
+            );
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(h.window, |_, window, cx| {
+            window.render_frame(cx);
+            let index = (0..6usize)
+                .find(|index| window.within("popup-menu").find(*index).label() == Some(label))
+                .expect(label);
+            window.within("popup-menu").click(index, cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        h.view.read_with(cx, |view, _| {
+            let doc = view.editor.document().unwrap();
+            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+            assert_eq!(doc.context().selections, selection);
+            assert!(doc.object_state(&part).visible());
+            assert!(!doc.object_state(&part).locked());
+            for (index, mesh) in meshes.iter().enumerate() {
+                let state = doc.object_state(mesh);
+                assert_eq!(state.explicit.hidden_in_editor, hidden[index], "{label}");
+                assert_eq!(state.explicit.locked, locked[index], "{label}");
+            }
+        });
+    }
+}
+
+#[gpui_kit::test]
+fn sweeping_state_columns_includes_skipped_rows_and_undoes_in_one_step(cx: &mut TestAppContext) {
+    let (h, _, meshes) = fixture(cx);
+    let selection = selected(&h, cx);
+    let history = h.view.read_with(cx, |view, _| {
+        view.editor.document().unwrap().history_lengths()
+    });
+    for column in ["vis", "lock"] {
+        cx.update_window(h.window, |_, window, cx| {
+            window.hover(row(&meshes[0]), cx);
+            let start = window
+                .find(format!("parts-{column}-{}", meshes[0].id))
+                .bounds()
+                .center();
+            let end = window
+                .find(format!("parts-{column}-{}", meshes[2].id))
+                .bounds()
+                .center();
+            window.dispatch_event(
+                MouseDownEvent {
+                    button: MouseButton::Left,
+                    position: start,
+                    modifiers: Default::default(),
+                    click_count: 1,
+                    first_mouse: false,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            for position in [end, start] {
+                window.dispatch_event(
+                    MouseMoveEvent {
+                        position,
+                        pressed_button: Some(MouseButton::Left),
+                        modifiers: Default::default(),
+                    }
+                    .to_platform_input(),
+                    cx,
+                );
+                window.render_frame(cx);
+            }
+            window.dispatch_event(
+                MouseUpEvent {
+                    button: MouseButton::Left,
+                    position: start,
+                    modifiers: Default::default(),
+                    click_count: 1,
+                }
+                .to_platform_input(),
+                cx,
+            );
+        })
+        .unwrap();
+        h.view.update(cx, |view, cx| {
+            let doc = view.editor.document().unwrap();
+            assert_eq!(doc.history_lengths().0, history.0 + 1, "{column}");
+            assert_eq!(doc.context().selections, selection);
+            for (index, mesh) in meshes.iter().enumerate() {
+                let state = doc.object_state(mesh).explicit;
+                assert_eq!(state.hidden_in_editor, column == "vis" && index < 3);
+                assert_eq!(state.locked, column == "lock" && index < 3);
+            }
+            view.editor.execute(EditorCommand::Undo).unwrap();
+            let doc = view.editor.document().unwrap();
+            assert!(meshes.iter().all(|mesh| {
+                let state = doc.object_state(mesh).explicit;
+                !state.hidden_in_editor && !state.locked
+            }));
+            cx.notify();
+        });
+    }
 }
 
 #[gpui_kit::test]

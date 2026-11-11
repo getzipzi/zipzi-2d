@@ -363,6 +363,7 @@ impl Editor {
                 | EditorCommand::UpdateParameterGroup { .. }
                 | EditorCommand::DeleteParameterGroup { .. }
                 | EditorCommand::SetObjectsLocked { .. }
+                | EditorCommand::SetObjectsVisible { .. }
                 | EditorCommand::SetObjectProperties { .. }
                 | EditorCommand::SelectCanvasObjects(_)
         ) {

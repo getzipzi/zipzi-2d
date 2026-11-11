@@ -116,6 +116,10 @@ pub enum EditorCommand {
         object: crate::ObjectRef,
         visible: bool,
     },
+    SetObjectsVisible {
+        objects: Vec<crate::ObjectRef>,
+        visible: bool,
+    },
     FinishEdit,
     CancelEdit,
     Undo,

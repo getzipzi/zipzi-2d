@@ -195,7 +195,10 @@ impl Document {
         Ok(())
     }
     pub fn set_object_visible(&mut self, object: &ObjectRef, visible: bool) -> Result<()> {
-        self.edit_object_state(std::slice::from_ref(object), StateEdit::Hidden(!visible))
+        self.set_objects_visible(std::slice::from_ref(object), visible)
+    }
+    pub fn set_objects_visible(&mut self, objects: &[ObjectRef], visible: bool) -> Result<()> {
+        self.edit_object_state(objects, StateEdit::Hidden(!visible))
     }
     pub fn set_objects_locked(&mut self, objects: &[ObjectRef], locked: bool) -> Result<()> {
         self.edit_object_state(objects, StateEdit::Locked(locked))

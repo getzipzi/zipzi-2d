@@ -149,13 +149,17 @@ pub(super) fn button(
     object: ObjectRef,
     id: SharedString,
     disabled: bool,
+    preview: Option<bool>,
     cx: &App,
 ) -> AnyElement {
     let entity = owner.upgrade().unwrap();
     let Some(doc) = entity.read(cx).editor.document() else {
         return div().into_any_element();
     };
-    let state = doc.object_state(&object);
+    let mut state = doc.object_state(&object);
+    if let Some(hidden) = preview {
+        state.explicit.hidden_in_editor = hidden;
+    }
     let inherited = !state.hidden_by.is_empty();
     let names = state
         .hidden_by

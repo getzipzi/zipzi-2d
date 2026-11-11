@@ -1,3 +1,4 @@
+use super::StateColumn;
 use crate::{EditorView, t};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
@@ -6,7 +7,8 @@ use gpui_kit::component::{
     menu::{ContextMenuExt, PopupMenuItem},
 };
 use gpui_kit::{prelude::*, *};
-use zipzi_editor_core::{DocumentId, EditorCommand, ObjectRef};
+use std::collections::HashSet;
+use zipzi_editor_core::{DocumentId, EditingContext, EditorCommand, ObjectRef, TreeNode};
 
 pub(super) fn execute(
     owner: &WeakEntity<EditorView>,
@@ -20,7 +22,11 @@ pub(super) fn execute(
     }
     if let Some(owner) = owner.upgrade() {
         owner.update(cx, |owner, cx| {
-            if owner.modal || owner.editor.is_busy() || owner.editor.active_id() != Some(document) {
+            if owner.modal
+                || owner.editor.is_busy()
+                || owner.editor.active_id() != Some(document)
+                || owner.editor.editing_context() != Some(EditingContext::Modeling)
+            {
                 return;
             }
             owner.clear_edit_error(cx);
@@ -44,11 +50,12 @@ pub(super) fn button(
     object: ObjectRef,
     id: SharedString,
     disabled: bool,
+    preview: Option<bool>,
     cx: &App,
 ) -> impl IntoElement {
     let entity = owner.upgrade().unwrap();
     let editor = &entity.read(cx).editor;
-    let (state, names) = editor
+    let (mut state, names) = editor
         .document()
         .map(|doc| {
             let state = doc.object_state_index().state(&object).clone();
@@ -61,6 +68,9 @@ pub(super) fn button(
             (state, names)
         })
         .unwrap_or_default();
+    if let Some(locked) = preview {
+        state.explicit.locked = locked;
+    }
     let explicit = state.explicit.locked;
     let locked = state.locked();
     let tooltip = if !names.is_empty() {
@@ -107,7 +117,7 @@ pub(super) fn button(
                 )
                 .disabled(disabled)
                 .tooltip(tooltip)
-                .when(!locked, |button| {
+                .when(!locked && preview.is_none(), |button| {
                     button
                         .opacity(0.)
                         .group_hover("layer-row", |s| s.opacity(1.))
@@ -173,13 +183,17 @@ pub(super) fn menu<const DEFORMER: bool, E: ContextMenuExt + IntoElement + 'stat
             return menu;
         }
         let state = entity.read(cx);
-        if state.modal || state.editor.is_busy() || state.editor.active_id() != Some(document) {
+        if state.modal
+            || state.editor.is_busy()
+            || state.editor.active_id() != Some(document)
+            || state.editor.editing_context() != Some(EditingContext::Modeling)
+        {
             return menu;
         }
         let Some(doc) = state.editor.document() else {
             return menu;
         };
-        let locks = doc.object_state_index();
+        let states = doc.object_state_index();
         let objects = if doc.context().selections.contains(&object) {
             doc.context().selections.clone()
         } else {
@@ -187,32 +201,58 @@ pub(super) fn menu<const DEFORMER: bool, E: ContextMenuExt + IntoElement + 'stat
         };
         let creation_selection = objects.clone();
         let deletion_selection = objects.clone();
-        let objects: Vec<_> = objects.into_iter().filter(|r| locks.contains(r)).collect();
-        for (locked, label) in [
-            (true, t!("editor.lock_selected")),
-            (false, t!("editor.unlock_selected")),
-        ] {
-            let enabled = objects
-                .iter()
-                .any(|r| locks.state(r).explicit.locked != locked);
-            let owner = owner.clone();
-            let objects = objects.clone();
-            menu = menu.item(PopupMenuItem::new(label).disabled(!enabled).on_click(
-                move |_, window, cx| {
-                    execute(
-                        &owner,
-                        document,
-                        EditorCommand::SetObjectsLocked {
-                            objects: objects.clone(),
-                            locked,
-                        },
-                        window,
-                        cx,
-                    );
-                },
-            ));
+        let objects: Vec<_> = objects.into_iter().filter(|r| states.contains(r)).collect();
+        let nodes = if DEFORMER {
+            doc.deformer_tree()
+        } else {
+            doc.part_tree()
+        };
+        let selected: HashSet<_> = objects.iter().cloned().collect();
+        let mut others = Vec::new();
+        for node in &nodes {
+            collect_other_objects(node, &selected, &mut others);
         }
-        for source in &locks.state(&object).locked_by {
+        for (column, toggle, restrict_others, restore_others) in [
+            (
+                StateColumn::Visibility,
+                t!("editor.toggle_visibility"),
+                t!("editor.hide_others"),
+                t!("editor.show_others"),
+            ),
+            (
+                StateColumn::Lock,
+                t!("editor.toggle_lock"),
+                t!("editor.lock_others"),
+                t!("editor.unlock_others"),
+            ),
+        ] {
+            for (label, targets, restricted) in [
+                (toggle, &objects, !column.restricted(states.state(&object))),
+                (restrict_others, &others, true),
+                (restore_others, &others, false),
+            ] {
+                let targets: Vec<_> = targets
+                    .iter()
+                    .filter(|r| column.restricted(states.state(r)) != restricted)
+                    .cloned()
+                    .collect();
+                let owner = owner.clone();
+                menu = menu.item(
+                    PopupMenuItem::new(label)
+                        .disabled(targets.is_empty())
+                        .on_click(move |_, window, cx| {
+                            execute(
+                                &owner,
+                                document,
+                                column.command(targets.clone(), restricted),
+                                window,
+                                cx,
+                            );
+                        }),
+                );
+            }
+        }
+        for source in &states.state(&object).locked_by {
             let label = t!(
                 "editor.locate_lock_source",
                 name = doc.object_index().name(source)
@@ -271,4 +311,22 @@ pub(super) fn menu<const DEFORMER: bool, E: ContextMenuExt + IntoElement + 'stat
             cx,
         )
     })
+}
+
+fn collect_other_objects(
+    node: &TreeNode,
+    selected: &HashSet<ObjectRef>,
+    others: &mut Vec<ObjectRef>,
+) -> bool {
+    let object = node.reference();
+    let mut contains_selected = object
+        .as_ref()
+        .is_some_and(|object| selected.contains(object));
+    for child in &node.children {
+        contains_selected |= collect_other_objects(child, selected, others);
+    }
+    if !contains_selected && let Some(object) = object {
+        others.push(object);
+    }
+    contains_selected
 }

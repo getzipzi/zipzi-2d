@@ -257,15 +257,17 @@ impl DocumentSession {
         } else {
             self.cancel_gesture();
         }
+        let visibility_only = matches!(
+            &command,
+            EditorCommand::SetObjectVisible { .. } | EditorCommand::SetObjectsVisible { .. }
+        );
         let presentation_only = match &command {
             EditorCommand::PreviewOpacity(_) | EditorCommand::PreviewName(_) => true,
-            EditorCommand::SetObjectVisible { .. } => !self.document.has_pending_edit(),
             EditorCommand::SetObjectProperties { object, patch } => {
                 patch.mesh_presentation_only(object.kind)
             }
-            _ => false,
+            _ => visibility_only && !self.document.has_pending_edit(),
         };
-        let visibility_only = matches!(&command, EditorCommand::SetObjectVisible { .. });
         let reusable = if presentation_only {
             self.geometry
                 .clone()
@@ -537,6 +539,9 @@ impl DocumentSession {
                 .map(|_| ()),
             EditorCommand::SetObjectVisible { object, visible } => {
                 self.document.set_object_visible(&object, visible)
+            }
+            EditorCommand::SetObjectsVisible { objects, visible } => {
+                self.document.set_objects_visible(&objects, visible)
             }
             EditorCommand::FinishEdit => self.document.finish_edit(),
             EditorCommand::CancelEdit => {
