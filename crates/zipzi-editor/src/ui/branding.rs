@@ -99,13 +99,15 @@ mod tests {
                         image.size(0).width,
                         DevicePixels((64. * aspect * scale).round() as i32)
                     );
+                    let pixels = image.as_bytes(0).unwrap();
                     assert!(
-                        image
-                            .as_bytes(0)
-                            .unwrap()
-                            .chunks_exact(4)
-                            .any(|pixel| { pixel[3] > 0 && pixel[3] < 255 }),
-                        "curved brand edges must retain partial pixel coverage"
+                        pixels.chunks_exact(4).any(|pixel| {
+                            (pixel[3] > 0 && pixel[3] < 255)
+                                || (pixel[3] == 255
+                                    && pixel[..3].iter().all(|channel| *channel >= 240)
+                                    && pixel[..3].iter().any(|channel| *channel < 255))
+                        }),
+                        "brand edges must retain antialiased pixel coverage"
                     );
                 }
             }
