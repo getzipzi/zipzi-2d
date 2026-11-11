@@ -194,7 +194,7 @@ fn project_select_restores_mode_tools_and_layout(cx: &mut TestAppContext) {
                 assert_eq!(view.editor.workspace(), WorkspaceKind::Modeling);
                 assert_eq!(view.editor.active_tool(), ToolId::Glue);
             });
-            assert!(window.try_find("tool_glue").is_some());
+            assert!(window.try_find("tool_glue").is_none());
             assert!(window.try_find("tool_select").is_some());
             assert!(window.try_find("animation-timeline").is_none());
             second
@@ -221,7 +221,7 @@ fn project_select_restores_mode_tools_and_layout(cx: &mut TestAppContext) {
             harness.view.read(cx).editor.workspace(),
             WorkspaceKind::Modeling
         );
-        assert!(window.try_find("tool_glue").is_some());
+        assert!(window.try_find("tool_glue").is_none());
         assert!(window.try_find("tool_select").is_some());
         assert!(window.try_find("animation-timeline").is_none());
     })

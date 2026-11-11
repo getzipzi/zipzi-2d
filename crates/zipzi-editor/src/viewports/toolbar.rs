@@ -95,11 +95,6 @@ impl ToolbarRegistry {
                 command: CommandId::BrushSelectTool,
             },
             ToolbarItemConfig {
-                id: "tool_glue",
-                icon: IconName::Link.into(),
-                command: CommandId::GlueTool,
-            },
-            ToolbarItemConfig {
                 id: "tool_manual_mesh",
                 icon: ToolbarIcon::Svg(include_bytes!("../../assets/icons/mesh-edit.svg")),
                 command: CommandId::ManualMesh,
@@ -157,11 +152,7 @@ impl RenderOnce for CanvasToolbar {
             .flex_col()
             .gap(compact::rem(1.));
         for item in items {
-            let command = if item.command == CommandId::GlueTool {
-                CommandId::GlueStitch
-            } else {
-                item.command
-            };
+            let command = item.command;
             let invocation = canvas.read(cx).command(
                 &view.editor,
                 command,
@@ -185,7 +176,6 @@ impl RenderOnce for CanvasToolbar {
                         CommandId::SelectTool => "editor.tool_select_hint",
                         CommandId::LassoTool => "editor.tool_lasso_hint",
                         CommandId::BrushSelectTool => "editor.tool_brush_select_hint",
-                        CommandId::GlueTool => "editor.tool_glue_hint",
                         CommandId::ManualMesh => "editor.manual_mesh_edit_hint",
                         _ => command.spec().label,
                     }))

@@ -17,11 +17,14 @@ impl CanvasScene {
                     ControlKind::Warp => !visibility.hide_unselected_warps,
                     ControlKind::Rotation => !visibility.hide_unselected_rotations,
                     ControlKind::Glue => {
-                        self.topology.glue(&c.object.id).is_some_and(|g| {
-                            selection
-                                .iter()
-                                .any(|r| r.id == g.mesh_a || r.id == g.mesh_b)
-                        }) || tool == ToolId::Glue
+                        self.topology
+                            .glue(&c.object.id)
+                            .is_some_and(|g| {
+                                selection
+                                    .iter()
+                                    .any(|r| r.id == g.mesh_a || r.id == g.mesh_b)
+                            })
+                            || (tool == ToolId::Glue && selection.is_empty())
                     }
                 })
     }

@@ -341,17 +341,6 @@ fn details_source(
 ) -> Option<details::DetailSource> {
     match editor.editing_context()? {
         EditingContext::Animation => animation::details_source(editor, target),
-        EditingContext::Modeling
-            if target.is_some_and(|target| target.object.kind == ObjectKind::Glue) =>
-        {
-            Some(details::DetailSource {
-                dependencies: vec![
-                    target.map(|target| target.object.id.clone()),
-                    target.map(|target| format!("{:?}", target.scope)),
-                ],
-                build: scene::glue_details,
-            })
-        }
         EditingContext::Modeling => None,
     }
 }

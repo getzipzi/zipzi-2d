@@ -87,9 +87,6 @@ pub struct OverlaySnapshot {
     pub image_bounds: Vec<(ViewportPoint, ViewportPoint)>,
     pub deformers: Vec<OverlayDeformer>,
     pub glues: Vec<OverlayGlue>,
-    pub glue_labels: Vec<super::OverlayGlueLabel>,
-    pub glue_weights: Vec<super::OverlayGlueWeight>,
-    pub glue_weight_opacity: f32,
     pub marquee: Option<(ViewportPoint, ViewportPoint)>,
     /// Sampled freehand path, including the current pointer position.
     pub lasso: Vec<ViewportPoint>,
@@ -134,7 +131,6 @@ pub enum CanvasGestureKind {
     BrushSelect,
     BrushResize,
     BrushInflate,
-    BrushGlue,
     Move,
     Rotate,
     Scale,
@@ -211,17 +207,8 @@ impl ToolController {
 
     /// Status queries share the edit capabilities, without producing screen geometry.
     pub(crate) fn notice(&self, document: &Document, frame: &CanvasFrame) -> Option<String> {
-        if let Some(stitch) = &self.stitch {
-            return stitch.diagnostic.clone();
-        }
         if let Some(manual) = &self.manual {
             return manual.diagnostic.clone();
-        }
-        if self.active == super::ToolId::Glue {
-            return self
-                .glue_paint_controls(document, Some(frame))
-                .and_then(|controls| controls.diagnostic)
-                .map(|status| status.message);
         }
         let scene = &frame.geometry;
         let selection = self.overlay_selection(document, scene);
@@ -286,9 +273,6 @@ impl ToolController {
     }
 
     pub fn overlay(&self, document: &Document, frame: &CanvasFrame) -> OverlaySnapshot {
-        if let Some(stitch) = &self.stitch {
-            return stitch.overlay(frame);
-        }
         if let Some(manual) = &self.manual {
             return manual.overlay(frame, self.shift, self.alt);
         }
@@ -314,69 +298,6 @@ impl ToolController {
                 .map(super::gesture::Gesture::kind),
             ..Default::default()
         };
-        out.glue_labels = self.glue_labels(document, frame);
-        if self.active == super::ToolId::Glue {
-            let model = document.model();
-            if let Some(glue) =
-                super::glue::active_glue(document).and_then(|object| model.glue(&object.id))
-            {
-                if let Some(reason) = self
-                    .glue_paint_controls(document, Some(frame))
-                    .and_then(|controls| controls.diagnostic)
-                {
-                    out.point_unavailable = Some(reason.message);
-                }
-                if out
-                    .glue_labels
-                    .iter()
-                    .any(|label| label.object.id == glue.id)
-                {
-                    out.glue_weights = glue
-                        .pairs
-                        .iter()
-                        .filter_map(|pair| {
-                            Some(super::OverlayGlueWeight {
-                                a: super::glue::endpoint(
-                                    frame,
-                                    glue.mesh_a_id.as_str(),
-                                    pair.vertex_a?,
-                                )?,
-                                b: super::glue::endpoint(
-                                    frame,
-                                    glue.mesh_b_id.as_str(),
-                                    pair.vertex_b?,
-                                )?,
-                                weights: [pair.weight_a, pair.weight_b],
-                            })
-                        })
-                        .collect();
-                }
-            }
-            let settings = self.glue_brush;
-            out.glue_weight_opacity = settings.color[3];
-            out.selection_brush = self
-                .pointer
-                .filter(|(binding, _)| *binding == frame.version.binding)
-                .filter(|_| {
-                    out.point_unavailable.is_none() && super::glue::active_glue(document).is_some()
-                })
-                .map(|(_, position)| OverlaySelectionBrush {
-                    position: self
-                        .gesture
-                        .as_ref()
-                        .and_then(|gesture| match gesture {
-                            super::gesture::Gesture::BrushSelect(g) if g.resizing => {
-                                Some(g.press.point)
-                            }
-                            _ => None,
-                        })
-                        .unwrap_or(position),
-                    radius: settings.diameter / 2.,
-                    shape: settings.shape,
-                    angle: settings.angle,
-                    subtract: self.shift,
-                });
-        }
         out.selection_operation = if let Some(gesture) = self
             .gesture
             .as_ref()

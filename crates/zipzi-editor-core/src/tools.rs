@@ -14,13 +14,11 @@ mod manual_mesh;
 mod overlay;
 mod region;
 mod select;
-mod stitch;
 mod transform_constraints;
 pub use brush_select::{BrushSelectionSettings, BrushShape};
-pub use glue::{GlueBrushMode, GluePaintControls, OverlayGlueLabel, OverlayGlueWeight};
 pub use hints::{HintAction, InteractionHint};
 pub use inflate::BrushMode;
-pub use manual_mesh::{ManualGlueControls, ManualMeshEdge, ManualMeshFeedback, ManualTool};
+pub use manual_mesh::{ManualMeshEdge, ManualMeshFeedback, ManualTool};
 
 use crate::{
     CanvasScene, ComponentRef, Document, HitTarget, ObjectKind, ObjectRef, ViewportPoint,
@@ -76,8 +74,6 @@ pub struct ToolController {
     pub original_points: bool,
     pub(crate) brush_selection: BrushSelectionSettings,
     pub(crate) brush_mode: BrushMode,
-    pub(crate) glue_brush: BrushSelectionSettings,
-    pub(crate) glue_brush_mode: GlueBrushMode,
     pub(crate) component_weights: std::collections::HashMap<ComponentRef, f32>,
     pub(crate) pointer: Option<(crate::ViewportBinding, ViewportPoint)>,
     pub(crate) components: Vec<ComponentRef>,
@@ -91,7 +87,6 @@ pub struct ToolController {
     shift: bool,
     gesture: Option<Gesture>,
     manual: Option<manual_mesh::ManualMeshSession>,
-    stitch: Option<stitch::StitchSession>,
     access_cache: std::sync::Mutex<Option<access::AccessCache>>,
     #[cfg(test)]
     access_builds: std::sync::atomic::AtomicUsize,
@@ -251,9 +246,6 @@ impl ToolController {
         self.hovered_binding
     }
     pub(crate) fn interaction_viewport(&self) -> Option<crate::ViewportId> {
-        if let Some(stitch) = &self.stitch {
-            return stitch.press.map(|_| stitch.viewport);
-        }
         if let Some(manual) = &self.manual {
             return manual.viewport();
         }
@@ -262,9 +254,6 @@ impl ToolController {
             .map(|press| press.press().version.binding.viewport)
     }
     pub(crate) fn interaction_hints(&self) -> &'static [InteractionHint] {
-        if self.stitch.is_some() {
-            return &[];
-        }
         if self.gesture.is_none()
             && matches!(
                 self.hovered,
@@ -281,9 +270,6 @@ impl ToolController {
             .map_or(controls::HINTS, Gesture::hints)
     }
     pub(crate) fn idle_hints(&self) -> &'static [InteractionHint] {
-        if self.stitch.is_some() {
-            return &[];
-        }
         if self.active == ToolId::BrushSelect
             && self.brush_mode == BrushMode::Deform
             && !self.manual_active()
@@ -313,18 +299,11 @@ impl ToolController {
         self.component_weights.retain(|c, _| selected.contains(c));
     }
     pub fn dragging(&self) -> bool {
-        self.stitch.as_ref().is_some_and(|s| s.press.is_some())
-            || self.gesture.is_some()
-            || self.manual.as_ref().is_some_and(|mode| mode.dragging())
+        self.gesture.is_some() || self.manual.as_ref().is_some_and(|mode| mode.dragging())
     }
     /// Completed poses from this control edit can lag subsequent pointer moves.
     /// The press fixes the authoring target; new gestures still require a current frame.
     pub(crate) fn accepts_drag_frame(&self, version: FrameVersion) -> bool {
-        if let Some(stitch) = &self.stitch {
-            return stitch
-                .press
-                .is_some_and(|(v, _)| v.binding == version.binding);
-        }
         if let Some(manual) = &self.manual {
             return manual.accepts_frame(version);
         }
@@ -368,23 +347,8 @@ impl ToolController {
         });
     }
     pub fn reconcile(&mut self, document: &mut Document) {
-        if matches!(&self.gesture, Some(Gesture::Glue(g)) if !g.current(document)) {
-            self.cancel(document);
-        }
         if let Some(mode) = &mut self.manual {
             mode.reconcile(document);
-        }
-        if let Some(stitch) = &mut self.stitch {
-            if let Some(engine) = &mut stitch.engine {
-                if engine
-                    .targets()
-                    .iter()
-                    .any(|t| document.validate_manual_target(t).is_err())
-                {
-                    stitch.press = None;
-                }
-                engine.reconcile(document);
-            }
         }
         let locks = document.object_state_index();
         let model = document.model();
@@ -406,9 +370,6 @@ impl ToolController {
         self.prune_warp_frames(document);
     }
     pub fn cancel(&mut self, document: &mut Document) -> bool {
-        if let Some(stitch) = &mut self.stitch {
-            stitch.press = None;
-        }
         let gesture = self.gesture.take();
         let original = gesture.as_ref().and_then(|g| {
             if let Gesture::Controls(g) = g {
@@ -418,16 +379,11 @@ impl ToolController {
                 None
             }
         });
-        let brush = if self.active == ToolId::Glue {
-            &mut self.glue_brush
-        } else {
-            &mut self.brush_selection
-        };
         let changed = gesture.is_some_and(|g| {
             g.cancel(
                 document,
                 &mut self.components,
-                brush,
+                &mut self.brush_selection,
                 &mut self.component_weights,
             )
         }) | self
@@ -444,7 +400,6 @@ impl ToolController {
     }
     pub fn set_tool(&mut self, tool: ToolId, document: &mut Document) -> bool {
         let changed = self.cancel(document);
-        self.stitch = None;
         let preserve_components = self.active.preserves_components(tool);
         self.active = tool;
         if !preserve_components {
@@ -468,42 +423,6 @@ impl ToolController {
         self.reconcile_component_weights();
         changed
     }
-    pub(crate) fn begin_stitch(
-        &mut self,
-        document: &mut Document,
-        viewport: crate::ViewportId,
-    ) -> anyhow::Result<()> {
-        self.exit_manual(document);
-        self.clear_selection();
-        self.stitch = Some(stitch::StitchSession::new(document, viewport)?);
-        self.active = ToolId::Glue;
-        Ok(())
-    }
-    pub(crate) fn stitch_viewport(&self) -> Option<crate::ViewportId> {
-        self.stitch.as_ref().map(|s| s.viewport)
-    }
-    pub(crate) fn stitch_parts(&self) -> usize {
-        self.stitch.as_ref().map_or(0, |s| s.parts.len())
-    }
-    pub(crate) fn stitch_controls(
-        &self,
-        document: &Document,
-        frame: Option<&CanvasFrame>,
-    ) -> Option<ManualGlueControls> {
-        self.stitch
-            .as_ref()?
-            .engine
-            .as_ref()?
-            .glue_controls(document, frame)
-    }
-    pub(crate) fn toggle_stitch_remove(&mut self) {
-        if let Some(s) = &mut self.stitch {
-            s.remove = !s.remove;
-        }
-    }
-    pub(crate) fn stitch_removing(&self) -> bool {
-        self.stitch.as_ref().is_some_and(|s| s.remove)
-    }
     pub fn manual_active(&self) -> bool {
         self.manual.is_some()
     }
@@ -520,33 +439,6 @@ impl ToolController {
         self.manual
             .as_ref()
             .map_or_else(Vec::new, |mode| mode.targets())
-    }
-    pub(crate) fn manual_glue_controls(
-        &self,
-        document: &Document,
-        frame: Option<&CanvasFrame>,
-    ) -> Option<ManualGlueControls> {
-        self.manual.as_ref()?.glue_controls(document, frame)
-    }
-    pub(crate) fn set_manual_glue_target(&mut self, target: Option<String>) {
-        if let Some(mode) = &mut self.manual {
-            mode.set_glue_target(target);
-        }
-    }
-    pub(crate) fn toggle_manual_sync_insert(&mut self) {
-        if let Some(mode) = &mut self.manual {
-            mode.toggle_sync_insert();
-        }
-    }
-    pub(crate) fn edit_manual_glue(
-        &mut self,
-        document: &mut Document,
-        frame: &CanvasFrame,
-        bind: bool,
-    ) -> anyhow::Result<bool> {
-        self.manual
-            .as_mut()
-            .map_or(Ok(false), |mode| mode.edit_glue(document, frame, bind))
     }
     pub fn manual_target_at(
         &self,
@@ -614,7 +506,6 @@ impl ToolController {
         self.components.clear();
         self.component_weights.clear();
         self.active = ToolId::Select;
-        self.stitch = None;
         self.manual = Some(manual_mesh::ManualMeshSession::new(targets, document));
     }
     pub fn set_manual_tool(&mut self, tool: ManualTool, document: &mut Document) {

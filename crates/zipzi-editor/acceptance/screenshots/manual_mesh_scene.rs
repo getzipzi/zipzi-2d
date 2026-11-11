@@ -4,7 +4,7 @@ use super::common::save;
 use gpui_kit::{point, px, test::TestWindowExt};
 use zipzi_editor_core::{Editor, ModelPoint};
 
-pub(super) fn click_model(h: &mut Harness, p: ModelPoint) -> anyhow::Result<()> {
+fn click_model(h: &mut Harness, p: ModelPoint) -> anyhow::Result<()> {
     h.cx.update_window(h.window, |_, window, cx| {
         let p = h
             .view

@@ -2,8 +2,6 @@ use super::*;
 mod bindings;
 mod dispatch;
 mod expressions;
-mod glue;
-pub use glue::{glue_binding_additions, validate_glue_weight_edit};
 mod mesh;
 mod motions;
 mod organization;

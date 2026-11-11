@@ -96,14 +96,12 @@ enum Gesture {
     Rename,
     Opacity,
     Controls,
-    GlueWeights,
     Properties(u64),
     ExpressionEntry(Uuid),
 }
 
 enum PendingOriginal {
     RotationLength(String, Option<f32>),
-    GlueWeights(zipzi_core::Glue),
     ExpressionEntry(crate::FieldCapture<zipzi_contract::document::ExpressionEntryFields>),
     Controls(crate::control_edit::EditOriginal),
     Properties(
@@ -116,7 +114,6 @@ impl PendingOriginal {
     fn id(&self) -> &str {
         match self {
             Self::RotationLength(id, _) => id,
-            Self::GlueWeights(glue) => &glue.id,
             Self::ExpressionEntry(address) => &address.id,
             Self::Controls(original) => original.id(),
             Self::Properties(object, _, _) => &object.id,
@@ -127,7 +124,6 @@ impl PendingOriginal {
             Self::RotationLength(id, value) => {
                 model.editor_state().rotation_bone_lengths.get(id).copied() == *value
             }
-            Self::GlueWeights(glue) => model.glue(&glue.id) == Some(glue),
             Self::ExpressionEntry(address) => {
                 model
                     .expression_entry(&address.id)
@@ -230,7 +226,6 @@ pub use authoring::{
     TreeDeletionPlan, TreeDeletionTask,
 };
 mod edits;
-mod glue;
 mod physics;
 mod projection;
 mod properties;

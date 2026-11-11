@@ -275,10 +275,10 @@ pub(crate) struct ControlSpace {
 /// Prefer the focused parameter or opened binding. Without either, one
 /// contributing BlendShape on an exact stored key is unambiguous. Mixed or
 /// multiple contributions still require an explicit authoring destination.
-pub(crate) fn blend_edit_target<'a>(
+fn mesh_blend_target<'a>(
     document: &Document,
     doc: &'a zipzi_core::state::DocumentState,
-    values: &zipzi_core::PreviewValues,
+    scene: &CanvasScene,
     object: &ObjectRef,
 ) -> Result<Option<(&'a zipzi_core::BlendShapeBinding, usize, f32)>> {
     #[cfg(feature = "bench-instrumentation")]
@@ -292,6 +292,7 @@ pub(crate) fn blend_edit_target<'a>(
     if bindings.is_empty() {
         return Ok(None);
     }
+    let values = scene.parameter_values();
     for &b in &bindings {
         let table = doc.blend_key_table(&b.key_table_id).unwrap();
         if active.is_some_and(|r| r.kind == ObjectKind::BlendBinding && r.id == b.id)
@@ -448,7 +449,7 @@ impl ControlEdit {
             }))
         };
         if object.kind == ObjectKind::Mesh {
-            match blend_edit_target(document, &doc, scene.parameter_values(), object) {
+            match mesh_blend_target(document, &doc, scene, object) {
                 Ok(Some((b, slot, weight))) => {
                     let table = doc.blend_key_table(&b.key_table_id).unwrap();
                     let p = doc.parameter(&table.parameter_id).unwrap();
@@ -575,7 +576,7 @@ impl ControlEdit {
         document.ensure_editable(std::slice::from_ref(object))?;
         let doc = document.model();
         let blend = if object.kind == ObjectKind::Mesh {
-            blend_edit_target(document, &doc, scene.parameter_values(), object)?
+            mesh_blend_target(document, &doc, scene, object)?
         } else {
             if let Some(hint) = deformer_blend_edit_hint(&doc, scene, object) {
                 bail!(hint);

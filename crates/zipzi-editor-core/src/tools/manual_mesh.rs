@@ -14,7 +14,6 @@ use zipzi_sdk::ManualVertexIdAllocator;
 mod mapping;
 mod session;
 use mapping::{PoseMapping, PositionUvMap};
-pub use session::ManualGlueControls;
 pub(super) use session::ManualMeshSession;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

@@ -50,18 +50,25 @@ impl PropertyPayload {
 }
 
 impl Document {
-    fn property_parameter_values(
+    fn scene_property_scope(
         &self,
         model: &zipzi_core::state::DocumentState,
-    ) -> zipzi_core::PreviewValues {
+        id: &str,
+        blend_id: &str,
+    ) -> PropertyScope {
+        use zipzi_core::SceneTrackEvaluation;
         // Match Modeling's parameter normalization without evaluating geometry.
-        let requested = self.session.preview_values();
-        model
+        let values: std::collections::HashMap<_, _> = model
             .parameter_order()
             .iter()
             .filter_map(|id| model.parameter(id))
             .map(|p| {
-                let requested = requested.get(&p.id).copied().unwrap_or(p.default_value);
+                let requested = self
+                    .session
+                    .preview_values()
+                    .get(&p.id)
+                    .copied()
+                    .unwrap_or(p.default_value);
                 let value = if p.repeat {
                     let range = p.maximum - p.minimum;
                     let normalized = (requested - p.minimum) / range;
@@ -83,17 +90,7 @@ impl Document {
                 };
                 (p.id.clone(), value)
             })
-            .collect()
-    }
-
-    fn scene_property_scope(
-        &self,
-        model: &zipzi_core::state::DocumentState,
-        id: &str,
-        blend_id: &str,
-    ) -> PropertyScope {
-        use zipzi_core::SceneTrackEvaluation;
-        let values = self.property_parameter_values(model);
+            .collect();
         if model
             .blend_bindings_for_target(blend_id)
             .any(|b| !zipzi_core::evaluation::evaluate_blend_binding(model, &values, b).is_empty())
@@ -154,15 +151,6 @@ impl Document {
             return PropertyScope::Resource {
                 revision: self.model_generation(),
             };
-        }
-        if object.kind == ObjectKind::Glue {
-            let model = self.session.document();
-            return crate::property::glue::scope(
-                self,
-                &model,
-                object,
-                &self.property_parameter_values(&model),
-            );
         }
         if object.kind == ObjectKind::Part {
             let model = self.session.document();
@@ -251,9 +239,6 @@ impl Document {
         }
         if object.kind == ObjectKind::Part {
             return crate::property::part::values(model, &object.id, scope);
-        }
-        if object.kind == ObjectKind::Glue {
-            return crate::property::glue::values(model, object, scope);
         }
         if object.kind != ObjectKind::Mesh {
             return crate::property::values_from(model, object);
@@ -560,13 +545,6 @@ impl Document {
                 )
                 .map(|_| ())?);
         }
-        if object.kind == ObjectKind::Glue
-            && patch
-                .changes
-                .contains_key(&crate::property::glue::INTENSITY.key)
-        {
-            return crate::property::glue::apply_intensity(edit, object, patch, &payload);
-        }
         if patch.uses_scalar_patch(object.kind) {
             let scalar = Self::scalar_patch(&edit.read_document()?, object, patch, &payload)?;
             return Ok(edit.patch_property(scalar)?);
@@ -686,6 +664,10 @@ impl Document {
             ObjectKind::Part => P::Part {
                 id,
                 draw_order: read(payload, "draw_order")?,
+            },
+            ObjectKind::Glue => P::Glue {
+                id,
+                intensity: read(payload, "intensity")?,
             },
             ObjectKind::Motion => P::Motion {
                 id,

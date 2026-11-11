@@ -281,13 +281,10 @@ impl Document {
         }
         if self.manual_pending.is_none() {
             self.finish_edit()?;
-            let zipzi_sdk::QuerySource::Published(version) = operations[0].0.source else {
-                anyhow::bail!("Mesh Edit requires a published source");
-            };
             self.manual_pending = Some(ManualPending {
                 edit: self
                     .session
-                    .begin_draft("Mesh Edit", Some(version))?
+                    .begin_draft("Mesh Edit", Some(self.session.version()))?
                     .interactive()?,
                 preview: PreviewState::default(),
                 changed: false,

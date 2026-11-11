@@ -239,10 +239,7 @@ impl ViewportSurface {
         } else {
             let resize_brush = self.owner.upgrade().is_some_and(|owner| {
                 let state = owner.read(cx);
-                matches!(
-                    state.editor.active_tool(),
-                    ToolId::BrushSelect | ToolId::Glue
-                ) && !state.editor.stitch_for_viewport(self.viewport)
+                state.editor.active_tool() == ToolId::BrushSelect
                     && !crate::settings::primary_modifier(event.modifiers)
                     && self.binding(&state.editor).is_some_and(|binding| {
                         state.input_router.brush_size_key.get() == Some(binding)

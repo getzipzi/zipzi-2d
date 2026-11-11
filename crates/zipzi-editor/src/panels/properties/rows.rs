@@ -43,8 +43,6 @@ pub(super) enum Row {
     DeformerOriginal,
     AnimationActions(ObjectRef),
     BusinessActions(ObjectRef),
-    GlueActions(ObjectRef),
-    GlueFollow(ObjectRef),
     Detail(properties::DetailRow),
 }
 impl Row {
@@ -135,10 +133,6 @@ impl PropertiesPanel {
         let index = doc.object_index();
         let inspected = self.target.as_ref().unwrap().object.clone();
         let mut rows = Vec::new();
-        if target.object.kind == zipzi_editor_core::ObjectKind::Glue {
-            rows.push(Row::GlueActions(target.object.clone()));
-            rows.push(Row::GlueFollow(target.object.clone()));
-        }
         rows.extend(super::binding::rows(doc, target));
         rows.extend(super::texture::rows(
             doc,

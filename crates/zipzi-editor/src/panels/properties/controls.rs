@@ -1212,17 +1212,19 @@ impl PropertiesPanel {
         let disabled =
             self.disabled || spec.binding.readonly || unavailable || window.has_active_dialog(cx);
         let body = if unavailable {
-            use zipzi_editor_core::PropertyScope;
-            let reason = match self.target.as_ref().map(|target| &target.scope) {
-                Some(PropertyScope::UnavailableGlueBlendShape { reason }) => reason.clone(),
-                Some(PropertyScope::DeformerBlendShape | PropertyScope::OffscreenBlendShape) => {
-                    t!("properties.deformer_blend_base").into_owned()
-                }
-                _ => t!("properties.select_keyform").into_owned(),
-            };
             div()
                 .text_color(cx.theme().muted_foreground)
-                .child(reason)
+                .child(t!(if self.target.as_ref().is_some_and(|target| {
+                    matches!(
+                        target.scope,
+                        zipzi_editor_core::PropertyScope::DeformerBlendShape
+                            | zipzi_editor_core::PropertyScope::OffscreenBlendShape
+                    )
+                }) {
+                    "properties.deformer_blend_base"
+                } else {
+                    "properties.select_keyform"
+                }))
                 .into_any_element()
         } else if spec.editor == FieldEditor::Color {
             self.render_color(id, disabled, window, cx)

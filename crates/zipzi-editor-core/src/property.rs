@@ -464,19 +464,6 @@ pub enum PropertyScope {
     },
     InterpolatedOffscreen,
     OffscreenBlendShape,
-    GlueKeyform {
-        samples: Vec<String>,
-    },
-    InterpolatedGlue,
-    GlueBlendShape {
-        binding: String,
-        sample: String,
-        weight_bits: u32,
-        background_bits: u32,
-    },
-    UnavailableGlueBlendShape {
-        reason: String,
-    },
     /// Conservative address for repeated resource fields; revisions never rewind.
     Resource {
         revision: u64,
@@ -492,8 +479,6 @@ impl PropertyScope {
                 | Self::DeformerBlendShape
                 | Self::InterpolatedOffscreen
                 | Self::OffscreenBlendShape
-                | Self::InterpolatedGlue
-                | Self::UnavailableGlueBlendShape { .. }
         )
     }
 }

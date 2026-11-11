@@ -421,40 +421,6 @@ fn glue_parameter_slider_and_connected_vertex_edit_stay_available(cx: &mut TestA
 }
 
 #[gpui_kit::test]
-fn glue_toolbar_stitches_and_advanced_settings_edit_weights(cx: &mut TestAppContext) {
-    use zipzi_editor_core::{GlueBrushMode, ObjectKind, ToolId};
-    let (document, assets) = super::super::document_fixture::rectangle_document(true).unwrap();
-    let harness = super::super::setup_with_document(cx, document, assets);
-    present_canvas(&harness, cx);
-    let glue_id = uuid::Uuid::from_u128(910).to_string();
-    cx.update_window(harness.window, |_, window, cx| {
-        assert!(window.find("tool_glue").visible());
-        window.click("tool_glue", cx);
-        window.render_frame(cx);
-        assert!(window.find("glue-stitch-bar").visible());
-        assert!(window.try_find("mesh-edit-actions").is_none());
-        window.click("glue-stitch-action", cx);
-        window.render_frame(cx);
-        window.click(format!("glue-label-{glue_id}"), cx);
-        window.render_frame(cx);
-        window.click("brush-selection-more-button", cx);
-        window.render_frame(cx);
-        assert!(window.find("glue-brush-modes").visible());
-        window.click("glue-mode-a", cx);
-    })
-    .unwrap();
-    harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.active_tool(), ToolId::Glue);
-        assert_eq!(view.editor.glue_brush_mode(), GlueBrushMode::A);
-        let document = view.editor.document().unwrap();
-        let selected = document.context().selection.as_ref().unwrap();
-        assert_eq!(selected.kind, ObjectKind::Glue);
-        assert_eq!(selected.id, glue_id);
-        assert_eq!(document.history_lengths(), (0, 0));
-    });
-}
-
-#[gpui_kit::test]
 fn blendshape_slider_selects_a_delta_keyform_for_canvas_editing(cx: &mut TestAppContext) {
     let (document, assets) = super::super::document_fixture::rectangle_document(true).unwrap();
     let parameter = document

@@ -107,16 +107,8 @@ impl CanvasScene {
             .as_ref()
             .is_none_or(|scope| scope.contains(object))
     }
-    pub(crate) fn isolate(&self, mut scope: Arc<HashSet<ObjectRef>>) -> Self {
+    pub(crate) fn isolate(&self, scope: Arc<HashSet<ObjectRef>>) -> Self {
         let mut scene = self.clone();
-        for glue in self.topology.glues.iter() {
-            if !scope.contains(&glue.object)
-                && scope.contains(&ObjectRef::new(K::Mesh, &glue.mesh_a))
-                && scope.contains(&ObjectRef::new(K::Mesh, &glue.mesh_b))
-            {
-                Arc::make_mut(&mut scope).insert(glue.object.clone());
-            }
-        }
         scene
             .visible_meshes
             .retain(|id| scope.contains(&ObjectRef::new(K::Mesh, id)));

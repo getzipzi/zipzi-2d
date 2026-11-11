@@ -404,7 +404,6 @@ impl Render for ViewportSurface {
         let menu_owner = owner.downgrade();
         let menu_canvas = cx.weak_entity();
         let hover_name = overlay.hovered_object_label.clone();
-        let glue_controls = painting::glue_markers(&overlay, cx);
         let body = div()
             .id("canvas-body")
             .test_support()
@@ -460,7 +459,6 @@ impl Render for ViewportSurface {
             })
             .children(error.map(|e| div().absolute().p_4().child(e)))
             .child(self.overlay_element(overlay, palette, capture, cx))
-            .children(glue_controls)
             .children(hover_name.map(|name| {
                 div()
                     .id("hovered-object-name")

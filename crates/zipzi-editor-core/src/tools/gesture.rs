@@ -44,7 +44,6 @@ pub(super) enum Gesture {
     Lasso(LassoGesture),
     BrushSelect(BrushSelectionGesture),
     Inflate(inflate::InflateGesture),
-    Glue(glue::GlueGesture),
     Controls(ControlGesture),
 }
 impl Gesture {
@@ -69,7 +68,6 @@ impl Gesture {
             Self::BrushSelect(g) if g.resizing => K::BrushResize,
             Self::BrushSelect(_) => K::BrushSelect,
             Self::Inflate(_) => K::BrushInflate,
-            Self::Glue(_) => K::BrushGlue,
             Self::Controls(g) if g.adjusting_bone_length() => K::BoneLength,
             Self::Controls(g) => match g.target {
                 HitTarget::RotationHandle(_) | HitTarget::DeformerHandle(_, H::Rotate) => K::Rotate,
@@ -83,10 +81,6 @@ impl Gesture {
         match self {
             Self::Controls(g) => g.set_modifiers(shift, alt),
             Self::Inflate(g) => g.set_modifiers(shift),
-            Self::Glue(g) => {
-                g.press.shift = shift;
-                false
-            }
             _ => false,
         }
     }
@@ -96,7 +90,6 @@ impl Gesture {
             Self::Lasso(g) => &g.press,
             Self::BrushSelect(g) => &g.press,
             Self::Inflate(g) => &g.press,
-            Self::Glue(g) => &g.press,
             Self::Controls(g) => &g.press,
         }
     }
@@ -106,14 +99,13 @@ impl Gesture {
             Self::Lasso(g) => &mut g.press,
             Self::BrushSelect(g) => &mut g.press,
             Self::Inflate(g) => &mut g.press,
-            Self::Glue(g) => &mut g.press,
             Self::Controls(g) => &mut g.press,
         }
     }
     pub fn target(&self) -> Option<&HitTarget> {
         match self {
             Self::Select(g) => g.target.as_ref(),
-            Self::Lasso(_) | Self::BrushSelect(_) | Self::Inflate(_) | Self::Glue(_) => None,
+            Self::Lasso(_) | Self::BrushSelect(_) | Self::Inflate(_) => None,
             Self::Controls(g) => Some(&g.target),
         }
     }
@@ -121,7 +113,6 @@ impl Gesture {
         match self {
             Self::Controls(g) => g.accepts_frame(version),
             Self::Inflate(g) => g.accepts_frame(version),
-            Self::Glue(g) => g.accepts_frame(version),
             _ => false,
         }
     }
@@ -143,7 +134,6 @@ impl Gesture {
         match self {
             Self::Select(_) => Ok(false),
             Self::Inflate(_) => Ok(false),
-            Self::Glue(g) => g.update(document),
             Self::Lasso(g) => {
                 g.update();
                 Ok(false)
@@ -167,7 +157,6 @@ impl Gesture {
             Self::Controls(g) => g.finish(document, components, weights),
             Self::BrushSelect(_) => Ok(()),
             Self::Inflate(g) => g.finish(document),
-            Self::Glue(_) => document.finish_edit(),
         }
     }
     pub fn cancel(
@@ -180,7 +169,6 @@ impl Gesture {
         match self {
             Self::Controls(g) => g.cancel(document, components, weights),
             Self::Inflate(g) => g.cancel(document),
-            Self::Glue(_) => document.cancel_glue_weights(),
             Self::BrushSelect(g) => {
                 g.cancel(components, brush_settings, weights);
                 false
@@ -193,7 +181,7 @@ impl Gesture {
             Self::Select(g) => g.overlay(out),
             Self::Lasso(g) => g.overlay(out),
             Self::Controls(g) => g.overlay(out),
-            Self::BrushSelect(_) | Self::Inflate(_) | Self::Glue(_) => {}
+            Self::BrushSelect(_) | Self::Inflate(_) => {}
         }
     }
     pub fn hints(&self) -> &'static [InteractionHint] {
@@ -204,7 +192,6 @@ impl Gesture {
             Self::BrushSelect(g) if g.resizing => brush_select::RESIZE_HINTS,
             Self::BrushSelect(_) => brush_select::CAPTURE_HINTS,
             Self::Inflate(_) => inflate::HINTS,
-            Self::Glue(_) => glue::HINTS,
         }
     }
 }

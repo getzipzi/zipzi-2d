@@ -503,34 +503,6 @@ stored shapes; image and UV changes share one undo step. The extra space allows
 an affine mesh's outline to extend beyond the original image. Existing
 deformation sampling domains still apply to meshes with dependencies.
 
-## Glue
-
-Click the link tool to **Stitch two parts**, then click the two parts in order.
-An existing selection of two meshes skips this picking step. Stitching is an
-independent tool: Mesh Edit stays inactive and its toolbar and topology wires
-are absent. Click overlapping positions to add stitches; each click inserts any
-missing mesh points and binds them in one Undo step. Dragging never moves mesh
-vertices. Failed clicks publish nothing; repeated clicks do not duplicate pairs.
-
-**Done** returns to ordinary selection and selects the seam. The Properties
-panel provides **Attachment**, **Move both / Follow [part name]**, **Edit stitches**,
-and **Advanced** weight painting. Editing an existing seam preserves its exact
-identity and part order. **Remove stitches** toggles point removal without
-removing topology or parameter bindings. Escape exits the idle seam tool; Escape
-during a pointer gesture cancels that click. Mesh Edit has no Glue controls.
-
-Click a Glue label or select the object in the Glue panel to paint its weights.
-**A:B** favors A, **A** and **B** loosen one side, and **Reattach** restores
-contact while keeping the weight ratio. Hold Shift to reverse the brush. Hold
-the Glue shortcut (`G` by default) and drag to resize the brush. Add Shift to
-adjust the angle of a square or line brush, or Alt to adjust hardness. A stroke
-previews while dragging, commits one Undo step on release, and cancels with Esc.
-
-The Properties panel shows both meshes, the pair count and the 0–100% strength.
-At stored parameter keyforms it edits the ordinary value or the BlendShape
-delta for that sample. Delete removes the selected Glue through object deletion.
-The Glue and both meshes must be visible and unlocked to paint.
-
 ## Mesh generation controls
 
 The editor's adaptive mesh controls use source pixels. Initial spacing and

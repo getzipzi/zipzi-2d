@@ -95,9 +95,7 @@ impl Document {
             Gesture::Rename => "Rename layer",
             Gesture::Opacity => "Change opacity",
             Gesture::Controls => "Edit canvas controls",
-            Gesture::Properties(_) | Gesture::ExpressionEntry(_) | Gesture::GlueWeights => {
-                unreachable!()
-            }
+            Gesture::Properties(_) | Gesture::ExpressionEntry(_) => unreachable!(),
         };
         self.pending = Some(PendingEdit {
             kind,
