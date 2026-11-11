@@ -13,4 +13,4 @@ zipzi-render.workspace = true
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Direct3D11", "Win32_Graphics_Direct3D_Fxc", "Win32_Graphics_Dxgi", "Win32_Graphics_Dxgi_Common"] }
 
 [target.'cfg(target_os = "windows")'.dev-dependencies]
-zipzi-render-wgpu = { version = "=0.3.0-alpha.2", path = "../zipzi-render-wgpu" }
+zipzi-render-wgpu = { version = "=0.3.0-alpha.3", path = "../zipzi-render-wgpu" }
