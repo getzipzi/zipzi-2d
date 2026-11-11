@@ -13,8 +13,7 @@ Run commands from the repository root. Required tools:
 
 - Rust 1.95 or newer, uv 0.10.7 or newer, and CPython 3.14.
 - macOS Editor: Xcode Command Line Tools and a Metal-capable GPU.
-- Windows Editor development prototype: MSVC C++ Build Tools, Windows SDK and
-  a usable GPU. Desktop validation is still in progress.
+- Windows Editor: MSVC C++ Build Tools, Windows SDK and a usable GPU.
 
 ```sh
 uv sync --locked

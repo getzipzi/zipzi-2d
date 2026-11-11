@@ -12,7 +12,7 @@ Zipzi 2D 是 Live2D Cubism Editor 的开源替代选择，使用 Rust 和 GPUI �
 
 ![Zipzi 2D 编辑器的建模工作区](docs/editor-screenshot.png)
 
-> **早期开发阶段：**目前尚无稳定版本，API 和文件格式可能变更。编辑器支持 macOS；Windows 版本仍是开发原型，桌面功能验证正在进行中。
+> **早期开发阶段：**目前尚无稳定版本，API 和文件格式可能变更。编辑器支持 macOS 和 Windows。
 
 ## 你的编辑器，你的 AI agent，同一个模型。
 
@@ -156,7 +156,7 @@ Python 脚本也可通过本地 Runtime 独立运行，在编辑器之外完成�
 | 动画 | 动作、表情、物理与姿态编辑；动画预览 |
 | 项目输入输出 | PSD 导入，以及 Model3/MOC3、Cubism 工程和运行时配套文件等相关格式；支持范围和信息丢失规则因格式及导入／导出方向而异 |
 | 自动化 | Python 会话、批量编辑、共享撤销／重做、项目操作与模型检查 |
-| 平台 | macOS；Windows 开发原型 |
+| 平台 | macOS 和 Windows |
 
 详情见 [SDK 能力指南](crates/zipzi-python/CAPABILITIES.md)。GPU 检查需要兼容的宿主和可用 GPU。支持某种格式并不意味着所有模型都能无损往返转换。
 
@@ -168,7 +168,7 @@ Python 脚本也可通过本地 Runtime 独立运行，在编辑器之外完成�
 
 ## 开发
 
-需要 Rust 1.95 或更新版本、uv 0.10.7 或更新版本，以及 CPython 3.14。macOS 编辑器需要 Xcode Command Line Tools 和支持 Metal 的 GPU。[Windows 开发原型](crates/zipzi-editor/README.md)需要 MSVC、Windows SDK 和可用 GPU。在仓库根目录运行：
+需要 Rust 1.95 或更新版本、uv 0.10.7 或更新版本，以及 CPython 3.14。macOS 编辑器需要 Xcode Command Line Tools 和支持 Metal 的 GPU。[Windows 编辑器](crates/zipzi-editor/README.md)需要 MSVC、Windows SDK 和可用 GPU。在仓库根目录运行：
 
 ```sh
 uv sync --locked

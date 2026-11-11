@@ -12,7 +12,7 @@ Zipzi 2D は、Rust と GPUI で開発された Live2D Cubism Editor のオー�
 
 ![Zipzi 2D エディターのモデリングワークスペース](docs/editor-screenshot.png)
 
-> **開発初期段階：**安定版はまだありません。API やファイル形式は変更される可能性があります。エディターは macOS に対応しています。Windows 版は開発用プロトタイプで、デスクトップ機能の検証を進めています。
+> **開発初期段階：**安定版はまだありません。API やファイル形式は変更される可能性があります。エディターは macOS と Windows に対応しています。
 
 ## あなたのエディターと AI エージェントで、ひとつのモデルを。
 
@@ -156,7 +156,7 @@ Python スクリプトはローカル Runtime でも単独実行でき、エデ�
 | アニメーション | モーション、表情、物理演算、ポーズの編集とアニメーションプレビュー |
 | プロジェクト入出力 | PSD のインポート、および Model3/MOC3、Cubism プロジェクト、ランタイム付随ファイルなどの関連形式。対応範囲や情報損失の扱いは形式と入出力方向によって異なります |
 | 自動化 | Python セッション、一括編集、取り消し／やり直し履歴の共有、プロジェクト操作、モデル検査 |
-| プラットフォーム | macOS、Windows 開発用プロトタイプ |
+| プラットフォーム | macOS、Windows |
 
 詳細は [SDK 機能ガイド](crates/zipzi-python/CAPABILITIES.md)を参照してください。GPU 検査には対応ホストと利用可能な GPU が必要です。形式への対応は、すべてのモデルを情報損失なく往復変換できることを意味しません。
 
@@ -168,7 +168,7 @@ Alpha 版を試し、[困った点を教えてください](https://github.com/g
 
 ## 開発
 
-Rust 1.95 以降、uv 0.10.7 以降、CPython 3.14 が必要です。macOS エディターには Xcode Command Line Tools と Metal 対応 GPU が必要です。[Windows 開発用プロトタイプ](crates/zipzi-editor/README.md)には MSVC、Windows SDK、利用可能な GPU が必要です。リポジトリのルートで実行してください。
+Rust 1.95 以降、uv 0.10.7 以降、CPython 3.14 が必要です。macOS エディターには Xcode Command Line Tools と Metal 対応 GPU が必要です。[Windows エディター](crates/zipzi-editor/README.md)には MSVC、Windows SDK、利用可能な GPU が必要です。リポジトリのルートで実行してください。
 
 ```sh
 uv sync --locked

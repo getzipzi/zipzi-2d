@@ -16,8 +16,7 @@ and GPUI. Its name comes from Cantonese 摺紙 (*zip3 zi2*), meaning “origami�
 ![Zipzi 2D editor showing the modeling workspace](docs/editor-screenshot.png)
 
 > **Early development:** There is no stable release yet. APIs and file formats
-> may change. The editor supports macOS; Windows support is a development
-> prototype with desktop validation still in progress.
+> may change. The editor supports macOS and Windows.
 
 ## Your editor. Your AI agent. One model.
 
@@ -193,7 +192,7 @@ for modeling, animation authoring, previews and inspection.
 | Animation | Motion, expression, physics and pose authoring; animation previews |
 | Project I/O | PSD import and Cubism-related formats, including Model3/MOC3, projects and runtime sidecars; support and loss rules vary by format and direction |
 | Automation | Python sessions, batch edits, shared undo/redo, project operations and model inspection |
-| Platforms | macOS; Windows development prototype |
+| Platforms | macOS and Windows |
 
 See the [SDK capability guide](crates/zipzi-python/CAPABILITIES.md) for details.
 GPU inspection requires a compatible host and usable GPU. Format support does
@@ -215,7 +214,7 @@ Development commands and focused test selection are below.
 
 Use Rust 1.95 or newer, uv 0.10.7 or newer, and CPython 3.14.
 The macOS Editor requires Xcode Command Line Tools and a Metal-capable GPU.
-The [Windows development prototype](crates/zipzi-editor/README.md) requires
+The [Windows Editor](crates/zipzi-editor/README.md) requires
 MSVC, the Windows SDK and a usable GPU.
 Run these commands from the repository root:
 
