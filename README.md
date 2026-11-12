@@ -18,6 +18,13 @@ and GPUI. Its name comes from Cantonese 摺紙 (*zip3 zi2*), meaning “origami�
 > **Early development:** There is no stable release yet. APIs and file formats
 > may change. The editor supports macOS and Windows.
 
+- **Open source and commercial friendly** — Create, refine, and use your models
+  commercially with an open-source editor and an MIT-licensed SDK.
+- **Native and high performance** — Built with Rust and GPUI for responsive
+  editing, even with complex models and dense meshes.
+- **Agent-ready** — Create from scratch, collaborate with AI, or import an
+  existing model for further refinement.
+
 ## Your editor. Your AI agent. One model.
 
 Describe what you want to your AI coding agent. It uses the Python SDK to inspect
