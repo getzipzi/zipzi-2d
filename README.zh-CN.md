@@ -18,7 +18,7 @@ Zipzi 2D 是 Live2D Cubism Editor 的开源替代选择，使用 Rust 和 GPUI �
 - **原生高性能** — 基于 Rust 和 GPUI 构建，内存占用低，面对复杂模型和密集网格，依然保持流畅响应。
 - **原生支持 AI Agent** — 从头创作、与 AI 协同建模，或导入现有模型继续精修。
 
-[观看 Zipzi 2D 演示视频](docs/zipzi-2d-demo.mp4)
+https://github.com/user-attachments/assets/de1f7895-540a-4ee9-90aa-56291931b384
 
 ## 你的编辑器，你的 AI agent，同一个模型。
 

@@ -18,7 +18,7 @@ Zipzi 2D は、Rust と GPUI で開発された Live2D Cubism Editor のオー�
 - **ネイティブで高性能** — Rust と GPUI で構築。メモリ使用量を抑えながら、複雑なモデルや高密度のメッシュも快適に編集できます。
 - **AI エージェントに対応** — ゼロからの制作、AI との共同モデリング、既存モデルの読み込みと調整ができます。
 
-[Zipzi 2D のデモ動画を見る](docs/zipzi-2d-demo.mp4)
+https://github.com/user-attachments/assets/de1f7895-540a-4ee9-90aa-56291931b384
 
 ## あなたのエディターと AI エージェントで、ひとつのモデルを。
 

@@ -25,7 +25,7 @@ and GPUI. Its name comes from Cantonese 摺紙 (*zip3 zi2*), meaning “origami�
 - **Agent-ready** — Create from scratch, collaborate with AI, or import an
   existing model for further refinement.
 
-[Watch the Zipzi 2D demo](docs/zipzi-2d-demo.mp4)
+https://github.com/user-attachments/assets/de1f7895-540a-4ee9-90aa-56291931b384
 
 ## Your editor. Your AI agent. One model.
 
