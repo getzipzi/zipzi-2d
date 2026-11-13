@@ -20,8 +20,8 @@ and GPUI. Its name comes from Cantonese 摺紙 (*zip3 zi2*), meaning “origami�
 
 - **Open source and commercial friendly** — Create, refine, and use your models
   commercially with an open-source editor and an MIT-licensed SDK.
-- **Native and high performance** — Built with Rust and GPUI for responsive
-  editing, even with complex models and dense meshes.
+- **Native and high performance** — Built with Rust and GPUI for low memory
+  usage and responsive editing, even with complex models and dense meshes.
 - **Agent-ready** — Create from scratch, collaborate with AI, or import an
   existing model for further refinement.
 
