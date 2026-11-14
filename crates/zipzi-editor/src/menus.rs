@@ -393,6 +393,7 @@ impl EditorView {
                 MenuItem::submenu(Menu::new(t!("menu.export")).items([
                     item(CommandId::ExportRuntime),
                     item(CommandId::ExportCubism),
+                    item(CommandId::ExportPsd),
                 ])),
                 item(CommandId::Close),
                 MenuItem::action(t!("menu.close_window"), CloseWindow)

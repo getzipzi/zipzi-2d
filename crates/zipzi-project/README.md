@@ -16,7 +16,9 @@ and retain their source description when saved again.
 
 `ProjectImporter` returns `ImportedProject` values containing frozen state,
 owned resources and protected input paths. Model3/MOC3, CMO3/CAN3, PSD and
-sidecar adapters use Builder and frozen projections. Project no longer contains
+sidecar adapters use Builder and frozen projections. `TransferFormat::Psd` publishes
+a layered raster snapshot of the default parameter pose from captured resources,
+using the document export bounds and atomic file replacement. Project no longer contains
 DocumentSession or DocumentStore; the caller decides when to publish an import.
 
 Focused checks:

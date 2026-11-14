@@ -232,6 +232,9 @@ impl Render for ExportForm {
                         cx.notify();
                     })),
             );
+        if self.format == TransferFormat::Psd {
+            content = content.child(div().child(t!("transfer.psd_hint").into_owned()));
+        }
         if self.format == TransferFormat::Cubism {
             content = content.child(
                 Checkbox::new("export-allow-loss")

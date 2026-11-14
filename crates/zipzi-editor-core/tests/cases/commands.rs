@@ -101,6 +101,7 @@ fn commands_check_targets_busy_state_and_workspace_availability() -> anyhow::Res
     for id in [
         CommandId::Undo,
         CommandId::Save,
+        CommandId::ExportPsd,
         CommandId::GlueTool,
         CommandId::LassoTool,
         CommandId::ZoomIn,

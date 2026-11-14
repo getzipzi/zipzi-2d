@@ -18,19 +18,13 @@ fn u32be(bytes: &[u8], pos: usize) -> u32 {
 fn exports_real_model_with_layers_and_composite() {
     let (psd, report) = from_model3_file(&fixture("gpu/gpu-package/model.model3.json")).unwrap();
     assert_eq!((report.width, report.height, report.layers), (640, 480, 19));
-    assert!(report.warnings.iter().any(|w| w.contains("masks")));
-    assert!(psd.len() < 100_000, "PSD layers should be compressed");
+    assert!(!report.warnings.iter().any(|w| w.contains("masks")));
     assert_eq!(&psd[..4], b"8BPS");
     assert_eq!(u32be(&psd, 14), 480);
     assert_eq!(u32be(&psd, 18), 640);
     let layer_section = 26 + 4 + 4;
     let layer_info = layer_section + 4;
     assert!(u32be(&psd, layer_section) > 0);
-    // A negative layer count signals that the merged preview has alpha.
-    assert_eq!(
-        i16::from_be_bytes(psd[layer_info + 4..layer_info + 6].try_into().unwrap()).abs(),
-        19
-    );
     let parsed = read_psd(
         &psd,
         &ReadOptions {
@@ -40,7 +34,54 @@ fn exports_real_model_with_layers_and_composite() {
         },
     )
     .unwrap();
-    let children = parsed.children.unwrap();
+    let tree = parsed.children.unwrap();
+    fn flatten<'a>(
+        tree: &'a [ag_psd::psd::Layer],
+        groups: &mut usize,
+    ) -> Vec<&'a ag_psd::psd::Layer> {
+        let mut layers = Vec::new();
+        for layer in tree {
+            if let Some(children) = &layer.children {
+                *groups += 1;
+                layers.extend(flatten(children, groups));
+            } else {
+                layers.push(layer);
+            }
+        }
+        layers
+    }
+    let mut groups = 0;
+    let children = flatten(&tree, &mut groups);
+    assert_eq!(children.len(), report.layers);
+    // Folder start/end records participate in PSD's signed layer count.
+    assert_eq!(
+        i16::from_be_bytes(psd[layer_info + 4..layer_info + 6].try_into().unwrap()).unsigned_abs()
+            as usize,
+        report.layers + 2 * groups
+    );
+    // Linear filtering adds intermediate colors; compare compression with the
+    // decoded payload instead of a size tuned to nearest-neighbor output.
+    let raw_bytes: usize = children
+        .iter()
+        .map(|layer| {
+            layer
+                .image_data
+                .as_ref()
+                .map_or(0, |image| image.data.len())
+                + layer
+                    .additional_info
+                    .mask
+                    .as_ref()
+                    .and_then(|mask| mask.image_data.as_ref())
+                    .map_or(0, |image| image.data.len())
+        })
+        .sum();
+    assert!(psd.len() < raw_bytes / 2, "PSD layers should be compressed");
+    assert!(children.iter().any(|layer| layer
+        .additional_info
+        .mask
+        .as_ref()
+        .is_some_and(|mask| mask.image_data.is_some())));
     let hidden: Vec<_> = children
         .iter()
         .filter(|layer| layer.hidden == Some(true))

@@ -218,7 +218,7 @@ impl EditorView {
                 CommandId::ImportModel3 => self.import(ImportKind::Model3, window, cx),
                 CommandId::ImportPsd => self.import(ImportKind::Psd, window, cx),
                 CommandId::ImportCubism => self.import(ImportKind::Cubism, window, cx),
-                CommandId::ExportRuntime | CommandId::ExportCubism => {
+                CommandId::ExportRuntime | CommandId::ExportCubism | CommandId::ExportPsd => {
                     self.open_export(command, window, cx)
                 }
                 CommandId::Save => self.save(false, window, cx),

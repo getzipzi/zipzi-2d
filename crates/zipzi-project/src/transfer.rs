@@ -11,6 +11,7 @@ use zipzi_core::{state::DocumentState, Status};
 pub enum TransferFormat {
     Runtime,
     Cubism,
+    Psd,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -163,6 +164,30 @@ impl TransferSnapshot {
             }
         }
         match format {
+            TransferFormat::Psd => {
+                let psd_error =
+                    |e: zipzi_moc3_psd::Error| Status::error("PSD_EXPORT", e.to_string());
+                let (bytes, report) = zipzi_moc3_psd::from_document(&self.document, &|asset| {
+                    let image = self
+                        .resources
+                        .read_texture(asset)
+                        .map_err(|s| zipzi_moc3_psd::Error::InvalidInput(s.message))?;
+                    Ok(zipzi_core::image::DecodedImage {
+                        width: image.width,
+                        height: image.height,
+                        rgba: image.rgba.to_vec(),
+                    })
+                })
+                .map_err(psd_error)?;
+                let mut publication = crate::cmo3::publish_bytes(
+                    &bytes,
+                    destination,
+                    &crate::filesystem::NativeFileSystem,
+                )
+                .map_err(|e| Status::error("PSD_IO", e.to_string()))?;
+                publication.notices = report.warnings;
+                Ok(publication)
+            }
             TransferFormat::Runtime => {
                 let plan = crate::package::build_export_plan_with(
                     &self.document,

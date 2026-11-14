@@ -1,8 +1,10 @@
-//! Export the default pose of a MOC3 model to a layered, 8-bit RGB PSD.
+//! Export the default pose of a model to a layered, 8-bit RGB PSD.
 //!
 //! A MOC3 contains geometry and UVs, but no pixels. Supply the texture PNGs
 //! through a model3.json file or an explicit texture-slot map.
 
+mod bitmap_mask;
+mod hierarchy;
 mod psd;
 mod raster;
 
@@ -101,24 +103,7 @@ fn convert(mut imported: ImportResult) -> Result<(Vec<u8>, ExportReport), Error>
         .setup()
         .source_canvas
         .expect("MOC3 import retains its canvas");
-    if !canvas.width.is_finite() || !canvas.height.is_finite() {
-        return Err(Error::InvalidInput("invalid canvas size".into()));
-    }
-    let width = canvas.width.round() as u32;
-    let height = canvas.height.round() as u32;
-    if width == 0 || height == 0 || width > 30_000 || height > 30_000 {
-        return Err(Error::PsdLimit(
-            "PSD dimensions must be 1..=30000 pixels".into(),
-        ));
-    }
-    if u64::from(width) * u64::from(height) > 64_000_000 {
-        return Err(Error::PsdLimit(
-            "canvas exceeds the 64 megapixel export limit".into(),
-        ));
-    }
-
     let mut textures = HashMap::<String, DecodedImage>::new();
-    let mut warnings = Vec::new();
     for reference in imported
         .document
         .mesh_order()
@@ -159,9 +144,82 @@ fn convert(mut imported: ImportResult) -> Result<(Vec<u8>, ExportReport), Error>
             .map_err(|e| Error::Model(e.message))?;
     }
     imported.document = b.freeze().map_err(|e| Error::Model(e.message))?.state;
+    encode_document(&imported.document, canvas, &textures)
+}
+
+/// Export frozen authoring content with captured textures. Uses the document's
+/// export bounds and default parameter pose, independently of editor previews.
+pub fn from_document(
+    document: &zipzi_core::state::DocumentState,
+    resolve: &impl Fn(&zipzi_core::state::AssetRecord) -> Result<DecodedImage, Error>,
+) -> Result<(Vec<u8>, ExportReport), Error> {
     let mut frame = DrawableFrame::default();
-    let status =
-        evaluate_frame_including_hidden(&imported.document, &PreviewValues::new(), &mut frame);
+    let status = evaluate_frame_including_hidden(document, &PreviewValues::new(), &mut frame);
+    if !status.is_ok() {
+        return Err(Error::Model(status.message));
+    }
+    let canvas = zipzi_core::geometry::finite_export_canvas(
+        document.setup().export,
+        frame
+            .drawables
+            .iter()
+            .flat_map(|d| d.positions.iter().copied()),
+    )
+    .map_err(|s| Error::InvalidInput(s.message))?;
+    let mut textures = HashMap::new();
+    for mesh in document
+        .mesh_order()
+        .iter()
+        .filter_map(|id| document.mesh(id))
+    {
+        let asset_id = mesh.texture_asset_id.resolved_id().ok_or_else(|| {
+            Error::Model(format!(
+                "missing texture reference {:?}",
+                mesh.texture_asset_id
+            ))
+        })?;
+        if textures.contains_key(asset_id) {
+            continue;
+        }
+        let asset = document
+            .asset(asset_id)
+            .ok_or_else(|| Error::Model(format!("missing texture {asset_id}")))?;
+        let image = resolve(asset)?;
+        if image.width == 0
+            || image.height == 0
+            || u64::from(image.width) * u64::from(image.height) * 4 != image.rgba.len() as u64
+        {
+            return Err(Error::InvalidInput(format!("invalid texture {}", asset.id)));
+        }
+        textures.insert(asset.id.clone(), image);
+    }
+    encode_document(document, canvas, &textures)
+}
+
+fn encode_document(
+    document: &zipzi_core::state::DocumentState,
+    canvas: zipzi_core::Canvas,
+    textures: &HashMap<String, DecodedImage>,
+) -> Result<(Vec<u8>, ExportReport), Error> {
+    if !canvas.width.is_finite() || !canvas.height.is_finite() {
+        return Err(Error::InvalidInput("invalid canvas size".into()));
+    }
+    let width = canvas.width.round() as u32;
+    let height = canvas.height.round() as u32;
+    if width == 0 || height == 0 || width > 30_000 || height > 30_000 {
+        return Err(Error::PsdLimit(
+            "PSD dimensions must be 1..=30000 pixels".into(),
+        ));
+    }
+    if u64::from(width) * u64::from(height) > 64_000_000 {
+        return Err(Error::PsdLimit(
+            "canvas exceeds the 64 megapixel export limit".into(),
+        ));
+    }
+
+    let mut warnings = Vec::new();
+    let mut frame = DrawableFrame::default();
+    let status = evaluate_frame_including_hidden(document, &PreviewValues::new(), &mut frame);
     if !status.is_ok() {
         return Err(Error::Model(status.message));
     }
@@ -170,23 +228,33 @@ fn convert(mut imported: ImportResult) -> Result<(Vec<u8>, ExportReport), Error>
     if drawables.len() > i16::MAX as usize {
         return Err(Error::PsdLimit("too many PSD layers".into()));
     }
-    if drawables.iter().any(|d| !d.masks.is_empty()) {
-        warnings.push("ArtMesh masks are not represented in the PSD".into());
-    }
     if !frame.offscreens.is_empty() {
         warnings.push("offscreen effects are not represented in the PSD".into());
     }
     if drawables.iter().any(|d| d.raw_blend_mode.is_some()) {
         warnings.push("extended blend modes are approximated as normal layers".into());
     }
-    let layers: Vec<Layer> = drawables
-        .into_iter()
-        .filter_map(|d| {
-            raster::rasterize(d, textures.get(&d.texture_asset_id)?, canvas, width, height)
-        })
-        .collect();
+    let mut masks = bitmap_mask::MaskSources::new(&frame, textures, canvas, width, height);
+    let mut layers = Vec::new();
+    for drawable in drawables {
+        let texture = textures.get(&drawable.texture_asset_id).ok_or_else(|| {
+            Error::Model(format!("missing texture {}", drawable.texture_asset_id))
+        })?;
+        if let Some(mut layer) = raster::rasterize(drawable, texture, canvas, width, height) {
+            if let Some(mesh) = document.mesh(&drawable.id) {
+                layer.name = hierarchy::display_name(&mesh.name, &mesh.runtime_id, &mesh.id);
+            }
+            layer.mask = masks.for_layer(drawable, &layer)?;
+            layers.push(layer);
+        }
+    }
     let layer_count = layers.len();
-    let bytes = psd::encode(width, height, layers)?;
+    let parts: Vec<_> = document
+        .part_order()
+        .iter()
+        .filter_map(|id| document.part(id))
+        .collect();
+    let bytes = psd::encode_with_parts(width, height, layers, &parts, &mut warnings)?;
     let report = ExportReport {
         width,
         height,

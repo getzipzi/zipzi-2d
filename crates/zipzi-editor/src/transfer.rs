@@ -23,10 +23,10 @@ impl EditorView {
             return;
         }
         self.animation_anchor = None;
-        let format = if command.id == CommandId::ExportRuntime {
-            TransferFormat::Runtime
-        } else {
-            TransferFormat::Cubism
+        let format = match command.id {
+            CommandId::ExportRuntime => TransferFormat::Runtime,
+            CommandId::ExportPsd => TransferFormat::Psd,
+            _ => TransferFormat::Cubism,
         };
         let owner = cx.weak_entity();
         window.defer(cx, move |window, cx| {
@@ -58,11 +58,14 @@ impl EditorView {
             .map(PathBuf::from)
             .or_else(|| zipzi_editor_core::platform_paths::user_home().ok())
             .unwrap_or_else(|| std::env::current_dir().expect("file dialog initial directory"));
-        let suggested = summary
+        let mut suggested = summary
             .title
             .unwrap_or_else(|| t!("project.untitled").into_owned())
             .trim_end_matches(".zipzi")
             .to_string();
+        if format == TransferFormat::Psd {
+            suggested.push_str(".psd");
+        }
         let picker = cx.prompt_for_new_path(&directory, Some(&suggested));
         self.modal = true;
         self.redraw(cx);

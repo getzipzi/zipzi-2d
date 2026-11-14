@@ -1,9 +1,20 @@
 use crate::{Error, Layer};
-use ag_psd::psd::{BlendMode as PsdBlendMode, Layer as PsdLayer, Psd, WriteOptions};
+use ag_psd::psd::{BlendMode as PsdBlendMode, Layer as PsdLayer, LayerMaskData, Psd, WriteOptions};
 use ag_psd::{write_psd, PixelData};
 use zipzi_core::types::BlendMode;
 
+#[cfg(test)]
 pub fn encode(width: u32, height: u32, layers: Vec<Layer>) -> Result<Vec<u8>, Error> {
+    encode_with_parts(width, height, layers, &[], &mut Vec::new())
+}
+
+pub(crate) fn encode_with_parts(
+    width: u32,
+    height: u32,
+    layers: Vec<Layer>,
+    parts: &[&zipzi_core::Part],
+    warnings: &mut Vec<String>,
+) -> Result<Vec<u8>, Error> {
     // PSD readers without layer support need a merged preview. The pixels
     // remain separate in `children`, where ag-psd applies ZIP compression.
     let mut composite = vec![0u8; width as usize * height as usize * 4];
@@ -15,11 +26,11 @@ pub fn encode(width: u32, height: u32, layers: Vec<Layer>) -> Result<Vec<u8>, Er
             for x in 0..layer.width {
                 let src = ((y * layer.width + x) * 4) as usize;
                 let dst = (((layer.top + y) * width + layer.left + x) * 4) as usize;
-                blend(
-                    &mut composite[dst..dst + 4],
-                    &layer.rgba[src..src + 4],
-                    layer.blend_mode,
-                );
+                let mut pixel: [u8; 4] = layer.rgba[src..src + 4].try_into().unwrap();
+                if let Some(mask) = &layer.mask {
+                    pixel[3] = ((u32::from(pixel[3]) * u32::from(mask[src / 4]) + 127) / 255) as u8;
+                }
+                blend(&mut composite[dst..dst + 4], &pixel, layer.blend_mode);
             }
         }
     }
@@ -27,9 +38,10 @@ pub fn encode(width: u32, height: u32, layers: Vec<Layer>) -> Result<Vec<u8>, Er
     // Affinity stacks the last PSD layer record on top. Keep Zipzi's
     // back-to-front draw order so its layer composite matches the preview.
     // Moving the buffers also avoids a second copy before encoding.
-    let children = layers
-        .into_iter()
-        .map(|layer| {
+    let mut entries = Vec::new();
+    for layer in layers {
+        let part_id = layer.part_id.clone();
+        let encoded = {
             let blend_mode = match layer.blend_mode {
                 BlendMode::Normal => PsdBlendMode::Normal,
                 BlendMode::Multiplicative => PsdBlendMode::Multiply,
@@ -38,6 +50,21 @@ pub fn encode(width: u32, height: u32, layers: Vec<Layer>) -> Result<Vec<u8>, Er
             PsdLayer {
                 additional_info: ag_psd::psd::LayerAdditionalInfo {
                     name: Some(layer.name),
+                    mask: layer.mask.map(|mask| LayerMaskData {
+                        top: Some(f64::from(layer.top)),
+                        left: Some(f64::from(layer.left)),
+                        default_color: Some(0.0),
+                        position_relative_to_layer: Some(false),
+                        image_data: Some(PixelData {
+                            width: layer.width,
+                            height: layer.height,
+                            data: mask
+                                .into_iter()
+                                .flat_map(|gray| [gray, gray, gray, 255])
+                                .collect(),
+                        }),
+                        ..Default::default()
+                    }),
                     ..Default::default()
                 },
                 top: Some(f64::from(layer.top)),
@@ -51,8 +78,10 @@ pub fn encode(width: u32, height: u32, layers: Vec<Layer>) -> Result<Vec<u8>, Er
                 }),
                 ..Default::default()
             }
-        })
-        .collect();
+        };
+        entries.push((part_id, encoded));
+    }
+    let children = crate::hierarchy::organize(entries, parts, warnings)?;
 
     let psd = Psd {
         width: f64::from(width),
@@ -104,6 +133,7 @@ mod tests {
     fn writes_back_layer_before_front_layer_for_affinity() {
         let layer = |name: &str, color| Layer {
             name: name.into(),
+            part_id: String::new(),
             hidden: false,
             left: 0,
             top: 0,
@@ -111,6 +141,7 @@ mod tests {
             height: 1,
             rgba: color,
             blend_mode: BlendMode::Normal,
+            mask: None,
         };
         let bytes = encode(
             1,
