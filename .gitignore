@@ -9,6 +9,7 @@ third_party/CubismSdkForNative*/
 /third_party/*
 !/third_party/purism-core/
 models/local/
+models/converted/
 benchmarks/cubism-matrix/assets/live2d/
 benchmarks/cubism-matrix/artifacts/
 benchmarks/cubism-matrix/runners/native/build*/

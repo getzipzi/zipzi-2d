@@ -28,7 +28,12 @@ pub fn main() -> Result<()> {
     let mut editor = Editor::empty();
     editor.register_primary_viewport(ViewportId::new(), ViewportKind::Modeling)?;
     editor.set_canvas_metrics(metrics);
-    let task = editor.prepare_load(LoadRequest::Model3(model))?.unwrap();
+    let request = if model.extension().is_some_and(|ext| ext == "zipzi") {
+        LoadRequest::Open(model)
+    } else {
+        LoadRequest::Model3(model)
+    };
+    let task = editor.prepare_load(request)?.unwrap();
     editor.finish_load(task.run())?;
     let preview = editor.preview()?;
     let wt = WgpuTargetConfig {
