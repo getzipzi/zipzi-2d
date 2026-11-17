@@ -1,7 +1,10 @@
 //! Immutable, inspectable package bytes and references, prepared before publication.
 use super::{validate_package_paths, RuntimeValidation};
 
-use crate::{export_cdi3, export_expression3, export_motion3, export_physics3, export_pose3};
+use crate::{
+    export_cdi3, export_expression3, export_motion3_with_summary, export_physics3, export_pose3,
+    MotionExportLimits,
+};
 use serde_json::Value;
 use std::{
     collections::{BTreeMap, HashSet},
@@ -164,6 +167,9 @@ pub struct ExportPlan {
     source: zipzi_core::state::ContentId,
 }
 impl ExportPlan {
+    pub fn report(&self) -> &Value {
+        &self.report
+    }
     pub fn files(&self) -> &BTreeMap<String, ExportFile> {
         &self.files
     }
@@ -187,6 +193,9 @@ pub fn build_export_plan_with(
     protected_paths: &[PathBuf],
     read: &dyn Fn(&zipzi_core::state::AssetRecord) -> Result<crate::AssetData, Status>,
 ) -> Result<ExportPlan, Status> {
+    let motion_limits = MotionExportLimits::default();
+    crate::preflight_motion_exports(doc, &motion_limits)
+        .map_err(|e| Status::error(e.code, format!("{}: {}", e.path, e.message)))?;
     if !doc.missing_attachments().is_empty() {
         return Err(Status::error(
             "MISSING_PACKAGE_ATTACHMENT",
@@ -236,15 +245,27 @@ pub fn build_export_plan_with(
     }
     let mut motions = Vec::new();
     let mut motion_paths = BTreeMap::new();
+    let mut motion_summaries = BTreeMap::new();
+    let mut motion_total = crate::MotionExportSummary::default();
     for id in doc.motion_order() {
         let clip = doc.motion(id).expect("ordered motion exists");
-        let content = export_motion3(doc, id).map_err(|error| {
+        let exported = export_motion3_with_summary(doc, id, &motion_limits).map_err(|error| {
             Status::error(error.code, format!("{}: {}", error.path, error.message))
         })?;
+        motion_total.auto_smooth_segments += exported.summary.auto_smooth_segments;
+        motion_total.frame_step_intervals += exported.summary.frame_step_intervals;
+        motion_total.output_segments += exported.summary.output_segments;
+        motion_total.boundary_segments += exported.summary.boundary_segments;
+        motion_summaries.insert(id.clone(), exported.summary);
         let path = asset_filename("motions", &clip.name, id, "motion3.json", &mut used_paths);
         motion_paths.insert(id.clone(), path.clone());
-        motions.push((path, clip.name.clone(), content));
+        motions.push((path, clip.name.clone(), exported.json));
     }
+    // Keep the job receipt bounded independently of clip count and user names.
+    let motion_notices: Vec<_> = motion_total
+        .notice("Animation curves")
+        .into_iter()
+        .collect();
     let pose = export_pose3(doc)
         .map_err(|error| Status::error(error.code, format!("{}: {}", error.path, error.message)))?;
     let physics = export_physics3(doc)
@@ -423,6 +444,8 @@ pub fn build_export_plan_with(
         "managed_attachments": managed_paths,
         "expressions": expressions.iter().map(|(path, name, _)| serde_json::json!({"path": path, "name": name})).collect::<Vec<_>>(),
         "motions": motions.iter().map(|(path, name, _)| serde_json::json!({"path": path, "name": name})).collect::<Vec<_>>(),
+        "motion_baking": motion_summaries,
+        "motion_baking_notices": motion_notices,
         "moc_version": moc_version,
 
         "package_reference_validation": "passed",

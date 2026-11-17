@@ -290,3 +290,6 @@ fn model3_motion_package_preserves_shared_file_registrations_and_atomic_import()
     assert_eq!(reopened.document.content_id(), revision);
     std::fs::remove_dir_all(temporary).unwrap();
 }
+
+#[path = "motion_tests/curve_authoring.rs"]
+mod curve_authoring;

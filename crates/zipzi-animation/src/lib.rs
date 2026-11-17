@@ -6,7 +6,8 @@ mod motion;
 mod motion_authoring;
 pub use motion::canonical_motion_seek_time;
 pub use motion_authoring::{
-    compile_motion_auto_smooth, motion_easing_controls, motion_frame_step_time, MotionCurveError,
+    compile_motion_auto_smooth, motion_easing_controls, motion_frame_step_boundary,
+    motion_frame_step_time, MotionCurveError,
 };
 mod replay;
 mod seek_cache;

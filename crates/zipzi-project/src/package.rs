@@ -219,6 +219,14 @@ fn publish_plan_with_filesystem(
         return Err(io::io_error(error));
     }
     let mut publication = Publication::finish(files, parent);
+    if let Some(notices) = report
+        .get("motion_baking_notices")
+        .and_then(|v| v.as_array())
+    {
+        publication
+            .notices
+            .extend(notices.iter().filter_map(|v| v.as_str()).map(str::to_owned));
+    }
     if let Some(message) = report
         .pointer("/cursor_preview/message")
         .and_then(|value| value.as_str())

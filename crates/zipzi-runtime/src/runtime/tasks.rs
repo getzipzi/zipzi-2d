@@ -376,8 +376,20 @@ impl Runtime {
                 "Export overlaps a resident project or pending output",
             ));
         }
+        let motion_workspace = if matches!(format, ExportFormat::Runtime) {
+            zipzi_project::preflight_motion_exports(
+                snapshot.document(),
+                &zipzi_project::MotionExportLimits::default(),
+            )
+            .map_err(|e| error(&e.code, &format!("{}: {}", e.path, e.message)))?
+            .estimated_workspace_bytes
+        } else {
+            0
+        };
         let leases = self.admit_job(TaskBudget {
-            workspace_bytes: 256 << 20,
+            workspace_bytes: (256usize << 20)
+                .checked_add(motion_workspace)
+                .ok_or_else(|| error("RESOURCE_LIMIT", "Export workspace overflow"))?,
             result_bytes: 1 << 20,
         })?;
         Ok(self.enqueue(

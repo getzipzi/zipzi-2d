@@ -25,6 +25,46 @@ pub enum MotionCurveError {
     /// Frame counts must be positive integers; one means Off.
     #[error("frame-step count must be greater than zero")]
     InvalidFrameStep,
+    /// Export/drawing cannot enumerate a grid whose integer indices or boundary
+    /// times exceed their exact representable range.
+    #[error("frame-step grid exceeds the representable time or index range")]
+    FrameStepPrecision,
+}
+
+fn frame_step_boundary(start: f32, fps: f32, frames: u32, index: f64) -> f32 {
+    (f64::from(start) + index * f64::from(frames) / f64::from(fps)) as f32
+}
+
+/// Canonical represented grid boundary, shared by playback time mapping,
+/// visible-range drawing and export baking. Enumerators must budget their output
+/// before calling this; an index is a count of N-frame holds, not a frame number.
+/// A one-frame grid is available for callers doing frame arithmetic, while
+/// `motion_frame_step_time` still treats N=1 as continuous sampling.
+pub fn motion_frame_step_boundary(
+    start: f32,
+    fps: f32,
+    frames: u32,
+    index: u64,
+) -> Result<f32, MotionCurveError> {
+    if !start.is_finite() {
+        return Err(MotionCurveError::NonFinitePoint);
+    }
+    if !fps.is_finite() || fps <= 0.0 {
+        return Err(MotionCurveError::InvalidFps);
+    }
+    if frames == 0 {
+        return Err(MotionCurveError::InvalidFrameStep);
+    }
+    // Consecutive integer indices must remain distinct in the f64 arithmetic
+    // used by the stateless sampler. Never silently saturate a baking counter.
+    if index > (1_u64 << 53) - 1 {
+        return Err(MotionCurveError::FrameStepPrecision);
+    }
+    let time = frame_step_boundary(start, fps, frames, index as f64);
+    if !time.is_finite() {
+        return Err(MotionCurveError::FrameStepPrecision);
+    }
+    Ok(time)
 }
 
 fn validate_point(point: MotionPoint) -> Result<(), MotionCurveError> {
@@ -141,8 +181,7 @@ pub fn motion_frame_step_time(
     if time <= start {
         return Ok(start);
     }
-    let boundary =
-        |index: f64| (f64::from(start) + index * f64::from(frames) / f64::from(fps)) as f32;
+    let boundary = |index: f64| frame_step_boundary(start, fps, frames, index);
     let mut index =
         ((f64::from(time) - f64::from(start)) * f64::from(fps) / f64::from(frames)).floor();
     if boundary(index) > time {

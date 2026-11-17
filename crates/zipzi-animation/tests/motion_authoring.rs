@@ -434,3 +434,44 @@ fn finite_wide_curve_values_do_not_overflow_during_sampling() {
     );
     assert_eq!(sample_motion_curve(&curve, 0., false), 0.);
 }
+
+#[test]
+fn enumerated_frame_step_boundaries_match_the_sampler_and_reject_inexact_indices() {
+    use zipzi_animation::motion_frame_step_boundary;
+    for start in [0., 0.1, 0.125, 4096.25] {
+        for fps in [24., 29.97, 60.] {
+            for frames in [2, 3, 7] {
+                let step = MotionFrameStep::from_frames(frames).unwrap();
+                for index in 1..128 {
+                    let previous =
+                        motion_frame_step_boundary(start, fps, frames, index - 1).unwrap();
+                    let time = motion_frame_step_boundary(start, fps, frames, index).unwrap();
+                    assert_eq!(
+                        motion_frame_step_time(start, time.next_down(), fps, step).unwrap(),
+                        previous
+                    );
+                    assert_eq!(
+                        motion_frame_step_time(start, time, fps, step).unwrap(),
+                        time
+                    );
+                }
+            }
+        }
+    }
+    assert_eq!(
+        motion_frame_step_boundary(0., 30., 3, 1_u64 << 53),
+        Err(MotionCurveError::FrameStepPrecision)
+    );
+    assert_eq!(
+        motion_frame_step_boundary(f32::MAX, 1., u32::MAX, (1_u64 << 53) - 1),
+        Ok(f32::MAX)
+    );
+    assert_eq!(
+        motion_frame_step_boundary(0., f32::MIN_POSITIVE, u32::MAX, 100),
+        Err(MotionCurveError::FrameStepPrecision)
+    );
+    assert_eq!(
+        motion_frame_step_boundary(0., 30., 0, 0),
+        Err(MotionCurveError::InvalidFrameStep)
+    );
+}

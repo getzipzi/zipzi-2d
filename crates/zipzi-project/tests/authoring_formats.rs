@@ -57,6 +57,58 @@ fn captured(input: &ImportedProject) {
         }
     }
 }
+
+#[test]
+fn curve_baking_is_reported_without_changing_authoring_and_limits_precede_publication() {
+    use zipzi_core::document::{MotionCurve, MotionFrameStep};
+    let (state, resources) = model();
+    let wire = r#"{"Version":3,"Meta":{"Duration":1,"Fps":30,"Loop":false,"AreBeziersRestricted":false,"CurveCount":1,"TotalSegmentCount":1,"TotalPointCount":2,"UserDataCount":0,"TotalUserDataSize":0},"Curves":[{"Target":"Model","Id":"Opacity","Segments":[0,0,0,1,1]}]}"#;
+    let state = import_motion3(&state, &id(100), "Curve", wire)
+        .unwrap()
+        .candidate;
+    let mut clip = state.motion(&id(100)).unwrap().clone();
+    let segment = &mut std::sync::Arc::make_mut(&mut clip.tracks[0].segments)[0];
+    segment.curve = MotionCurve::AutoSmooth {};
+    segment.frame_step = MotionFrameStep::EveryFrames { frames: 3 };
+    let mut builder = state.builder();
+    builder.replace_authored_motion(clip.clone()).unwrap();
+    let state = builder.freeze().unwrap().state;
+    let plan = build_export_plan(&state, &resources).unwrap();
+    let summary = &plan.report()["motion_baking"][&id(100)];
+    assert_eq!(summary["auto_smooth_segments"], 1);
+    assert_eq!(summary["frame_step_intervals"], 1);
+    assert_eq!(summary["output_segments"], 10);
+    let directory = tempfile::tempdir().unwrap();
+    let destination = directory.path().join("runtime");
+    let publication = publish_export_plan(&plan, &destination, &|_| {
+        Ok(PackageValidation::structural(
+            RuntimeValidation::NotPerformed,
+        ))
+    })
+    .unwrap();
+    assert_eq!(publication.notices.len(), 1);
+    assert!(publication.notices[0].contains("Frame Step"));
+    assert_eq!(state.motion(&id(100)), Some(&clip));
+    clip.duration = 1e15;
+    std::sync::Arc::make_mut(&mut clip.tracks[0].segments)[0]
+        .end
+        .time = clip.duration;
+    let mut builder = state.builder();
+    builder.replace_authored_motion(clip).unwrap();
+    let huge = builder.freeze().unwrap().state;
+    let untouched = directory.path().join("huge");
+    let error = publish_package(
+        &huge,
+        &PackageOptions {
+            resources,
+            destination: untouched.clone(),
+            validate: Some(Box::new(|_| panic!("must reject before validation"))),
+        },
+    )
+    .unwrap_err();
+    assert_eq!(error.code, "MOTION_EXPORT_LIMIT");
+    assert!(!untouched.exists());
+}
 #[test]
 fn runtime_package_import_captures_textures_and_preserves_geometry_after_sources_disappear() {
     let (state, resources) = model();

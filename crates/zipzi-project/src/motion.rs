@@ -14,6 +14,51 @@ use zipzi_live2d::motion3::{
     MotionPoint as WirePoint, MotionSegment as WireSegment, MotionTarget,
 };
 
+mod bake;
+
+/// Admission bounds for numeric curve compilation, Step expansion and encoding.
+#[derive(Debug, Clone, Copy)]
+pub struct MotionExportLimits {
+    pub max_output_segments: usize,
+    pub max_workspace_bytes: usize,
+}
+impl Default for MotionExportLimits {
+    fn default() -> Self {
+        Self {
+            max_output_segments: 1_000_000,
+            max_workspace_bytes: 256 << 20,
+        }
+    }
+}
+
+/// Curve-lowering evidence returned alongside motion3 bytes and package reports.
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize)]
+pub struct MotionExportSummary {
+    pub source_segments: usize,
+    pub estimated_output_segments: usize,
+    pub output_segments: usize,
+    pub auto_smooth_segments: usize,
+    pub frame_step_intervals: usize,
+    /// Generated hold spans before boundary-kind repairs.
+    pub frame_step_segments: usize,
+    pub boundary_segments: usize,
+    pub estimated_workspace_bytes: usize,
+}
+impl MotionExportSummary {
+    pub fn notice(&self, name: &str) -> Option<String> {
+        (self.frame_step_intervals > 0 || self.auto_smooth_segments > 0).then(|| format!(
+            "{name}: compiled {} Auto Smooth segments and baked {} Frame Step intervals; motion3 contains {} segments ({} boundary segments)",
+            self.auto_smooth_segments, self.frame_step_intervals, self.output_segments, self.boundary_segments,
+        ))
+    }
+}
+
+#[derive(Debug)]
+pub struct MotionExport {
+    pub json: String,
+    pub summary: MotionExportSummary,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MotionDiagnostic {
     pub code: String,
@@ -355,10 +400,91 @@ pub fn import_motion3(
 }
 
 pub fn export_motion3(document: &DocumentState, id: &str) -> Result<String, MotionProjectError> {
+    Ok(export_motion3_with_summary(document, id, &MotionExportLimits::default())?.json)
+}
+
+/// Estimate expansion without compiling or creating baked output points.
+pub fn preflight_motion3(
+    document: &DocumentState,
+    id: &str,
+    limits: &MotionExportLimits,
+) -> Result<MotionExportSummary, MotionProjectError> {
     let clip = document
         .motion(id)
         .ok_or_else(|| error("MISSING_MOTION", "$", id))?;
-    export_clip_motion3(document, clip)
+    Ok(export_estimate(document, clip, limits)?.summary)
+}
+
+/// Aggregate admission for packages, before any curve or model output is built.
+pub fn preflight_motion_exports(
+    document: &DocumentState,
+    limits: &MotionExportLimits,
+) -> Result<MotionExportSummary, MotionProjectError> {
+    let mut total = MotionExportSummary::default();
+    for id in document.motion_order() {
+        let remaining = MotionExportLimits {
+            max_output_segments: limits
+                .max_output_segments
+                .saturating_sub(total.estimated_output_segments),
+            max_workspace_bytes: limits
+                .max_workspace_bytes
+                .saturating_sub(total.estimated_workspace_bytes),
+        };
+        let current = preflight_motion3(document, id, &remaining)?;
+        macro_rules! add { ($($field:ident),*) => { $(total.$field = total.$field.checked_add(current.$field).ok_or_else(|| error("MOTION_EXPORT_LIMIT", "$.Curves", "Package motion estimate overflow"))?;)* }; }
+        add!(
+            source_segments,
+            estimated_output_segments,
+            auto_smooth_segments,
+            frame_step_intervals,
+            estimated_workspace_bytes
+        );
+    }
+    Ok(total)
+}
+
+fn export_estimate(
+    document: &DocumentState,
+    clip: &MotionClip,
+    limits: &MotionExportLimits,
+) -> Result<bake::Estimate, MotionProjectError> {
+    let mut estimate = bake::estimate(clip, limits)?;
+    for track in &clip.tracks {
+        let length = match &track.target {
+            MotionTrackTarget::Parameter { parameter_id } => document
+                .parameter(parameter_id)
+                .map_or(0, |p| p.runtime_id.len()),
+            MotionTrackTarget::PartOpacity { part_id } => {
+                document.part(part_id).map_or(0, |p| p.runtime_id.len())
+            }
+            MotionTrackTarget::Model { runtime_id }
+            | MotionTrackTarget::Unresolved { runtime_id, .. } => runtime_id.len(),
+            MotionTrackTarget::Unspecified => 0,
+        };
+        estimate.summary.estimated_workspace_bytes = length
+            .checked_mul(16)
+            .and_then(|n| n.checked_add(estimate.summary.estimated_workspace_bytes))
+            .filter(|&n| n <= limits.max_workspace_bytes)
+            .ok_or_else(|| {
+                error(
+                    "MOTION_EXPORT_LIMIT",
+                    "$.Curves",
+                    "Motion target names exceed the export workspace",
+                )
+            })?;
+    }
+    Ok(estimate)
+}
+
+pub fn export_motion3_with_summary(
+    document: &DocumentState,
+    id: &str,
+    limits: &MotionExportLimits,
+) -> Result<MotionExport, MotionProjectError> {
+    let clip = document
+        .motion(id)
+        .ok_or_else(|| error("MISSING_MOTION", "$", id))?;
+    export_clip_motion3(document, clip, limits)
 }
 
 pub(crate) fn opaque_export_problems(
@@ -382,21 +508,8 @@ pub(crate) fn opaque_export_problems(
 fn export_clip_motion3(
     document: &DocumentState,
     clip: &MotionClip,
-) -> Result<String, MotionProjectError> {
-    if clip.tracks.iter().any(|t| {
-        t.segments.iter().any(|s| {
-            matches!(
-                s.frame_step,
-                zipzi_contract::motion_curve::MotionFrameStep::EveryFrames { frames: 2.. }
-            )
-        })
-    }) {
-        return Err(error(
-            "MOTION_FRAME_STEP_BAKING_REQUIRED",
-            "$",
-            "Frame Step export baking is not yet available",
-        ));
-    }
+    limits: &MotionExportLimits,
+) -> Result<MotionExport, MotionProjectError> {
     if let Some(problem) = opaque_export_problems(document, clip).first() {
         return Err(error(
             problem.code(),
@@ -404,6 +517,7 @@ fn export_clip_motion3(
             "Imported opaque fields no longer match their provenance",
         ));
     }
+    let mut estimate = export_estimate(document, clip, limits)?;
     let curves = clip
         .tracks
         .iter()
@@ -449,23 +563,13 @@ fn export_clip_motion3(
                     runtime_id.clone(),
                 ),
             };
-            let (initial, segments) = if clip.source_key_range().is_some() {
-                runtime_curve(track, clip.duration, clip.restricted_beziers)
-            } else {
-                (
-                    wire_point(track.initial.point()),
-                    zipzi_animation::CompiledCurve::from_track(track, clip.fps)
-                        .segments
-                        .iter()
-                        .map(wire_segment)
-                        .collect(),
-                )
-            };
+            let (initial, segments) =
+                bake::track(track, clip, estimate.tracks[index], &mut estimate.summary)?;
             Ok(Motion3Curve {
                 target,
                 id: runtime_id,
-                initial,
-                segments,
+                initial: wire_point(initial),
+                segments: segments.iter().map(wire_segment).collect(),
                 fade_in: track.fade_in,
                 fade_out: track.fade_out,
                 extensions: track.extensions.clone(),
@@ -501,168 +605,42 @@ fn export_clip_motion3(
         user_data: Some(events),
         extensions: clip.extensions.clone(),
     };
-    encode_motion3(&wire).map_err(|e| error(e.code, e.path, e.message))
-}
-
-/// Runtime motion files contain the playback interval. Keep source-authoring
-/// pre-roll/tail keys in DocumentState and split their curves exactly at the boundary.
-fn runtime_curve(
-    track: &MotionTrack,
-    duration: f32,
-    restricted: bool,
-) -> (WirePoint, Vec<WireSegment>) {
-    let mut initial = wire_point(track.initial.point());
-    let mut previous = track.initial.point();
-    let mut segments = Vec::new();
-    let lerp = |a: MotionPoint, b: MotionPoint, t: f32| MotionPoint {
-        time: a.time + (b.time - a.time) * t,
-        value: a.value + (b.value - a.value) * t,
-    };
-    let split = |p: [MotionPoint; 4], t: f32| {
-        let a = lerp(p[0], p[1], t);
-        let b = lerp(p[1], p[2], t);
-        let c = lerp(p[2], p[3], t);
-        let d = lerp(a, b, t);
-        let e = lerp(b, c, t);
-        let mid = lerp(d, e, t);
-        ([p[0], a, d, mid], [mid, e, c, p[3]])
-    };
-    let parameter = |p: [MotionPoint; 4], time: f32| {
-        if restricted {
-            return ((time - p[0].time) / (p[3].time - p[0].time)).clamp(0., 1.);
-        }
-        let mut lo = 0.;
-        let mut hi = 1.;
-        for _ in 0..32 {
-            let t = (lo + hi) * 0.5;
-            let value = split(p, t).0[3].time;
-            if value < time {
-                lo = t;
-            } else {
-                hi = t;
-            }
-        }
-        (lo + hi) * 0.5
-    };
-    let compiled = zipzi_animation::CompiledCurve::from_track(track, 1.);
-    for segment in compiled.segments.iter() {
-        let end = segment.end();
-        if end.time <= 0. {
-            previous = end;
-            initial = wire_point(end);
-            continue;
-        }
-        if previous.time >= duration {
-            break;
-        }
-        let left = previous.time.max(0.);
-        let right = end.time.min(duration);
-        if right < left {
-            previous = end;
-            continue;
-        }
-        let (start, wire) = match segment {
-            zipzi_animation::CompiledSegment::Bezier {
-                control1, control2, ..
-            } => {
-                let mut p = [previous, *control1, *control2, end];
-                if restricted {
-                    let span = end.time - previous.time;
-                    p[1].time = previous.time + span / 3.;
-                    p[2].time = previous.time + 2. * span / 3.;
-                }
-                if right < end.time {
-                    p = split(p, parameter(p, right)).0;
-                }
-                if left > previous.time {
-                    p = split(p, parameter(p, left)).1;
-                }
-                p[0].time = left;
-                p[3].time = right;
-                (
-                    p[0],
-                    WireSegment::Bezier {
-                        control1: wire_point(p[1]),
-                        control2: wire_point(p[2]),
-                        end: wire_point(p[3]),
-                    },
-                )
-            }
-            zipzi_animation::CompiledSegment::Linear { .. } => {
-                let value = |time: f32| {
-                    lerp(
-                        previous,
-                        end,
-                        ((time - previous.time) / (end.time - previous.time)).clamp(0., 1.),
-                    )
-                    .value
-                };
-                (
-                    MotionPoint {
-                        time: left,
-                        value: value(left),
-                    },
-                    WireSegment::Linear {
-                        end: WirePoint {
-                            time: right,
-                            value: value(right),
-                        },
-                    },
-                )
-            }
-            zipzi_animation::CompiledSegment::Stepped { .. } => (
-                MotionPoint {
-                    time: left,
-                    value: previous.value,
-                },
-                WireSegment::Stepped {
-                    end: WirePoint {
-                        time: right,
-                        value: if right == end.time {
-                            end.value
-                        } else {
-                            previous.value
-                        },
-                    },
-                },
-            ),
-            zipzi_animation::CompiledSegment::InverseStepped { .. } => (
-                MotionPoint {
-                    time: left,
-                    value: if left == previous.time {
-                        previous.value
-                    } else {
-                        end.value
-                    },
-                },
-                WireSegment::InverseStepped {
-                    end: WirePoint {
-                        time: right,
-                        value: end.value,
-                    },
-                },
-            ),
-        };
-        if segments.is_empty() {
-            initial = wire_point(start);
-        }
-        if right > left {
-            segments.push(wire);
-        }
-        previous = end;
-        if end.time >= duration {
-            break;
-        }
-    }
-    if initial.time < 0. || initial.time > duration {
-        initial.time = 0.;
-    }
-    (initial, segments)
+    let json = encode_motion3(&wire).map_err(|e| error(e.code, e.path, e.message))?;
+    Ok(MotionExport {
+        json,
+        summary: estimate.summary,
+    })
 }
 
 #[cfg(test)]
 mod source_range_tests {
     use super::*;
+    fn runtime_curve(
+        track: &MotionTrack,
+        duration: f32,
+        restricted: bool,
+    ) -> (WirePoint, Vec<WireSegment>) {
+        let clip: MotionClip = serde_json::from_value(serde_json::json!({
+            "id":"clip", "name":"test", "duration":duration, "fps":30., "looping":false,
+            "restricted_beziers":restricted, "fade_in":null, "fade_out":null, "tracks":[track],
+            "events":[], "track_order":[], "extensions":{},
+            "meta_extensions":{"ZipziSourceKeyRange":{"start":-1.,"end":2.}}
+        }))
+        .unwrap();
+        let estimate = bake::estimate(&clip, &MotionExportLimits::default()).unwrap();
+        let (initial, segments) = bake::track(
+            track,
+            &clip,
+            estimate.tracks[0],
+            &mut MotionExportSummary::default(),
+        )
+        .unwrap();
+        (
+            wire_point(initial),
+            segments.iter().map(wire_segment).collect(),
+        )
+    }
+
     fn track(segment: MotionSegment) -> MotionTrack {
         MotionTrack {
             id: "track".into(),
@@ -765,5 +743,5 @@ pub fn export_available_motion3(
         .retain(|t| !projection.disabled.iter().any(|d| d.track_id == t.id));
     clip.track_order
         .retain(|id| clip.tracks.iter().any(|t| &t.id == id));
-    export_clip_motion3(document, &clip)
+    Ok(export_clip_motion3(document, &clip, &MotionExportLimits::default())?.json)
 }

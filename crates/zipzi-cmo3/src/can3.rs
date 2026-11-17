@@ -276,16 +276,6 @@ fn keys(
     inferred: bool,
     restricted: bool,
 ) -> Result<Vec<Key>, Cmo3Error> {
-    if track.segments.iter().any(|s| {
-        matches!(
-            s.frame_step,
-            zipzi_core::document::MotionFrameStep::EveryFrames { frames: 2.. }
-        )
-    }) {
-        return Err(Cmo3Error::InvalidDocument(
-            "CAN3 Frame Step requires explicit frame baking".into(),
-        ));
-    }
     let compiled = zipzi_animation::CompiledCurve::from_track(track, fps);
     let mut keys: Vec<_> = track
         .keys()
@@ -487,6 +477,23 @@ fn prepare(
     bake: bool,
     auto: bool,
 ) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error> {
+    if doc
+        .motion_order()
+        .iter()
+        .filter_map(|id| doc.motion(id))
+        .flat_map(|clip| clip.tracks.iter())
+        .flat_map(|track| track.segments.iter())
+        .any(|segment| {
+            matches!(
+                segment.frame_step,
+                zipzi_core::document::MotionFrameStep::EveryFrames { frames: 2.. }
+            )
+        })
+    {
+        return Err(Cmo3Error::InvalidDocument(
+            "CAN3 cannot preserve segment Frame Step; export motion3 for baked playback".into(),
+        ));
+    }
     let mut report = Cmo3Report::default();
     let canvas = crate::canvas::for_document(doc)?;
     if [canvas.width, canvas.height]

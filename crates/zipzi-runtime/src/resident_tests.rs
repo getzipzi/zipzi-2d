@@ -1710,6 +1710,47 @@ fn sampled_tasks_keep_frozen_provenance_across_publication_and_yield() {
 }
 
 #[test]
+fn motion_baking_is_preflighted_before_export_jobs_and_path_reservations() {
+    let (mut rt, client, session) = setup();
+    let before = rt.read_snapshot(client, session).unwrap();
+    let wire = r#"{"Version":3,"Meta":{"Duration":1000000000000000,"Fps":30,"Loop":false,"AreBeziersRestricted":false,"CurveCount":1,"TotalSegmentCount":1,"TotalPointCount":2,"UserDataCount":0,"TotalUserDataSize":0},"Curves":[{"Target":"Model","Id":"Opacity","Segments":[0,0,0,1000000000000000,1]}]}"#;
+    let candidate =
+        zipzi_project::import_motion3(before.snapshot.document(), &id(100), "Huge", wire)
+            .unwrap()
+            .candidate;
+    let mut clip = candidate.motion(&id(100)).unwrap().clone();
+    Arc::make_mut(&mut clip.tracks[0].segments)[0].frame_step =
+        zipzi_core::document::MotionFrameStep::EveryFrames { frames: 2 };
+    let d = draft(&mut rt, client, session);
+    let (d, ()) = rt
+        .batch(client, d, |commands| commands.create_motion(clip))
+        .unwrap();
+    rt.publish(client, d, "curve").unwrap();
+    let expected = version(&rt, client, session);
+    let usage = rt.resources().budget().usage();
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("runtime");
+    assert_eq!(
+        code(rt.request_export(
+            client,
+            QuerySource::Published(expected),
+            &path,
+            zipzi_contract::kernel_tasks::ExportFormat::Runtime,
+            false
+        )),
+        "MOTION_EXPORT_LIMIT"
+    );
+    assert_eq!(version(&rt, client, session), expected);
+    assert_eq!(
+        rt.resources().budget().usage().transfer_bytes,
+        usage.transfer_bytes
+    );
+    assert!(rt.reservations.is_empty());
+    assert!(rt.next_work().is_none());
+    assert!(!path.exists());
+}
+
+#[test]
 fn exported_files_report_success_after_late_cancellation_without_changing_save_marker() {
     let (mut rt, client, session) = setup();
     let directory = tempfile::tempdir().unwrap();
@@ -1738,6 +1779,21 @@ fn exported_files_report_success_after_late_cancellation_without_changing_save_m
         .as_ref()
         .unwrap()
         .is_ok());
+    let captured = rt.read_snapshot(client, session).unwrap();
+    let wire = r#"{"Version":3,"Meta":{"Duration":1,"Fps":30,"Loop":false,"AreBeziersRestricted":false,"CurveCount":1,"TotalSegmentCount":1,"TotalPointCount":2,"UserDataCount":0,"TotalUserDataSize":0},"Curves":[{"Target":"Model","Id":"Opacity","Segments":[0,0,0,1,1]}]}"#;
+    let candidate =
+        zipzi_project::import_motion3(captured.snapshot.document(), &id(100), "Stepped", wire)
+            .unwrap()
+            .candidate;
+    let mut clip = candidate.motion(&id(100)).unwrap().clone();
+    let segment = &mut Arc::make_mut(&mut clip.tracks[0].segments)[0];
+    segment.curve = MotionCurve::AutoSmooth {};
+    segment.frame_step = zipzi_core::document::MotionFrameStep::EveryFrames { frames: 3 };
+    let d = draft(&mut rt, client, session);
+    let (d, ()) = rt
+        .batch(client, d, |commands| commands.create_motion(clip))
+        .unwrap();
+    rt.publish(client, d, "curve").unwrap();
     let source = QuerySource::Published(version(&rt, client, session));
     let path = directory.path().join("runtime");
     let job = rt
@@ -1765,6 +1821,10 @@ fn exported_files_report_success_after_late_cancellation_without_changing_save_m
         panic!("export result")
     };
     assert!(receipt.published);
+    assert!(receipt
+        .notices
+        .iter()
+        .any(|notice| notice.contains("Frame Step")));
     assert!(path.is_dir());
     assert!(rt
         .session_read(client, session)

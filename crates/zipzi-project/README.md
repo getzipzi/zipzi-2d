@@ -134,7 +134,16 @@ marker. Missing records remain missing when older projects are opened. Copies
 and undo retain these records; exchange formats such as CMO3 report their loss.
 
 Motion initial keys and segment endpoints carry persistent UUIDs; Bezier
-controls remain anonymous points. Key IDs are excluded from motion3 arrays and
+controls remain anonymous points. Auto Smooth compiles to numeric Bezier controls;
+Frame Step lowers to Step spans using the same represented frame grid and sampler
+as preview. `preflight_motion3` / `preflight_motion_exports` bound segment growth
+and workspace before compilation. `export_motion3_with_summary` returns the
+actual lowering counts; package reports and publication notices expose them.
+Exports leave native authoring modes, preset sources and N intact. Reimported
+motion3 contains ordinary numeric curves. CAN3 explicitly rejects interval Frame
+Step, including when its existing animation resampling option is enabled.
+
+Key IDs are excluded from motion3 arrays and
 opaque-content fingerprints; reimporting a motion allocates fresh key identities.
 
 ## Bounded observation resources

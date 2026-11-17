@@ -34,8 +34,9 @@ pub use expression::{
 };
 pub use filesystem::{FileSystem, NativeFileSystem, Publication};
 pub use motion::{
-    export_available_motion3, export_motion3, import_motion3, MotionDiagnostic, MotionImport,
-    MotionProjectError,
+    export_available_motion3, export_motion3, export_motion3_with_summary, import_motion3,
+    preflight_motion3, preflight_motion_exports, MotionDiagnostic, MotionExport,
+    MotionExportLimits, MotionExportSummary, MotionImport, MotionProjectError,
 };
 pub use package::{
     build_export_plan, publish_export_plan, publish_package, ExportFile, ExportFileKind,
