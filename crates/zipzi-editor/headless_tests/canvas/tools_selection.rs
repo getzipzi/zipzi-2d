@@ -1,5 +1,7 @@
 use super::super::setup;
 use super::common::*;
+#[path = "../../../../fixtures/multi-mesh-edit.rs"]
+mod glue_fixture;
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{
     AppContext as _, InputEvent as _, PinchEvent, ScrollDelta, ScrollWheelEvent, TestAppContext,
@@ -418,6 +420,164 @@ fn glue_parameter_slider_and_connected_vertex_edit_stay_available(cx: &mut TestA
         .unwrap()
         .id;
     assert_preview_slider_quiet_until_edit(cx, document, assets, parameter, &[]);
+}
+
+#[gpui_kit::test]
+fn glue_toolbar_switches_connections_and_visible_weight_brushes(cx: &mut TestAppContext) {
+    use zipzi_editor_core::{EditorCommand, GlueBrushMode, ObjectKind, ObjectRef, ToolId};
+    let assets = tempfile::tempdir().unwrap();
+    let mut session = glue_fixture::create(
+        assets.path(),
+        include_bytes!("../../../zipzi-editor-core/tests/fixtures/alpha-asymmetric.png"),
+    )
+    .unwrap();
+    let glue_id = glue_fixture::id(5);
+    crate::test_fixture::publish_fixture(&mut session, "Glue", |edit| {
+        crate::test_fixture::insert_glue(
+            edit,
+            zipzi_core::Glue {
+                id: glue_id.clone(),
+                mesh_a_id: glue_fixture::id(2).into(),
+                mesh_b_id: glue_fixture::id(4).into(),
+                pairs: vec![zipzi_core::GlueVertexPair {
+                    vertex_a: Some(0),
+                    vertex_b: Some(0),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            },
+        )
+    })
+    .unwrap();
+    let saved =
+        crate::test_fixture::save_fixture(&mut session, &assets.path().join("glue.zipzi")).unwrap();
+    let document = zipzi_editor_core::Document::open(&saved.path).unwrap();
+    let harness = super::super::setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, _, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::SelectObjects(vec![]))
+                .unwrap();
+            view.redraw(cx);
+        });
+    })
+    .unwrap();
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("tool_glue", cx);
+        window.render_frame(cx);
+        assert!(window.find(format!("glue-label-{glue_id}")).visible());
+        assert!(
+            window.try_find("brush-selection-controls").is_none(),
+            "brush controls wait for a Glue target"
+        );
+        assert!(!harness.view.read(cx).editor.glue_editing_weights());
+        window.click(format!("glue-label-{glue_id}"), cx);
+        window.render_frame(cx);
+        assert!(window.find("glue-brush-modes").visible());
+        assert!(harness.view.read(cx).editor.glue_editing_weights());
+        window.click("tool_select", cx);
+        window.render_frame(cx);
+        assert!(window.try_find("brush-selection-controls").is_none());
+        window.click(format!("glue-label-{glue_id}"), cx);
+        window.render_frame(cx);
+        assert!(window.find("glue-brush-modes").visible());
+        assert!(harness.view.read(cx).editor.glue_editing_weights());
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (0, 0)
+        );
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, _, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::SelectObjects(
+                    [2, 4]
+                        .map(|id| ObjectRef::new(ObjectKind::Mesh, glue_fixture::id(id)))
+                        .into(),
+                ))
+                .unwrap();
+            view.redraw(cx);
+        });
+    })
+    .unwrap();
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("tool_manual_mesh", cx);
+        window.render_frame(cx);
+        assert!(window.find("mesh-edit-actions").visible());
+        assert!(window.find("mesh-glue-add-point").visible());
+        assert!(window.find("mesh-glue-bind").visible());
+        assert!(window.find("mesh-glue-unbind").visible());
+        assert!(window.try_find("glue-stitch-bar").is_none());
+        window.click("mesh-glue-add-point", cx);
+        window.render_frame(cx);
+        assert!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .manual_glue_controls(
+                    harness
+                        .view
+                        .read(cx)
+                        .editor
+                        .primary_viewport_binding()
+                        .unwrap()
+                )
+                .unwrap()
+                .add_glue_point
+        );
+        window.click("tool_manual_mesh", cx);
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::SelectObject(ObjectRef::new(
+                    ObjectKind::Glue,
+                    glue_id.clone(),
+                )))
+                .unwrap();
+            view.redraw(cx);
+        });
+    })
+    .unwrap();
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("glue-edit-points", cx);
+        window.render_frame(cx);
+        assert!(window.find("mesh-edit-actions").visible());
+        assert!(harness.view.read(cx).editor.manual_active());
+    })
+    .unwrap();
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("mesh-glue-weights", cx);
+        window.render_frame(cx);
+        assert!(window.find("glue-brush-modes").visible());
+        window.click("glue-mode-follow-b", cx);
+        assert_eq!(
+            harness.view.read(cx).editor.glue_brush_mode(),
+            GlueBrushMode::FollowB
+        );
+        assert_eq!(harness.view.read(cx).editor.active_tool(), ToolId::Glue);
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (0, 0)
+        );
+    })
+    .unwrap();
 }
 
 #[gpui_kit::test]
@@ -985,7 +1145,7 @@ fn surface_click_and_tool_shortcuts_use_document_selection(cx: &mut TestAppConte
         window.press("g", cx);
         assert_eq!(
             harness.view.read(cx).editor.active_tool(),
-            zipzi_editor_core::ToolId::Select
+            zipzi_editor_core::ToolId::Glue
         );
         harness.view.update(cx, |view, cx| {
             view.run_command(zipzi_editor_core::CommandId::GlueTool, window, cx)

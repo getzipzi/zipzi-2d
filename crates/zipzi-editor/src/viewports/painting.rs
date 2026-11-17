@@ -356,3 +356,56 @@ pub(super) fn move_handles(
         })
         .collect()
 }
+
+pub(super) fn glue_markers(
+    overlay: &zipzi_editor_core::OverlaySnapshot,
+    cx: &App,
+) -> Vec<AnyElement> {
+    let theme = cx.theme();
+    let mut markers = Vec::new();
+    for label in &overlay.glue_labels {
+        markers.push(
+            div()
+                .id(SharedString::from(format!(
+                    "glue-label-{}",
+                    label.object.id
+                )))
+                .test_support()
+                .aria_label(label.name.clone())
+                .absolute()
+                .left(px(label.position.x))
+                .top(px(label.position.y))
+                .w(px(zipzi_editor_core::OverlayGlueLabel::WIDTH))
+                .h(px(zipzi_editor_core::OverlayGlueLabel::HEIGHT))
+                .px(px(5.))
+                .rounded_sm()
+                .border_1()
+                .border_color(if label.locked {
+                    theme.border
+                } else if label.selected {
+                    gpui_kit::rgb(0x8d6800).into()
+                } else {
+                    gpui_kit::rgb(0xbd9000).into()
+                })
+                .bg(if label.locked {
+                    theme.background
+                } else {
+                    gpui_kit::rgb(0xffd000).into()
+                })
+                .text_color(if label.locked {
+                    theme.muted_foreground
+                } else {
+                    gpui_kit::rgb(0x332700).into()
+                })
+                .text_size(px(11.))
+                .when(label.selected, |label| {
+                    label.font_weight(FontWeight::SEMIBOLD)
+                })
+                .cursor_pointer()
+                .truncate()
+                .child(label.name.clone())
+                .into_any_element(),
+        );
+    }
+    markers
+}

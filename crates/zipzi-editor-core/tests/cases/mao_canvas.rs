@@ -2,13 +2,12 @@ use zipzi_editor_core::{
     CanvasInput, Document, EditorCommand, ObjectKind, ObjectRef, ViewportMetrics, ViewportPoint,
 };
 
-#[test]
-fn mao_artmesh266_is_editable_at_its_initial_parameter_values() -> anyhow::Result<()> {
+fn mao_document() -> anyhow::Result<Option<(Document, tempfile::TempDir)>> {
     let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../models/local/mao/mao_pro_t06.cmo3");
     if !source.exists() {
         eprintln!("SKIP: local Mao Cubism project unavailable");
-        return Ok(());
+        return Ok(None);
     }
     // Exercise initial authoring independently of the host's separate archive
     // workspace limits and the adjacent animation project's absolute links.
@@ -38,7 +37,14 @@ fn mao_artmesh266_is_editable_at_its_initial_parameter_values() -> anyhow::Resul
     let resources = zipzi_sdk::ResourceView::default().with_images(images);
     let io = zipzi_sdk::ProjectIo::new(fixture.path(), store);
     io.save(&builder.freeze()?.state, &resources, &path, None, || true)?;
-    let mut doc = Document::open(&path)?;
+    Ok(Some((Document::open(&path)?, fixture)))
+}
+
+#[test]
+fn mao_artmesh266_is_editable_at_its_initial_parameter_values() -> anyhow::Result<()> {
+    let Some((mut doc, _fixture)) = mao_document()? else {
+        return Ok(());
+    };
     let initial = doc.snapshot()?;
     let mesh = initial
         .viewport_frame
@@ -177,5 +183,126 @@ fn mao_artmesh266_is_editable_at_its_initial_parameter_values() -> anyhow::Resul
     })?;
     super::support::present_canvas(&mut editor)?;
     assert_eq!(editor.overlay().target_label, label);
+    Ok(())
+}
+
+#[test]
+fn mao_glue_import_roundoff_can_be_painted_canceled_and_undone() -> anyhow::Result<()> {
+    use zipzi_editor_core::{BrushSelectionSettings, CommandId, ToolId};
+    let Some((mut doc, _fixture)) = mao_document()? else {
+        return Ok(());
+    };
+    let original = {
+        let host = doc.runtime_host();
+        let snapshot = super::support::published_snapshot(&host, doc.runtime_session_id())?;
+        let model = snapshot.document();
+        let glue = model
+            .glue_order()
+            .iter()
+            .filter_map(|id| model.glue(id))
+            .find(|g| g.runtime_id == "Glue__ArtMesh180__ArtMesh179")
+            .unwrap();
+        assert_eq!(glue.pairs.len(), 19);
+        assert_eq!(
+            glue.pairs
+                .iter()
+                .filter(|p| p.weight_a + p.weight_b > 1.)
+                .count(),
+            3
+        );
+        zipzi_sdk::validate_glue_weight_edit(model, glue)?;
+        glue.clone()
+    };
+    doc.select_object(ObjectRef::new(ObjectKind::Glue, &original.id))?;
+    let mut editor = super::support::editor_from_document(doc);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 1200.,
+        height: 900.,
+        scale_factor: 1.,
+    });
+    editor.dispatch(editor.command(CommandId::FitView))?;
+    editor.execute(EditorCommand::SetTool(ToolId::Glue))?;
+    editor.execute(EditorCommand::SetGlueBrushSettings(
+        BrushSelectionSettings {
+            diameter: BrushSelectionSettings::MAX_DIAMETER,
+            weight: 0.2,
+            hardness: 1.,
+            ..Default::default()
+        },
+    ))?;
+    let frame = super::support::present_canvas(&mut editor)?;
+    assert!(
+        editor
+            .glue_paint_controls(frame.version.binding)
+            .unwrap()
+            .diagnostic
+            .is_none()
+    );
+    let overlay = editor.overlay();
+    let pair = &overlay.glue_weights[5];
+    let center = ViewportPoint {
+        x: (pair.a.x + pair.b.x) / 2.,
+        y: (pair.a.y + pair.b.y) / 2.,
+    };
+    let point = (-5..=5)
+        .flat_map(|y| {
+            (-5..=5).map(move |x| ViewportPoint {
+                x: center.x + x as f32 * 20.,
+                y: center.y + y as f32 * 20.,
+            })
+        })
+        .find(|p| {
+            p.x >= 0.
+                && p.y >= 0.
+                && p.x <= 1200.
+                && p.y <= 900.
+                && (p.x - pair.a.x).hypot(p.y - pair.a.y) < 400.
+                && (p.x - pair.b.x).hypot(p.y - pair.b.y) < 400.
+                && !overlay.glue_labels.iter().any(|l| {
+                    p.x >= l.position.x
+                        && p.x <= l.position.x + 130.
+                        && p.y >= l.position.y
+                        && p.y <= l.position.y + 20.
+                })
+        })
+        .expect("brush point clear of labels");
+    let read = |editor: &zipzi_editor_core::Editor| -> anyhow::Result<zipzi_core::Glue> {
+        let doc = editor.document().unwrap();
+        let host = doc.runtime_host();
+        let snapshot = super::support::published_snapshot(&host, doc.runtime_session_id())?;
+        Ok(snapshot.document().glue(&original.id).unwrap().clone())
+    };
+    assert_eq!(
+        read(&editor)?,
+        original,
+        "opening weight editing preserves imported values"
+    );
+    let down = CanvasInput::Down {
+        point,
+        shift: false,
+        alt: false,
+        primary: false,
+    };
+    assert!(super::support::pointer_input(&mut editor, down)?);
+    super::support::pointer_input(&mut editor, CanvasInput::Cancel)?;
+    assert_eq!(read(&editor)?, original);
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    super::support::present_canvas(&mut editor)?;
+    assert!(super::support::pointer_input(&mut editor, down)?);
+    super::support::pointer_input(&mut editor, CanvasInput::Up { point })?;
+    let painted = read(&editor)?;
+    assert_ne!(painted.pairs, original.pairs);
+    for (a, b) in painted.pairs.iter().zip(&original.pairs) {
+        if a != b {
+            assert!(a.weight_a >= 0. && a.weight_b >= 0. && a.weight_a + a.weight_b <= 1.);
+        }
+    }
+    assert_eq!(painted.binding, original.binding);
+    assert_eq!(painted.intensity, original.intensity);
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(read(&editor)?, original);
+    editor.execute(EditorCommand::Redo)?;
+    assert_eq!(read(&editor)?, painted);
     Ok(())
 }

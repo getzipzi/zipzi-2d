@@ -23,6 +23,53 @@ impl GlueOperation {
     }
 }
 
+/// Evaluate the base or ordinary keyform grid before adding BlendShape deltas.
+pub fn ordinary_glue_intensity(
+    doc: &impl EvaluationModel,
+    values: &PreviewValues,
+    glue: &crate::Glue,
+) -> f32 {
+    let mut intensity = glue.intensity;
+    if let Some(b) = glue
+        .binding
+        .as_ref()
+        .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+    {
+        let mut scratch = selection::Selection::default();
+        let sel = selection::select(doc, values, &b.axes, &mut scratch);
+        intensity = sel
+            .indices
+            .iter()
+            .zip(&sel.weights)
+            .map(|(&i, &w)| b.keyforms[i].intensity * w)
+            .sum();
+    }
+    intensity
+}
+
+/// Evaluate strength independently of endpoint visibility or pair completeness.
+pub fn evaluated_glue_intensity(
+    doc: &impl EvaluationModel,
+    values: &PreviewValues,
+    glue: &crate::Glue,
+) -> f32 {
+    let mut intensity = ordinary_glue_intensity(doc, values, glue);
+    let mut blends = doc
+        .iter_active_blend_bindings_for_target(&glue.id)
+        .peekable();
+    if blends.peek().is_some() {
+        for binding in blends {
+            if let DeltaKeyforms::Glue(forms) = &binding.keyforms {
+                for (i, weight) in selection::evaluate_blend_binding(doc, values, binding) {
+                    intensity += forms[i].intensity * weight;
+                }
+            }
+        }
+        intensity = intensity.clamp(0., 1.);
+    }
+    intensity
+}
+
 /// Values are the evaluated parameters of the displayed frame. Disabled scene
 /// relationships and incomplete pairs are excluded, just as in frame evaluation.
 pub fn evaluated_glue_operations(
@@ -36,32 +83,7 @@ pub fn evaluated_glue_operations(
             continue;
         }
         let glue = doc.get_glue(id).unwrap();
-        let mut intensity = glue.intensity;
-        if let Some(b) = glue
-            .binding
-            .as_ref()
-            .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
-        {
-            let mut scratch = selection::Selection::default();
-            let sel = selection::select(doc, values, &b.axes, &mut scratch);
-            intensity = sel
-                .indices
-                .iter()
-                .zip(&sel.weights)
-                .map(|(&i, &w)| b.keyforms[i].intensity * w)
-                .sum();
-        }
-        let mut blends = doc.iter_active_blend_bindings_for_target(id).peekable();
-        if blends.peek().is_some() {
-            for b in blends {
-                if let DeltaKeyforms::Glue(forms) = &b.keyforms {
-                    for (i, w) in selection::evaluate_blend_binding(doc, values, b) {
-                        intensity += forms[i].intensity * w;
-                    }
-                }
-            }
-            intensity = intensity.clamp(0., 1.);
-        }
+        let intensity = evaluated_glue_intensity(doc, values, glue);
         if intensity <= 0. {
             continue;
         }

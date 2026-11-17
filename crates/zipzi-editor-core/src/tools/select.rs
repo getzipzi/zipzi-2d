@@ -89,7 +89,9 @@ impl ToolController {
             .cloned()
             .collect();
         let brush_drag = self.active == super::ToolId::BrushSelect && primary && !resize_brush;
-        let hit = if brush_drag {
+        let hit = if self.active == super::ToolId::Glue {
+            None
+        } else if brush_drag {
             self.brush_drag_hit(document, frame, point)
         } else {
             self.canvas_hit(document, frame, point)
@@ -173,7 +175,36 @@ impl ToolController {
             current: point,
             dragged: false,
         };
-        self.gesture = if self.active == super::ToolId::BrushSelect
+        self.gesture = if self.active == super::ToolId::Glue {
+            if resize_brush {
+                use super::brush_select::BrushAdjustment;
+                let adjustment = if self.alt {
+                    BrushAdjustment::Hardness
+                } else if self.shift {
+                    BrushAdjustment::Angle
+                } else {
+                    BrushAdjustment::Diameter
+                };
+                super::brush_select::BrushSelectionGesture::new(
+                    document,
+                    press,
+                    self.glue_brush,
+                    true,
+                )
+                .map(|gesture| {
+                    super::gesture::Gesture::BrushSelect(gesture.with_adjustment(adjustment))
+                })
+            } else {
+                super::glue::GlueGesture::new(
+                    document,
+                    frame,
+                    press,
+                    self.glue_brush,
+                    self.glue_brush_mode,
+                )
+                .map(super::gesture::Gesture::Glue)
+            }
+        } else if self.active == super::ToolId::BrushSelect
             && !brush_drag
             && !resize_brush
             && self.brush_mode == super::BrushMode::Deform

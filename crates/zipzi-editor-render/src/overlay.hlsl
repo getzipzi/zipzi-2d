@@ -92,6 +92,12 @@ CanvasOut canvas_vertex(uint v : SV_VertexID, uint id : SV_InstanceID) {
     }
     float4 color=i.color;
     if (kind==3) color.a *= v==0 ? i.border.x : v==1 ? i.border.y : i.border.z;
+    if (kind==4) {
+        uint rgb=uint(i.border.w);
+        float3 other=float3((rgb>>16)&255,(rgb>>8)&255,rgb&255)/255.0;
+        float weight=v==0 ? i.border.x : v==1 ? i.border.y : i.border.z;
+        color.rgb=lerp(other,color.rgb,saturate(weight));
+    }
     Out base = output(position,color);
     CanvasOut o;
     o.position=base.position; o.color=base.color;

@@ -225,7 +225,7 @@ pub(crate) fn paint_prepared_with_options<P: Painter>(
                     mesh_edges::paint_edges_with_width(&edges, origin, width, paint);
                 }
             }
-            K::WeightedTriangle => {
+            K::WeightedTriangle | K::GradientTriangle => {
                 // The native shader interpolates vertex alpha. The fallback
                 // tessellates only weighted faces, retaining the same painter order.
                 for primitive in run {
@@ -256,8 +256,14 @@ pub(crate) fn paint_prepared_with_options<P: Painter>(
                             (point(0., 1.), point(0., 1.), point(0., 1.)),
                         );
                         path.bounds = path.bounds.dilate(px(1.));
-                        let mut c = primitive.color;
-                        c[3] *= vertices.iter().map(|(_, w)| *w).sum::<f32>() / 3.;
+                        let influence = vertices.iter().map(|(_, w)| *w).sum::<f32>() / 3.;
+                        let c = if primitive.kind() == K::GradientTriangle {
+                            primitive.gradient_color(influence)
+                        } else {
+                            let mut c = primitive.color;
+                            c[3] *= influence;
+                            c
+                        };
                         window.paint_path(path, color(c));
                     };
                     for i in 0..steps {
@@ -753,7 +759,7 @@ fn paint_other_markers(
         let r = px(GLUE_MARKER_RADIUS);
         let bounds = Bounds::new(center - point(r, r), size(r * 2., r * 2.));
         match endpoint.state {
-            GluePointState::Editable => {
+            GluePointState::Binding | GluePointState::Editable => {
                 window.paint_quad(
                     fill(
                         bounds,

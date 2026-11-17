@@ -15,5 +15,16 @@ control handles are filled circles with radius 1.5. These small markers have no
 stroke: adding a 2-unit outline would grow them to 5 units and close the holes
 at compact sizes. Bezier handle guides retain reduced opacity.
 
+Glue tools share the square junction used on the canvas. Add point combines
+that junction with edges and a plus; Bind converges two vertices into one
+junction; Unbind releases a junction into two outward branches; Edit Glue
+weights pairs the junction with a brush. Keep their square markers hollow
+and their ordinary vertex markers filled so the two remain distinct at 12px.
+
+Weight brushes use mirrored arrows toward A/B and one-sided release branches.
+Inactive A/B icons use their red/green mesh hues; selected icons inherit the
+toolbar's contrasting foreground. Reattach and Release both reuse the junction
+merge/split symbols. Mode names and brush directions belong in tooltips.
+
 Cursor artwork and application branding have their own visual requirements and
 live in separate directories.

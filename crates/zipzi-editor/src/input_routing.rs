@@ -107,7 +107,9 @@ impl EditorView {
         // Holding the configured unmodified brush shortcut arms brush sizing.
         if !event.keystroke.modifiers.modified()
             && let KeyDecision::Invoke {
-                id: zipzi_editor_core::CommandId::BrushSelectTool,
+                id:
+                    zipzi_editor_core::CommandId::BrushSelectTool
+                    | zipzi_editor_core::CommandId::GlueTool,
                 target: Some(LocalTarget::Viewport(binding)),
             } = &decision
             && binding.kind == zipzi_editor_core::ViewportKind::Modeling
@@ -118,13 +120,21 @@ impl EditorView {
                 .replace(Some(event.keystroke.key.to_string()));
         }
         if matches!(
-            &decision,
-            KeyDecision::Invoke {
-                id: zipzi_editor_core::CommandId::BrushSelectTool,
-                ..
-            }
-        ) && self.editor.active_tool() == zipzi_editor_core::ToolId::BrushSelect
-        {
+            (&decision, self.editor.active_tool()),
+            (
+                KeyDecision::Invoke {
+                    id: zipzi_editor_core::CommandId::BrushSelectTool,
+                    ..
+                },
+                zipzi_editor_core::ToolId::BrushSelect
+            ) | (
+                KeyDecision::Invoke {
+                    id: zipzi_editor_core::CommandId::GlueTool,
+                    ..
+                },
+                zipzi_editor_core::ToolId::Glue
+            )
+        ) {
             cx.stop_propagation();
             return;
         }

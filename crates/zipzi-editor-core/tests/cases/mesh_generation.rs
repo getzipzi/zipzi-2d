@@ -2775,12 +2775,19 @@ fn manual_mesh_model_edits_invert_small_rotations_at_large_origins() -> anyhow::
 }
 
 #[test]
-fn manual_mesh_model_drag_inverts_mixed_pose_and_glue_from_one_frozen_source() -> anyhow::Result<()>
-{
+fn manual_mesh_model_glue_point_drag_inverts_mixed_pose_from_one_frozen_source()
+-> anyhow::Result<()> {
     let id = dependency_fixture::id;
     let mut final_models = vec![];
     for staged in [false, true] {
         let (mut editor, _dir) = pose_editor()?;
+        editor.exit_manual_mesh();
+        editor.execute(EditorCommand::SelectObjects(
+            [2, 4]
+                .map(|n| ObjectRef::new(ObjectKind::Mesh, id(n)))
+                .into(),
+        ))?;
+        editor.enter_manual_mesh(editor.active_id().unwrap())?;
         let before = model_mesh_document(&editor);
         let history = editor.document().unwrap().history_lengths();
         let frame = crate::support::present_canvas(&mut editor)?;
@@ -2799,18 +2806,29 @@ fn manual_mesh_model_drag_inverts_mixed_pose_and_glue_from_one_frozen_source() -
         let (sin, cos) = r.angle.to_radians().sin_cos();
         let x = (local[4].x - local[0].x) * 0.15;
         let y = (local[4].y - local[0].y) * 0.15;
-        let gain = 1. - before.glue(&id(30)).unwrap().intensity * 0.3;
         let delta = ModelVector {
-            x: (x * cos - y * sin) * r.scale * gain,
-            y: (x * sin + y * cos) * r.scale * gain,
+            x: (x * cos - y * sin) * r.scale,
+            y: (x * sin + y * cos) * r.scale,
         };
         let original = shown.vertices[0].1;
-        let start = frame.transform.to_viewport(original);
+        let center = editor
+            .overlay()
+            .glues
+            .iter()
+            .flat_map(|g| &g.points)
+            .find(|p| p.state == zipzi_editor_core::GluePointState::Binding)
+            .unwrap()
+            .position;
+        let start = center;
         let target = ModelPoint {
             x: original.x + delta.x,
             y: original.y + delta.y,
         };
-        let end = frame.transform.to_viewport(target);
+        let center_model = frame.transform.to_model(center);
+        let end = frame.transform.to_viewport(ModelPoint {
+            x: center_model.x + delta.x,
+            y: center_model.y + delta.y,
+        });
         crate::support::pointer_input(
             &mut editor,
             CanvasInput::Down {

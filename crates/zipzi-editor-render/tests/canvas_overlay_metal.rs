@@ -416,3 +416,54 @@ fn weighted_selection_triangle_interpolates_vertex_alpha_on_gpu() -> anyhow::Res
     }
     Ok(())
 }
+
+#[test]
+fn glue_mesh_color_interpolates_red_green_without_changing_opacity_on_gpu() -> anyhow::Result<()> {
+    use zipzi_editor_core::{ObjectKind, ObjectRef, OverlayGlueWeightMesh};
+    use zipzi_editor_render::canvas_overlay::glue_weight_color;
+    let device = Device::system_default().expect("Metal GPU");
+    let queue = device.new_command_queue();
+    let mut renderer = MetalOverlayRenderer::new(device.clone())?;
+    for opacity in [0.3, 0.8] {
+        let overlay = OverlaySnapshot {
+            glue_weight_opacity: opacity,
+            glue_weight_meshes: vec![OverlayGlueWeightMesh {
+                object: ObjectRef::new(ObjectKind::Mesh, "a"),
+                triangles: vec![([p(8., 8.), p(56., 8.), p(8., 56.)], [1., 0., 0.])],
+            }],
+            ..Default::default()
+        };
+        let list = Arc::new(CanvasDrawList::new(
+            &overlay,
+            [64.; 2],
+            CanvasPalette::new(false),
+            CanvasOptions {
+                lines: false,
+                markers: false,
+            },
+        )?);
+        let image = renderer
+            .draw_prepared(
+                &queue,
+                OverlayViewport {
+                    extent: [64; 2],
+                    scale: 1.,
+                    origin: [0.; 2],
+                },
+                list,
+            )?
+            .unwrap();
+        let bytes = pixels(&device, &queue, &image);
+        for (x, y) in [(12, 12), (24, 24), (40, 12)] {
+            let red = 1. - ((x as f32 + 0.5 - 8.) + (y as f32 + 0.5 - 8.)) / 48.;
+            let actual = pixel(&bytes, 64, x, y);
+            let wanted = expected(glue_weight_color(red, opacity));
+            assert!(
+                actual.iter().zip(wanted).all(|(a, b)| a.abs_diff(b) <= 2),
+                "({x},{y}): {actual:?} vs {wanted:?}"
+            );
+        }
+        assert_eq!(pixel(&bytes, 64, 60, 60), [0; 4]);
+    }
+    Ok(())
+}

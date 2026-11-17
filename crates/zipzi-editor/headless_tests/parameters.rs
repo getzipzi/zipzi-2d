@@ -1572,7 +1572,10 @@ fn parameter_slider_updates_keyform_coordinate_when_panel_reopens(cx: &mut TestA
     let before = coordinate(cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.dock.as_ref().unwrap().toggle(PanelKind::Keyforms, window, cx);
+            view.dock
+                .as_ref()
+                .unwrap()
+                .toggle(PanelKind::Keyforms, window, cx);
         });
         window.render_frame(cx);
         assert!(window.try_find("keyform-preview-coordinate").is_none());

@@ -151,6 +151,20 @@ pub enum CommandId {
     HandTool,
     #[serde(rename = "tool.glue")]
     GlueTool,
+    #[serde(rename = "tool.glue-stitch")]
+    GlueStitch,
+    #[serde(rename = "tool.glue-edit-stitches")]
+    GlueEditStitches,
+    #[serde(rename = "tool.glue-finish")]
+    GlueFinish,
+    #[serde(rename = "tool.glue-weights")]
+    GlueWeights,
+    #[serde(rename = "tool.glue-insert-point")]
+    GlueInsertPoint,
+    #[serde(rename = "tool.glue-bind")]
+    GlueBind,
+    #[serde(rename = "tool.glue-unbind")]
+    GlueUnbind,
     #[serde(rename = "tool.generate-mesh")]
     GenerateMesh,
     #[serde(rename = "tool.manual-mesh")]
@@ -600,7 +614,26 @@ specs![
         false,
         []
     ),
-    (GlueTool, "editor.tool_glue", Viewport, false, []),
+    (GlueTool, "editor.tool_glue", Viewport, false, ["g"]),
+    (GlueStitch, "editor.glue_stitch", Viewport, false, []),
+    (
+        GlueEditStitches,
+        "editor.glue_edit_points",
+        Viewport,
+        false,
+        []
+    ),
+    (GlueFinish, "editor.glue_done", Viewport, false, []),
+    (GlueWeights, "editor.glue_weights_tab", Viewport, false, []),
+    (
+        GlueInsertPoint,
+        "editor.glue_insert_point",
+        Viewport,
+        false,
+        []
+    ),
+    (GlueBind, "editor.glue_bind", Viewport, false, []),
+    (GlueUnbind, "editor.glue_unbind", Viewport, false, []),
     (HandTool, "editor.tool_hand", Viewport, false, ["h"]),
     (
         ToggleDeformers,
@@ -736,6 +769,7 @@ pub enum CommandDisabledReason {
     InvalidTarget,
     Closing,
     Busy,
+    RequiresTwoMeshes,
     UnavailableInContext,
 }
 
@@ -931,6 +965,9 @@ impl Editor {
                     && !self.manual_active()
                     && self.active_tool() == crate::ToolId::Glue
             }
+            GlueWeights => self.glue_editing_weights(),
+            GlueInsertPoint => matches!(command.target, CommandTarget::Viewport(binding)
+                if self.manual_glue_controls(binding).is_some_and(|controls| controls.add_glue_point)),
             HandTool => animation_navigation || self.active_tool() == crate::ToolId::Hand,
             ManualMesh => self.manual_active(),
             ManualSelect => self.manual_tool() == Some(crate::ManualTool::Select),
@@ -958,6 +995,8 @@ impl Editor {
             Some(CommandDisabledReason::Busy)
         } else if !self.command_target_valid(command) {
             Some(CommandDisabledReason::InvalidTarget)
+        } else if command.id == GlueStitch && !self.glue_stitch_selection_valid() {
+            Some(CommandDisabledReason::RequiresTwoMeshes)
         } else {
             Some(CommandDisabledReason::UnavailableInContext)
         };
@@ -969,6 +1008,16 @@ impl Editor {
     }
     pub fn command_available(&self, command: Command) -> bool {
         self.command_state(command).enabled
+    }
+    fn glue_stitch_selection_valid(&self) -> bool {
+        self.document().is_some_and(|document| {
+            let selection = &document.context().selections;
+            selection.len() == 2
+                && selection[0] != selection[1]
+                && selection
+                    .iter()
+                    .all(|object| object.kind == crate::ObjectKind::Mesh)
+        })
     }
     fn command_enabled(
         &self,
@@ -1044,7 +1093,9 @@ impl Editor {
             ResetLayout | ResetShortcuts | ShowShortcuts => true,
             Close => target,
             Save | SaveAs => target && !self.is_busy(),
-            ExportRuntime | ExportCubism | ExportPsd => target && !self.is_busy() && !self.exiting(),
+            ExportRuntime | ExportCubism | ExportPsd => {
+                target && !self.is_busy() && !self.exiting()
+            }
             GenerateMesh => {
                 modeling
                     && target
@@ -1088,6 +1139,56 @@ impl Editor {
                     && matches!(command.target,CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport))
                     && (command.id != ManualPadSource || !self.gesture_active())
                     && (command.id != ManualSourceView || self.manual_targets().len() == 1)
+            }
+            GlueFinish => {
+                modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.gesture_active()
+                    && self.glue_editing_weights()
+            }
+            GlueWeights => {
+                modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.gesture_active()
+                    && (matches!(command.target, CommandTarget::Viewport(b) if self.manual_glue_controls(b).is_some_and(|c| c.target.is_some() && c.pair_count > 0))
+                        || self.document().is_some_and(|d| {
+                            d.context().selections.len() == 1
+                                && d.context()
+                                    .selection
+                                    .as_ref()
+                                    .is_some_and(|o| o.kind == crate::ObjectKind::Glue)
+                        }))
+            }
+            GlueStitch | GlueEditStitches => {
+                modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && !self.gesture_active()
+                    && if command.id == GlueStitch {
+                        self.glue_stitch_selection_valid()
+                    } else {
+                        self.document().is_some_and(|document| {
+                            let selection = &document.context().selections;
+                            selection.len() == 1 && selection[0].kind == crate::ObjectKind::Glue
+                        })
+                    }
+            }
+            GlueInsertPoint | GlueBind | GlueUnbind => {
+                modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && !self.gesture_active()
+                    && self.manual_editable()
+                    && matches!(command.target, CommandTarget::Viewport(binding)
+                    if self.manual_glue_controls(binding).is_some_and(|controls| match command.id {
+                        GlueBind => controls.bind_count > 0,
+                        GlueUnbind => controls.unbind_count > 0 && self.validate_modeling_press(binding).is_ok(),
+                        _ => true,
+                    }))
             }
             DeleteObject => {
                 (modeling || matches!(command.target, CommandTarget::Document(_)))
@@ -1253,6 +1354,71 @@ impl Editor {
             }
             ManualMesh if self.manual_active() => self.exit_manual_mesh(),
             ManualMesh => return Ok(CommandEffect::Host(command)),
+            GlueFinish => {
+                self.execute(EditorCommand::SetTool(crate::ToolId::Select))?;
+            }
+            GlueWeights if self.manual_for_viewport(viewport.unwrap().viewport) => {
+                let id = self
+                    .manual_glue_controls(viewport.unwrap())
+                    .and_then(|c| c.target)
+                    .unwrap();
+                self.exit_manual_mesh();
+                self.execute(EditorCommand::SelectObject(crate::ObjectRef::new(
+                    crate::ObjectKind::Glue,
+                    id,
+                )))?;
+                self.execute(EditorCommand::SetTool(crate::ToolId::Glue))?;
+            }
+            GlueWeights => {
+                self.execute(EditorCommand::SetTool(crate::ToolId::Glue))?;
+            }
+            GlueStitch | GlueEditStitches => {
+                let binding = viewport.unwrap();
+                let target = if command.id == GlueEditStitches {
+                    let document = self.document().unwrap();
+                    let object = document.context().selection.as_ref().unwrap();
+                    let glue = document
+                        .model()
+                        .glue(&object.id)
+                        .cloned()
+                        .ok_or_else(|| anyhow::anyhow!("Select a Glue"))?;
+                    let parts = vec![
+                        crate::ObjectRef::new(crate::ObjectKind::Mesh, glue.mesh_a_id.as_str()),
+                        crate::ObjectRef::new(crate::ObjectKind::Mesh, glue.mesh_b_id.as_str()),
+                    ];
+                    self.execute(EditorCommand::SelectObjects(parts))?;
+                    Some(glue.id)
+                } else {
+                    None
+                };
+                self.enter_manual_mesh_in_viewport(
+                    command.document().unwrap(),
+                    Some(binding.viewport),
+                )?;
+                if let Some(target) = target {
+                    self.set_manual_glue_target(binding, Some(target))?;
+                }
+            }
+            GlueInsertPoint => {
+                self.active_session_mut()
+                    .unwrap()
+                    .modeling
+                    .tools
+                    .toggle_manual_glue_insert();
+            }
+            GlueBind | GlueUnbind => {
+                let binding = viewport.unwrap();
+                self.validate_modeling_press(binding)?;
+                let frame = self.displayed_modeling_frame(binding).unwrap().clone();
+                let session = self.active_session_mut().unwrap();
+                if session.modeling.tools.edit_manual_glue(
+                    &mut session.document,
+                    &frame,
+                    command.id == GlueBind,
+                )? {
+                    session.invalidate_scene();
+                }
+            }
             ManualSelect | ManualLasso | ManualCreate | ManualDelete => {
                 let tool = match command.id {
                     ManualLasso => crate::ManualTool::Lasso,

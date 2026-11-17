@@ -47,7 +47,7 @@ fn columns(output: bool, manual: bool) -> Vec<Column> {
         help: t!("physics.reflect").into_owned(),
     });
     columns.push(Column {
-            width: Some(60.),
+        width: Some(60.),
         label: t!(if manual {
             "physics.input_value"
         } else {

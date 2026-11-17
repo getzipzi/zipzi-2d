@@ -12,6 +12,7 @@ mod deformer_original_scene;
 mod deletion_scene;
 mod dock_and_layout;
 mod external_status_scene;
+mod glue_scene;
 mod load_status_scene;
 mod manual_mesh_scene;
 mod mesh_generation_scene;
@@ -42,6 +43,10 @@ pub(super) fn run() -> anyhow::Result<()> {
     std::fs::create_dir_all(&directory)?;
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("mesh-edit-details") {
         manual_mesh_scene::details(&directory)?;
+        return Ok(());
+    }
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("glue") {
+        glue_scene::run(&directory)?;
         return Ok(());
     }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("brush-selection") {

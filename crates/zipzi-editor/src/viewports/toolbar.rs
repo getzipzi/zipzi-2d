@@ -99,6 +99,11 @@ impl ToolbarRegistry {
                 icon: ToolbarIcon::Svg(include_bytes!("../../assets/icons/mesh-edit.svg")),
                 command: CommandId::ManualMesh,
             },
+            ToolbarItemConfig {
+                id: "tool_glue",
+                icon: ToolbarIcon::Svg(include_bytes!("../../assets/icons/glue-weights.svg")),
+                command: CommandId::GlueTool,
+            },
         ] {
             registry.register(item).unwrap();
         }
@@ -136,6 +141,16 @@ pub(super) fn attached_button(button: Button, shape: Notch, cx: &App) -> Button 
         .when(!selected, |button| button.bg(transparent_black()))
         .border_0()
         .rounded(compact::scaled(shape.button_radius, cx))
+}
+
+pub(super) fn secondary_icon_button(button: Button, cx: &App) -> Button {
+    attached_button(button, SECONDARY, cx)
+        .xsmall()
+        .w(compact::rem(SECONDARY.button_size))
+        .h(compact::rem(SECONDARY.button_size))
+        .min_w(compact::rem(SECONDARY.button_size))
+        .px(compact::rem(3.))
+        .flex_shrink_0()
 }
 
 impl RenderOnce for CanvasToolbar {
@@ -176,6 +191,16 @@ impl RenderOnce for CanvasToolbar {
                         CommandId::SelectTool => "editor.tool_select_hint",
                         CommandId::LassoTool => "editor.tool_lasso_hint",
                         CommandId::BrushSelectTool => "editor.tool_brush_select_hint",
+                        CommandId::GlueStitch
+                            if state.disabled_reason
+                                == Some(
+                                    zipzi_editor_core::CommandDisabledReason::RequiresTwoMeshes,
+                                ) =>
+                        {
+                            "editor.glue_select_two_meshes"
+                        }
+                        CommandId::GlueStitch => "editor.glue_stitch_intro",
+                        CommandId::GlueTool => "editor.tool_glue_hint",
                         CommandId::ManualMesh => "editor.manual_mesh_edit_hint",
                         _ => command.spec().label,
                     }))

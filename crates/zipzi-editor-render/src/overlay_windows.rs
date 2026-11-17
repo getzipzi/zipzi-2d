@@ -4,9 +4,7 @@ use crate::canvas_overlay::{CanvasDrawList, CanvasRenderStats};
 use crate::{OverlayPass, OverlayStyle, OverlayViewport, overlay_data::Key};
 use anyhow::{Context, Result, ensure};
 use std::sync::Arc;
-use windows::{
-    Win32::Graphics::{Direct3D::*, Direct3D11::*, Dxgi::Common::*},
-};
+use windows::Win32::Graphics::{Direct3D::*, Direct3D11::*, Dxgi::Common::*};
 use zipzi_editor_core::OverlaySnapshot;
 
 pub struct WindowsOverlayRenderer {

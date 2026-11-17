@@ -12,5 +12,9 @@ pub(crate) fn weight(influence_percent: f64, reversed: bool) -> f32 {
     let magnitude: f32 = format!("{}e-2", influence_percent.abs())
         .parse()
         .expect("finite cursor influence");
-    if reversed { -magnitude } else { magnitude }
+    if reversed {
+        -magnitude
+    } else {
+        magnitude
+    }
 }

@@ -16,9 +16,12 @@ mod region;
 mod select;
 mod transform_constraints;
 pub use brush_select::{BrushSelectionSettings, BrushShape};
+pub use glue::{
+    GlueBrushMode, GluePaintControls, OverlayGlueLabel, OverlayGlueWeight, OverlayGlueWeightMesh,
+};
 pub use hints::{HintAction, InteractionHint};
 pub use inflate::BrushMode;
-pub use manual_mesh::{ManualMeshEdge, ManualMeshFeedback, ManualTool};
+pub use manual_mesh::{ManualGlueControls, ManualMeshEdge, ManualMeshFeedback, ManualTool};
 
 use crate::{
     CanvasScene, ComponentRef, Document, HitTarget, ObjectKind, ObjectRef, ViewportPoint,
@@ -75,6 +78,8 @@ pub struct ToolController {
     pub original_points: bool,
     pub(crate) brush_selection: BrushSelectionSettings,
     pub(crate) brush_mode: BrushMode,
+    pub(crate) glue_brush: BrushSelectionSettings,
+    pub(crate) glue_brush_mode: GlueBrushMode,
     pub(crate) component_weights: std::collections::HashMap<ComponentRef, f32>,
     pub(crate) pointer: Option<(crate::ViewportBinding, ViewportPoint)>,
     pub(crate) components: Vec<ComponentRef>,
@@ -348,6 +353,9 @@ impl ToolController {
         });
     }
     pub fn reconcile(&mut self, document: &mut Document) {
+        if matches!(&self.gesture, Some(Gesture::Glue(g)) if !g.current(document)) {
+            self.cancel(document);
+        }
         if let Some(mode) = &mut self.manual {
             mode.reconcile(document);
         }
@@ -380,11 +388,16 @@ impl ToolController {
                 None
             }
         });
+        let brush = if self.active == ToolId::Glue {
+            &mut self.glue_brush
+        } else {
+            &mut self.brush_selection
+        };
         let changed = gesture.is_some_and(|g| {
             g.cancel(
                 document,
                 &mut self.components,
-                &mut self.brush_selection,
+                brush,
                 &mut self.component_weights,
             )
         }) | self
@@ -440,6 +453,33 @@ impl ToolController {
         self.manual
             .as_ref()
             .map_or_else(Vec::new, |mode| mode.targets())
+    }
+    pub(crate) fn manual_glue_controls(
+        &self,
+        document: &Document,
+        frame: Option<&CanvasFrame>,
+    ) -> Option<ManualGlueControls> {
+        self.manual.as_ref()?.glue_controls(document, frame)
+    }
+    pub(crate) fn set_manual_glue_target(&mut self, target: Option<String>) {
+        if let Some(mode) = &mut self.manual {
+            mode.set_glue_target(target);
+        }
+    }
+    pub(crate) fn toggle_manual_glue_insert(&mut self) {
+        if let Some(mode) = &mut self.manual {
+            mode.toggle_glue_insert();
+        }
+    }
+    pub(crate) fn edit_manual_glue(
+        &mut self,
+        document: &mut Document,
+        frame: &CanvasFrame,
+        bind: bool,
+    ) -> anyhow::Result<bool> {
+        self.manual
+            .as_mut()
+            .map_or(Ok(false), |mode| mode.edit_glue(document, frame, bind))
     }
     pub fn manual_target_at(
         &self,

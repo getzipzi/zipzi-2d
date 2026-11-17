@@ -78,6 +78,12 @@ Canvas geometry uses an ordered native instance stream on both platforms.
 Rotation bones, Glue, transform frames, reference/guide/image lines, origin axes,
 marquee and even-odd lasso fills into lines, bordered round/square markers and
 triangles. The palette and painter order are shared with the GPUI fallback.
+Glue weight surfaces use a two-color gradient triangle with per-vertex A/B
+influence and one shared opacity. Both native shaders interpolate premultiplied
+color across the presented mesh; changing the ratio does not change opacity.
+The second RGB8 endpoint is encoded as an exact integer-valued float in the
+existing 64-byte instance layout. The GPUI fallback samples the same gradient
+while tessellating weighted faces.
 Geometry and interaction remain in `zipzi-editor-core`; text and widgets remain
 in GPUI. Move handles use the Kit Move SVG above the native surface, with Core's
 positions and interaction state. The normal path composites one immutable surface

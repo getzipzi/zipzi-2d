@@ -14,6 +14,7 @@ use zipzi_sdk::ManualVertexIdAllocator;
 mod mapping;
 mod session;
 use mapping::{PoseMapping, PositionUvMap};
+pub use session::ManualGlueControls;
 pub(super) use session::ManualMeshSession;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -172,6 +173,7 @@ struct ProjectedEdges {
     scene_revision: u64,
     topology: usize,
     mesh: usize,
+    merged_positions: HashMap<VertexId, crate::ModelPoint>,
     transform: ViewportTransform,
     structural: Arc<[ScreenLine]>,
     automatic: Arc<[ScreenLine]>,
@@ -323,6 +325,61 @@ impl ManualMeshMode {
         Ok(changed)
     }
 
+    /// Endpoints share one editing position, used for topology lines and picking.
+    /// The source frame still owns their independent pre-Glue artwork positions.
+    fn merged_positions(&self, frame: &CanvasFrame) -> HashMap<VertexId, crate::ModelPoint> {
+        if self.source_view {
+            return HashMap::new();
+        }
+        let mut result = HashMap::new();
+        for glue in frame.geometry.topology.glues.iter() {
+            let id = &self.target.object.id;
+            let side = if glue.mesh_a == *id {
+                0
+            } else if glue.mesh_b == *id {
+                1
+            } else {
+                continue;
+            };
+            if !frame
+                .geometry
+                .control(&glue.object.id)
+                .is_some_and(|c| c.visible && c.enabled)
+                || !frame.geometry.in_isolation_scope(&glue.object)
+                || [&glue.mesh_a, &glue.mesh_b].into_iter().any(|mesh| {
+                    !frame.geometry.mesh_visible(mesh)
+                        || !frame.geometry.in_isolation_scope(&crate::ObjectRef::new(
+                            crate::ObjectKind::Mesh,
+                            mesh,
+                        ))
+                })
+            {
+                continue;
+            }
+            let (Some(a_mesh), Some(b_mesh)) = (
+                frame.geometry.mesh(&glue.mesh_a),
+                frame.geometry.mesh(&glue.mesh_b),
+            ) else {
+                continue;
+            };
+            for &(a, b) in &glue.pairs {
+                let (Some(&(a_id, pa)), Some(&(b_id, pb))) =
+                    (a_mesh.vertices.get(a), b_mesh.vertices.get(b))
+                else {
+                    continue;
+                };
+                let middle = crate::ModelPoint {
+                    x: pa.x * 0.5 + pb.x * 0.5,
+                    y: pa.y * 0.5 + pb.y * 0.5,
+                };
+                result
+                    .entry(if side == 0 { a_id } else { b_id })
+                    .or_insert(middle);
+            }
+        }
+        result
+    }
+
     fn hit(&self, frame: &CanvasFrame, point: ViewportPoint) -> Hit {
         let Some(mesh) = frame.geometry.mesh(&self.target.object.id) else {
             return Hit::Empty;
@@ -330,11 +387,18 @@ impl ManualMeshMode {
         let Some(topology) = frame.geometry.topology.meshes.get(&self.target.object.id) else {
             return Hit::Empty;
         };
-        let project = |slot: usize| frame.transform.to_viewport(mesh.vertices[slot].1);
+        let merged = self.merged_positions(frame);
+        let project = |slot: usize| {
+            let (id, p) = mesh.vertices[slot];
+            frame
+                .transform
+                .to_viewport(merged.get(&id).copied().unwrap_or(p))
+        };
         if let Some((id, _)) = mesh
             .vertices
             .iter()
             .enumerate()
+            .filter(|(_, (id, _))| !merged.contains_key(id))
             .map(|(slot, &(id, _))| (id, crate::picking::distance2(point, project(slot))))
             .filter(|(_, distance)| *distance <= crate::canvas_style::POINT_HIT_RADIUS.powi(2))
             .min_by(|a, b| a.1.total_cmp(&b.1))
@@ -536,15 +600,17 @@ impl ManualMeshMode {
                     } => {
                         if gesture.moved {
                             if let Some(region) = path.region(gesture.start, point) {
+                                let merged = self.merged_positions(frame);
                                 let ids = frame
                                     .geometry
                                     .mesh(&self.target.object.id)
                                     .into_iter()
                                     .flat_map(|mesh| &mesh.vertices)
                                     .filter_map(|&(id, position)| {
-                                        region
-                                            .contains(gesture.transform.to_viewport(position))
-                                            .then_some(id)
+                                        (!merged.contains_key(&id)
+                                            && region
+                                                .contains(gesture.transform.to_viewport(position)))
+                                        .then_some(id)
                                     })
                                     .collect();
                                 operation.apply(&mut self.selected, ids);
@@ -652,14 +718,14 @@ impl ManualMeshMode {
             let uv = if let Hit::Edge([a, b], _) = hit {
                 let a = mesh.vertex_ids.iter().position(|id| *id == a).unwrap();
                 let b = mesh.vertex_ids.iter().position(|id| *id == b).unwrap();
+                let merged = self.merged_positions(frame);
                 let project = |slot: usize| {
-                    let p = frame
+                    let (id, p) = frame
                         .geometry
                         .mesh(&self.target.object.id)
                         .unwrap()
-                        .vertices[slot]
-                        .1;
-                    transform.to_viewport(p)
+                        .vertices[slot];
+                    transform.to_viewport(merged.get(&id).copied().unwrap_or(p))
                 };
                 let pa = project(a);
                 let pb = project(b);
@@ -835,12 +901,14 @@ impl ManualMeshMode {
         let Some(topology) = frame.geometry.topology.meshes.get(&self.target.object.id) else {
             return out;
         };
-        let line = |(a, b): (usize, usize)| {
-            (
-                frame.transform.to_viewport(mesh.vertices[a].1),
-                frame.transform.to_viewport(mesh.vertices[b].1),
-            )
+        let merged = self.merged_positions(frame);
+        let project = |slot: usize| {
+            let (id, p) = mesh.vertices[slot];
+            frame
+                .transform
+                .to_viewport(merged.get(&id).copied().unwrap_or(p))
         };
+        let line = |(a, b): (usize, usize)| (project(a), project(b));
         let topology_identity = Arc::as_ptr(topology) as usize;
         let mesh_identity = mesh as *const _ as usize;
         let viewport = frame.version.binding.viewport;
@@ -852,6 +920,7 @@ impl ManualMeshMode {
                     value.scene_revision == frame.version.scene
                         && value.topology == topology_identity
                         && value.mesh == mesh_identity
+                        && value.merged_positions == merged
                         && value.transform == frame.transform
                 })
                 .cloned();
@@ -883,6 +952,7 @@ impl ManualMeshMode {
                     scene_revision: frame.version.scene,
                     topology: topology_identity,
                     mesh: mesh_identity,
+                    merged_positions: merged.clone(),
                     transform: frame.transform,
                     structural: structural.into(),
                     automatic: automatic.into(),
@@ -928,6 +998,9 @@ impl ManualMeshMode {
             }
         }
         for &(id, position) in &mesh.vertices {
+            if merged.contains_key(&id) {
+                continue;
+            }
             out.vertices.push(OverlayVertex {
                 id,
                 position: frame.transform.to_viewport(position),
@@ -940,7 +1013,7 @@ impl ManualMeshMode {
         let points = mesh
             .vertices
             .iter()
-            .filter(|(id, _)| self.target.glue_vertices.contains(id))
+            .filter(|(id, _)| self.source_view && self.target.glue_vertices.contains(id))
             .map(|(id, p)| crate::OverlayGluePoint {
                 position: frame.transform.to_viewport(*p),
                 state: crate::GluePointState::Editable,

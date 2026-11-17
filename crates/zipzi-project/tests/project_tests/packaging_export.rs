@@ -40,12 +40,10 @@ fn runtime_package_roundtrips_cursor_preview_companion_and_reports_sdk_limit() {
         document.editor_state().cursor_preview_bindings,
         Some([(parameter.id.clone(), binding)].into())
     );
-    assert!(
-        !document
-            .model3_settings()
-            .extensions
-            .contains_key("ZipziCursorPreview")
-    );
+    assert!(!document
+        .model3_settings()
+        .extensions
+        .contains_key("ZipziCursorPreview"));
     assert!(build_export_plan(document, &imported.resources).is_ok());
 }
 

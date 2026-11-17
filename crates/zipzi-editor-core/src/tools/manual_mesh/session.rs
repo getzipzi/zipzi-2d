@@ -3,8 +3,13 @@ use super::*;
 use crate::ModelVector;
 use std::ops::{Deref, DerefMut};
 
+#[path = "glue.rs"]
+mod glue;
+pub use glue::ManualGlueControls;
+
 enum SharedGesture {
     Region(Gesture),
+    GluePoint(Gesture),
     Drag {
         press: Gesture,
         meshes: Vec<(usize, Vec<ManualVertexTarget>, PoseMapping)>,
@@ -13,7 +18,7 @@ enum SharedGesture {
 impl SharedGesture {
     fn press(&self) -> &Gesture {
         match self {
-            Self::Region(g) | Self::Drag { press: g, .. } => g,
+            Self::Region(g) | Self::GluePoint(g) | Self::Drag { press: g, .. } => g,
         }
     }
 }
@@ -23,7 +28,11 @@ pub(in crate::tools) struct ManualMeshSession {
     colors: Vec<usize>,
     active: usize,
     hovered: Option<usize>,
+    hovered_binding: Option<(String, String)>,
     shared: Option<SharedGesture>,
+    add_glue_point: bool,
+    glue_target: Option<String>,
+    retired_glue_target: Option<String>,
 }
 impl Deref for ManualMeshSession {
     type Target = ManualMeshMode;
@@ -38,10 +47,6 @@ impl DerefMut for ManualMeshSession {
 }
 
 impl ManualMeshSession {
-    pub fn new(targets: Vec<ManualMeshTarget>, document: &Document) -> Self {
-        let colors = (0..targets.len()).collect();
-        Self::with_colors(targets, document, colors)
-    }
     pub fn with_colors(
         targets: Vec<ManualMeshTarget>,
         document: &Document,
@@ -55,7 +60,11 @@ impl ManualMeshSession {
             active: 0,
             colors,
             hovered: None,
+            hovered_binding: None,
             shared: None,
+            add_glue_point: false,
+            glue_target: None,
+            retired_glue_target: None,
         }
     }
     pub fn targets(&self) -> Vec<ManualMeshTarget> {
@@ -70,6 +79,8 @@ impl ManualMeshSession {
         }
     }
     pub fn set_tool(&mut self, tool: ManualTool) {
+        self.add_glue_point = false;
+        self.hovered_binding = None;
         for mode in &mut self.modes {
             mode.tool = tool;
         }
@@ -98,6 +109,21 @@ impl ManualMeshSession {
     }
     pub fn reconcile(&mut self, document: &mut Document) {
         self.retain_context(document);
+        if self
+            .glue_target
+            .as_deref()
+            .is_some_and(|id| document.model().glue(id).is_none())
+        {
+            self.retired_glue_target = self.glue_target.take();
+        }
+        if self.glue_target.is_none()
+            && self
+                .retired_glue_target
+                .as_deref()
+                .is_some_and(|id| document.model().glue(id).is_some())
+        {
+            self.glue_target = self.retired_glue_target.take();
+        }
         if self.shared.is_some()
             && self
                 .modes
@@ -130,6 +156,7 @@ impl ManualMeshSession {
             changed |= mode.cancel(document);
         }
         self.hovered = None;
+        self.hovered_binding = None;
         changed
     }
     pub fn settle(&mut self, document: &mut Document) -> Result<bool> {
@@ -199,6 +226,12 @@ impl ManualMeshSession {
             let Some(mesh) = frame.geometry.mesh(&mode.target.object.id) else {
                 continue;
             };
+            let merged = mode.merged_positions(frame);
+            let project = |&(id, p): &(VertexId, crate::ModelPoint)| {
+                frame
+                    .transform
+                    .to_viewport(merged.get(&id).copied().unwrap_or(p))
+            };
             let rank = match mode.hit(frame, point) {
                 Hit::Vertex(id) => (
                     0,
@@ -206,15 +239,11 @@ impl ManualMeshSession {
                         .iter()
                         .find(|v| v.0 == id)
                         .map_or(f32::INFINITY, |v| {
-                            crate::picking::distance2(point, frame.transform.to_viewport(v.1))
+                            crate::picking::distance2(point, project(v))
                         }),
                 ),
                 Hit::Edge([a, b], _) => {
-                    let at = |id| {
-                        frame
-                            .transform
-                            .to_viewport(mesh.vertices.iter().find(|v| v.0 == id).unwrap().1)
-                    };
+                    let at = |id| project(mesh.vertices.iter().find(|v| v.0 == id).unwrap());
                     (1, crate::picking::segment_distance2(point, at(a), at(b)))
                 }
                 Hit::Empty => {
@@ -301,6 +330,24 @@ impl ManualMeshSession {
                 primary,
             } => {
                 self.cancel(document);
+                if !primary
+                    && matches!(self.tool, ManualTool::Select | ManualTool::Lasso)
+                    && let Some(binding) = self.pick_binding(document, frame, point)
+                {
+                    return self.begin_binding_drag(document, frame, binding, point, shift, alt);
+                }
+                if self.add_glue_point && !self.source_view && !primary && !shift && !alt {
+                    self.shared = Some(SharedGesture::GluePoint(Gesture {
+                        version: frame.version,
+                        transform: frame.transform,
+                        start: point,
+                        current: point,
+                        kind: GestureKind::Create(Hit::Empty),
+                        moved: false,
+                        pose: None,
+                    }));
+                    return Ok(false);
+                }
                 self.active = self.pick(frame, point).unwrap_or(self.active);
                 self.hovered = Some(self.active);
                 let hit = self.modes[self.active].hit(frame, point);
@@ -338,21 +385,7 @@ impl ManualMeshSession {
                     GestureKind::Drag(_)
                         if self.modes.iter().filter(|m| !m.selected.is_empty()).count() > 1 =>
                     {
-                        let mut meshes = Vec::new();
-                        for (index, mode) in self.modes.iter().enumerate() {
-                            if mode.selected.is_empty() || !self.shown(index, frame) {
-                                continue;
-                            }
-                            meshes.push((
-                                index,
-                                mode.selected_starts(document),
-                                PoseMapping::capture(document, frame, &mode.target.object.id)?,
-                            ));
-                        }
-                        self.shared = Some(SharedGesture::Drag {
-                            press: gesture,
-                            meshes,
-                        });
+                        self.shared = Some(self.capture_shared_drag(document, frame, gesture)?);
                     }
                     _ => self.modes[self.active].gesture = Some(gesture),
                 }
@@ -368,6 +401,20 @@ impl ManualMeshSession {
                 let mut changed = self.update_shared(document, point)?;
                 let gesture = self.shared.take().unwrap();
                 match gesture {
+                    SharedGesture::GluePoint(g) => {
+                        if !g.moved {
+                            match self.insert_overlap(document, frame, point) {
+                                Ok(added) => {
+                                    self.diagnostic = None;
+                                    changed = added;
+                                }
+                                Err(error) => {
+                                    document.cancel_manual_mesh_gesture();
+                                    self.diagnostic = Some(error.to_string());
+                                }
+                            }
+                        }
+                    }
                     SharedGesture::Drag { .. } => {
                         changed |= document.has_manual_mesh_gesture();
                         document.finish_manual_mesh_gesture()?;
@@ -385,22 +432,33 @@ impl ManualMeshSession {
                                 _ => unreachable!(),
                             };
                             if let Some(region) = region {
+                                let binding_vertices =
+                                    self.binding_region_vertices(document, frame, &region);
                                 for index in 0..self.modes.len() {
                                     if !self.shown(index, frame) {
                                         continue;
                                     }
                                     let mode = &mut self.modes[index];
-                                    let ids = frame
+                                    let merged = mode.merged_positions(frame);
+                                    let mut ids: Vec<_> = frame
                                         .geometry
                                         .mesh(&mode.target.object.id)
                                         .into_iter()
                                         .flat_map(|m| &m.vertices)
                                         .filter_map(|&(id, p)| {
-                                            region
-                                                .contains(gesture.transform.to_viewport(p))
-                                                .then_some(id)
+                                            (!merged.contains_key(&id)
+                                                && region
+                                                    .contains(gesture.transform.to_viewport(p)))
+                                            .then_some(id)
                                         })
                                         .collect();
+                                    ids.extend(
+                                        binding_vertices
+                                            .iter()
+                                            .filter_map(|&(i, id)| (i == index).then_some(id)),
+                                    );
+                                    ids.sort_unstable();
+                                    ids.dedup();
                                     operation.apply(&mut mode.selected, ids);
                                     mode.selected_edge = None;
                                 }
@@ -432,6 +490,16 @@ impl ManualMeshSession {
                 for mode in &mut self.modes {
                     mode.hover = Hit::Empty;
                 }
+                self.hovered_binding =
+                    if matches!(self.tool, ManualTool::Select | ManualTool::Lasso) {
+                        self.pick_binding(document, frame, point).map(|h| h.key)
+                    } else {
+                        None
+                    };
+                if self.hovered_binding.is_some() {
+                    self.hovered = None;
+                    return Ok(false);
+                }
                 self.hovered = self.pick(frame, point);
                 if let Some(index) = self.hovered {
                     self.modes[index].input(document, frame, input)?;
@@ -459,6 +527,7 @@ impl ManualMeshSession {
                     mode.hover = Hit::Empty;
                 }
                 self.hovered = None;
+                self.hovered_binding = None;
                 Ok(false)
             }
             _ => self.modes[self.active].input(document, frame, input),
@@ -469,7 +538,7 @@ impl ManualMeshSession {
             return Ok(false);
         };
         match shared {
-            SharedGesture::Region(gesture) => {
+            SharedGesture::Region(gesture) | SharedGesture::GluePoint(gesture) => {
                 gesture.update(point, false);
                 Ok(false)
             }
@@ -535,7 +604,13 @@ impl ManualMeshSession {
             }
         }
     }
-    pub fn overlay(&self, frame: &CanvasFrame, shift: bool, alt: bool) -> OverlaySnapshot {
+    pub fn overlay(
+        &self,
+        document: &Document,
+        frame: &CanvasFrame,
+        shift: bool,
+        alt: bool,
+    ) -> OverlaySnapshot {
         let mut out = self.modes[self.active].overlay(frame, shift, alt);
         let style = |index: usize, mesh: &OverlaySnapshot, merged: &OverlaySnapshot| {
             crate::OverlayMeshStyle {
@@ -589,6 +664,7 @@ impl ManualMeshSession {
                 out.selection_operation = other.selection_operation;
             }
         }
+        self.binding_overlay(document, frame, alt, &mut out);
         if let Some(shared) = &self.shared
             && shared.press().version.binding == frame.version.binding
         {

@@ -111,6 +111,11 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
             G::BoxSelect => Some(T::BoxSelect(operation)),
             G::LassoSelect => Some(T::Lasso(operation)),
             G::BrushSelect => Some(T::Brush(operation)),
+            G::BrushGlue => Some(T::Brush(if input.modifiers.shift {
+                CanvasSelectionOperation::Remove
+            } else {
+                CanvasSelectionOperation::Replace
+            })),
             G::BrushInflate => Some(T::Brush(
                 if overlay.selection_brush.as_ref().is_some_and(|b| b.subtract) {
                     CanvasSelectionOperation::Remove
@@ -123,6 +128,15 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
     }
     if input.hand_tool {
         return standard(C::OpenHand);
+    }
+    if input.tool == ToolId::Glue && input.manual_tool.is_none() {
+        return if overlay.point_unavailable.is_some() {
+            standard(C::OperationNotAllowed)
+        } else if overlay.selection_brush.is_some() {
+            Some(T::Brush(CanvasSelectionOperation::Replace))
+        } else {
+            standard(C::Arrow)
+        };
     }
     // Painting a selection is available even when the hovered point cannot be edited.
     if input.tool == ToolId::BrushSelect && input.manual_tool.is_none() {

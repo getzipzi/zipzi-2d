@@ -11,29 +11,33 @@ use crate::{
 };
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
-    ActiveTheme, Disableable, IndexPath, Sizable,
+    ActiveTheme, Disableable, Icon, IndexPath, Sizable,
     button::Button,
     input::{InputEvent, InputState},
     popover::Popover,
     select::{Select, SelectEvent, SelectItem, SelectState},
+    separator::Separator,
+    toolbar::{Toolbar, ToolbarGroup},
 };
 use gpui_kit::{prelude::*, *};
 use zipzi_editor_core::{
-    BrushMode, BrushSelectionSettings as Settings, BrushShape, EditorCommand, ToolId,
-    ViewportBinding, ViewportId,
+    BrushMode, BrushSelectionSettings as Settings, BrushShape, EditorCommand, GlueBrushMode,
+    ToolId, ViewportBinding, ViewportId,
 };
 
-const LABELS: [&str; 4] = [
+const LABELS: [&str; 5] = [
     "editor.brush_selection_size",
     "editor.brush_selection_weight",
     "editor.brush_selection_hardness",
     "editor.brush_selection_angle",
+    "editor.glue_weight_opacity",
 ];
-const IDS: [&str; 4] = [
+const IDS: [&str; 5] = [
     "brush-selection-size",
     "brush-selection-weight",
     "brush-selection-hardness",
     "brush-selection-angle",
+    "glue-weight-opacity",
 ];
 #[derive(Clone)]
 struct ShapeChoice {
@@ -54,7 +58,8 @@ fn value(s: Settings, index: usize) -> f64 {
         0 => s.diameter,
         1 => s.weight * 100.,
         2 => s.hardness * 100.,
-        _ => s.angle,
+        3 => s.angle,
+        _ => s.color[3] * 100.,
     }) as f64
 }
 fn options(s: Settings, index: usize, disabled: bool) -> SlideNumberOptions {
@@ -84,12 +89,28 @@ fn rgba(c: [f32; 4]) -> Rgba {
     }
 }
 
+fn glue_restriction(controls: Option<&zipzi_editor_core::GluePaintControls>) -> Option<String> {
+    let status = controls?.diagnostic.as_ref()?;
+    let key = match status.code.as_str() {
+        "GLUE_LOCKED" => "editor.glue_locked",
+        "GLUE_HIDDEN" => "editor.glue_hidden",
+        "GLUE_EMPTY" => "properties.glue_empty",
+        "GLUE_MESHES" => "editor.glue_invalid_meshes",
+        "GLUE_OCCUPIED" => "editor.glue_occupied",
+        "GLUE_ENDPOINT" => "editor.glue_unattached",
+        "INVALID_GLUE_WEIGHTS" => "editor.glue_invalid_weights",
+        _ => return Some(status.message.clone()),
+    };
+    Some(t!(key).into_owned())
+}
+
 pub(super) struct BrushSelectionBar {
     owner: WeakEntity<EditorView>,
     viewport: ViewportId,
     binding: Option<ViewportBinding>,
-    inputs: [Entity<InputState>; 4],
-    numbers: [Entity<SlideNumberInput>; 4],
+    tool: ToolId,
+    inputs: [Entity<InputState>; 5],
+    numbers: [Entity<SlideNumberInput>; 5],
     shape: Entity<SelectState<Vec<ShapeChoice>>>,
     color: Entity<ColorPickerState>,
     original: Option<Settings>,
@@ -153,7 +174,7 @@ impl BrushSelectionBar {
             let color = cx
                 .new(|cx| ColorPickerState::new(rgba(Settings::default().color), true, window, cx));
             let mut subscriptions = Vec::new();
-            for i in 0..4 {
+            for i in 0..LABELS.len() {
                 subscriptions.push(cx.subscribe_in(
                     &numbers[i],
                     window,
@@ -235,6 +256,7 @@ impl BrushSelectionBar {
                 owner,
                 viewport,
                 binding: None,
+                tool: ToolId::Select,
                 inputs,
                 numbers,
                 shape,
@@ -247,13 +269,13 @@ impl BrushSelectionBar {
         })
     }
     fn settings(&self, cx: &App) -> Option<Settings> {
-        Some(
-            self.owner
-                .upgrade()?
-                .read(cx)
-                .editor
-                .brush_selection_settings(),
-        )
+        let owner = self.owner.upgrade()?;
+        let editor = &owner.read(cx).editor;
+        Some(if editor.active_tool() == ToolId::Glue {
+            editor.glue_brush_settings()
+        } else {
+            editor.brush_selection_settings()
+        })
     }
     fn apply_number(&mut self, index: usize, v: f64, cx: &mut Context<Self>) {
         let Some(mut s) = self.settings(cx) else {
@@ -267,7 +289,8 @@ impl BrushSelectionBar {
             0 => s.diameter = v as f32,
             1 => s.weight = v as f32 / 100.,
             2 => s.hardness = v as f32 / 100.,
-            _ => s.angle = v as f32,
+            3 => s.angle = v as f32,
+            _ => s.color[3] = v as f32 / 100.,
         }
         self.apply(s, cx);
     }
@@ -279,18 +302,24 @@ impl BrushSelectionBar {
         if state.modal
             || state.editor.is_busy()
             || state.editor.gesture_active()
-            || state.editor.active_tool() != ToolId::BrushSelect
+            || !matches!(
+                state.editor.active_tool(),
+                ToolId::BrushSelect | ToolId::Glue
+            )
+            || state.editor.active_tool() != self.tool
             || self.binding.is_none()
             || state.editor.viewport_binding(self.viewport) != self.binding
-            || state.editor.brush_selection_settings() == s
+            || self.settings(cx) == Some(s)
         {
             return;
         }
         owner.update(cx, |owner, cx| {
-            if let Err(e) = owner
-                .editor
-                .execute(EditorCommand::SetBrushSelectionSettings(s))
-            {
+            let command = if self.tool == ToolId::Glue {
+                EditorCommand::SetGlueBrushSettings(s)
+            } else {
+                EditorCommand::SetBrushSelectionSettings(s)
+            };
+            if let Err(e) = owner.editor.execute(command) {
                 owner.set_edit_error(e.to_string(), cx);
             }
             owner.notify_canvas(cx);
@@ -361,13 +390,15 @@ impl BrushSelectionBar {
         };
         let state = owner.read(cx);
         let binding = state.editor.viewport_binding(self.viewport);
-        let s = state.editor.brush_selection_settings();
+        let s = self.settings(cx).unwrap_or_default();
+        let tool = state.editor.active_tool();
         let disabled = state.modal
             || state.editor.is_busy()
             || state.editor.gesture_active()
-            || state.editor.active_tool() != ToolId::BrushSelect;
-        let changed = self.binding != binding;
+            || !matches!(tool, ToolId::BrushSelect | ToolId::Glue);
+        let changed = self.binding != binding || self.tool != tool;
         self.binding = binding;
+        self.tool = tool;
         if changed {
             self.original = None;
             self.open = false;
@@ -375,12 +406,17 @@ impl BrushSelectionBar {
         if disabled {
             self.open = false;
         }
-        for i in 0..4 {
+        for i in 0..LABELS.len() {
             self.numbers[i].update(cx, |n, cx| {
                 if changed {
                     n.reset_drag(cx);
                 }
-                n.configure(t!(LABELS[i]).into_owned(), options(s, i, disabled), cx);
+                let label = if i == 1 && tool == ToolId::Glue {
+                    "editor.glue_brush_strength"
+                } else {
+                    LABELS[i]
+                };
+                n.configure(t!(label).into_owned(), options(s, i, disabled), cx);
             });
             if changed
                 || force
@@ -419,11 +455,136 @@ impl BrushSelectionBar {
             .child(self.numbers[index].clone())
             .into_any_element()
     }
+
+    fn glue_modes(
+        &self,
+        disabled: bool,
+        controls: Option<&zipzi_editor_core::GluePaintControls>,
+        advanced: bool,
+        cx: &Context<Self>,
+    ) -> impl IntoElement {
+        let owner = self.owner.upgrade();
+        let active = owner
+            .as_ref()
+            .map(|owner| owner.read(cx).editor.glue_brush_mode());
+        let mut buttons = div()
+            .id(if advanced {
+                "glue-single-side-modes"
+            } else {
+                "glue-brush-modes"
+            })
+            .test_support()
+            .flex()
+            .items_center()
+            .flex_shrink_0()
+            .gap(compact::rem(1.));
+        let names = controls
+            .map(|c| c.meshes.clone())
+            .unwrap_or(["A".into(), "B".into()]);
+        for (id, mode, label, icon) in [
+            (
+                "glue-mode-ratio",
+                GlueBrushMode::Ratio,
+                t!("editor.glue_follow", name = names[0]).into_owned(),
+                include_bytes!("../../assets/icons/glue-follow-a.svg").as_slice(),
+            ),
+            (
+                "glue-mode-follow-b",
+                GlueBrushMode::FollowB,
+                t!("editor.glue_follow", name = names[1]).into_owned(),
+                include_bytes!("../../assets/icons/glue-follow-b.svg").as_slice(),
+            ),
+            (
+                "glue-mode-a",
+                GlueBrushMode::A,
+                t!("editor.glue_brush_release_side", name = names[0]).into_owned(),
+                include_bytes!("../../assets/icons/glue-release-a.svg").as_slice(),
+            ),
+            (
+                "glue-mode-b",
+                GlueBrushMode::B,
+                t!("editor.glue_brush_release_side", name = names[1]).into_owned(),
+                include_bytes!("../../assets/icons/glue-release-b.svg").as_slice(),
+            ),
+            (
+                "glue-mode-reattach",
+                GlueBrushMode::Reattach,
+                t!("editor.glue_brush_reattach").into_owned(),
+                include_bytes!("../../assets/icons/glue-bind.svg").as_slice(),
+            ),
+            (
+                "glue-mode-release",
+                GlueBrushMode::Release,
+                t!("editor.glue_brush_release").into_owned(),
+                include_bytes!("../../assets/icons/glue-unbind.svg").as_slice(),
+            ),
+        ] {
+            if matches!(mode, GlueBrushMode::A | GlueBrushMode::B) != advanced {
+                continue;
+            }
+            let color = match mode {
+                GlueBrushMode::Ratio | GlueBrushMode::A => {
+                    Some(zipzi_editor_render::canvas_overlay::GLUE_WEIGHT_A)
+                }
+                GlueBrushMode::FollowB | GlueBrushMode::B => {
+                    Some(zipzi_editor_render::canvas_overlay::GLUE_WEIGHT_B)
+                }
+                _ => None,
+            };
+            let hint = glue_restriction(controls).unwrap_or_else(|| match mode {
+                GlueBrushMode::Ratio => {
+                    t!("editor.glue_paint_follow_hint", name = names[0]).into_owned()
+                }
+                GlueBrushMode::FollowB => {
+                    t!("editor.glue_paint_follow_hint", name = names[1]).into_owned()
+                }
+                GlueBrushMode::A => t!("editor.glue_paint_side_hint", name = names[0]).into_owned(),
+                GlueBrushMode::B => t!("editor.glue_paint_side_hint", name = names[1]).into_owned(),
+                GlueBrushMode::Reattach => t!("editor.glue_paint_attach_hint").into_owned(),
+                GlueBrushMode::Release => t!("editor.glue_paint_release_hint").into_owned(),
+            });
+            let button = compact::toggle(Button::new(id), active == Some(mode))
+                .icon(
+                    Icon::default()
+                        .data(icon)
+                        .when_some(color.filter(|_| active != Some(mode)), |icon, color| {
+                            icon.text_color(gpui_kit::rgb(color))
+                        }),
+                )
+                .tooltip(format!("{label}\n{hint}"))
+                .accessibility_label(label)
+                .disabled(disabled)
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    let Some(owner) = this.owner.upgrade() else {
+                        return;
+                    };
+                    if owner.read(cx).editor.active_tool() != ToolId::Glue {
+                        return;
+                    }
+                    owner.update(cx, |owner, cx| {
+                        let result = owner.editor.execute(EditorCommand::SetGlueBrushMode(mode));
+                        owner.complete_edit(result, cx);
+                    });
+                    cx.notify();
+                }));
+            buttons = buttons.child(super::toolbar::secondary_icon_button(button, cx));
+        }
+        buttons
+    }
 }
 impl Render for BrushSelectionBar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.sync(window, cx, false);
         let s = self.settings(cx).unwrap_or_default();
+        let glue = self.tool == ToolId::Glue;
+        let glue_context = glue
+            .then(|| {
+                self.owner
+                    .upgrade()
+                    .zip(self.binding)
+                    .and_then(|(owner, binding)| owner.read(cx).editor.glue_paint_controls(binding))
+            })
+            .flatten();
         let disabled = self.owner.upgrade().is_none_or(|owner| {
             let v = owner.read(cx);
             v.modal || v.editor.is_busy() || v.editor.gesture_active()
@@ -461,10 +622,62 @@ impl Render for BrushSelectionBar {
             .child(row("editor.brush_selection_shape", shape))
             .child(row(LABELS[2], self.field(2, 100.)))
             .child(row(LABELS[3], self.field(3, 100.)))
-            .child(row(
-                "editor.brush_selection_color",
-                ColorField::new("brush-selection-color", &self.color).into_any_element(),
-            ));
+            .when(glue, |details| {
+                details
+                    .child(row(LABELS[4], self.field(4, 100.)))
+                    .child(
+                        div()
+                            .mt(compact::rem(6.))
+                            .child(t!("editor.glue_single_side").into_owned()),
+                    )
+                    .child(self.glue_modes(
+                        disabled || glue_context.as_ref().is_none_or(|c| c.diagnostic.is_some()),
+                        glue_context.as_ref(),
+                        true,
+                        cx,
+                    ))
+            })
+            .when(!glue, |details| {
+                details.child(row(
+                    "editor.brush_selection_color",
+                    ColorField::new("brush-selection-color", &self.color).into_any_element(),
+                ))
+            });
+        let mode = self
+            .owner
+            .upgrade()
+            .map(|o| o.read(cx).editor.glue_brush_mode());
+        let advanced_side = if glue {
+            match mode {
+                Some(GlueBrushMode::A) => {
+                    Some((0, zipzi_editor_render::canvas_overlay::GLUE_WEIGHT_A))
+                }
+                Some(GlueBrushMode::B) => {
+                    Some((1, zipzi_editor_render::canvas_overlay::GLUE_WEIGHT_B))
+                }
+                _ => None,
+            }
+        } else {
+            None
+        };
+        let settings_label = t!(if glue {
+            "editor.glue_brush_settings"
+        } else {
+            "editor.brush_selection_settings"
+        })
+        .into_owned();
+        let settings_hint = if let Some((side, _)) = advanced_side {
+            let name = glue_context
+                .as_ref()
+                .map(|c| c.meshes[side].as_str())
+                .unwrap_or(if side == 0 { "A" } else { "B" });
+            format!(
+                "{settings_label}\n{}",
+                t!("editor.glue_brush_release_side", name = name)
+            )
+        } else {
+            settings_label.clone()
+        };
         let popover = Popover::new("brush-selection-more")
             .open(self.open)
             // The picker is a separately hosted child popup. Its outside-click
@@ -477,16 +690,16 @@ impl Render for BrushSelectionBar {
             }))
             .trigger(
                 compact::toggle(Button::new("brush-selection-more-button"), self.open)
-                    .icon(IconName::Settings2)
-                    .map(|button| {
-                        super::toolbar::attached_button(button, super::toolbar::SECONDARY, cx)
-                    })
-                    .xsmall()
-                    .w(compact::rem(24.))
-                    .h(compact::rem(24.))
+                    .icon(
+                        Icon::new(IconName::Settings2)
+                            .when_some(advanced_side.filter(|_| !self.open), |icon, (_, color)| {
+                                icon.text_color(gpui_kit::rgb(color))
+                            }),
+                    )
+                    .map(|button| super::toolbar::secondary_icon_button(button, cx))
                     .disabled(disabled)
-                    .accessibility_label(t!("editor.brush_selection_settings").into_owned())
-                    .tooltip(t!("editor.brush_selection_settings")),
+                    .accessibility_label(settings_label)
+                    .tooltip(settings_hint),
             )
             .child(details);
         let labelled_field = |index, id: &'static str, key: &str, width| {
@@ -499,67 +712,143 @@ impl Render for BrushSelectionBar {
                 .child(div().id(id).test_support().child(t!(key).into_owned()))
                 .child(self.field(index, width))
         };
-        let content = div()
-            .id("brush-selection-controls")
-            .test_support()
-            .flex()
-            .flex_wrap()
-            .items_center()
-            .justify_center()
-            .gap(compact::rem(4.))
-            .px(compact::rem(2.))
-            .max_w_full()
-            .text_size(compact::rem(11.))
-            .text_color(cx.theme().foreground)
-            .child(
-                self.mode_button(BrushMode::Deform, disabled, cx)
-                    .flex_shrink_0(),
-            )
-            .child(
-                self.mode_button(BrushMode::Inflate, disabled, cx)
-                    .flex_shrink_0(),
-            )
-            .child(labelled_field(
-                1,
-                "brush-selection-weight-label",
-                "editor.brush_weight_short",
-                80.,
-            ))
-            .child(labelled_field(
-                0,
-                "brush-selection-size-label",
-                "editor.brush_size_short",
-                88.,
-            ))
-            .child(
-                compact::button(Button::new("brush-selection-cycle-shape"))
-                    .icon(match s.shape {
-                        BrushShape::Circle => IconName::Circle,
-                        BrushShape::Square => IconName::Square,
-                        BrushShape::Line => IconName::Minus,
-                    })
-                    .map(|button| {
-                        super::toolbar::attached_button(button, super::toolbar::SECONDARY, cx)
-                    })
-                    .xsmall()
+        let content = if glue {
+            let mut toolbar = Toolbar::new("glue-weight-toolbar")
+                .xsmall()
+                .disabled(disabled)
+                .min_w_0()
+                .min_h(compact::rem(super::toolbar::SECONDARY.button_size))
+                .max_w_full()
+                .p_0()
+                .gap(compact::rem(4.));
+            if let Some((owner, binding)) = self.owner.upgrade().zip(self.binding) {
+                toolbar = toolbar.content(
+                    ToolbarGroup::new("glue-weight-navigation")
+                        .label(t!("editor.glue_weights_tab"))
+                        .content(super::modeling_toolbar::glue_navigation(
+                            &owner, binding, disabled, cx,
+                        )),
+                );
+            }
+            let compact_field = |index, id: &'static str, key: &str, width| {
+                let label = t!(key).into_owned();
+                div()
+                    .id(id)
+                    .test_support()
+                    .aria_label(label.clone())
+                    .flex()
+                    .items_center()
                     .flex_shrink_0()
-                    .w(compact::rem(24.))
-                    .h(compact::rem(24.))
-                    .disabled(disabled)
-                    .accessibility_label(t!("editor.brush_selection_shape").into_owned())
-                    .tooltip(t!("editor.brush_selection_shape"))
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        if let Some(mut s) = this.settings(cx) {
-                            s.shape = match s.shape {
-                                BrushShape::Circle => BrushShape::Square,
-                                BrushShape::Square => BrushShape::Line,
-                                BrushShape::Line => BrushShape::Circle,
-                            };
-                            this.apply(s, cx);
-                        }
-                    })),
-            )
-            .child(div().flex_shrink_0().child(popover));
+                    .h(compact::rem(super::toolbar::SECONDARY.button_size))
+                    .tooltip(move |window, cx| {
+                        gpui_kit::component::tooltip::Tooltip::new(label.clone()).build(window, cx)
+                    })
+                    .child(self.field(index, width))
+            };
+            toolbar = toolbar
+                .content(Separator::vertical().h(compact::rem(16.)))
+                .content(
+                    ToolbarGroup::new("glue-weight-brushes")
+                        .label(t!("editor.glue_local_brush"))
+                        .content(self.glue_modes(
+                            disabled
+                                || glue_context.as_ref().is_none_or(|c| c.diagnostic.is_some()),
+                            glue_context.as_ref(),
+                            false,
+                            cx,
+                        )),
+                )
+                .content(Separator::vertical().h(compact::rem(16.)))
+                .content(
+                    ToolbarGroup::new("glue-weight-parameters")
+                        .label(t!("editor.glue_brush_settings"))
+                        .gap(compact::rem(4.))
+                        .content(compact_field(
+                            1,
+                            "brush-selection-weight-label",
+                            "editor.glue_brush_strength",
+                            60.,
+                        ))
+                        .content(compact_field(
+                            0,
+                            "brush-selection-size-label",
+                            "editor.brush_selection_size",
+                            80.,
+                        )),
+                )
+                .content(popover);
+            div()
+                .id("brush-selection-controls")
+                .test_support()
+                .max_w_full()
+                .text_size(compact::rem(11.))
+                .text_color(cx.theme().foreground)
+                .child(toolbar)
+                .into_any_element()
+        } else {
+            div()
+                .id("brush-selection-controls")
+                .test_support()
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .justify_center()
+                .gap(compact::rem(4.))
+                .px(compact::rem(2.))
+                .max_w_full()
+                .text_size(compact::rem(11.))
+                .text_color(cx.theme().foreground)
+                .child(
+                    self.mode_button(BrushMode::Deform, disabled, cx)
+                        .flex_shrink_0(),
+                )
+                .child(
+                    self.mode_button(BrushMode::Inflate, disabled, cx)
+                        .flex_shrink_0(),
+                )
+                .child(labelled_field(
+                    1,
+                    "brush-selection-weight-label",
+                    "editor.brush_weight_short",
+                    80.,
+                ))
+                .child(labelled_field(
+                    0,
+                    "brush-selection-size-label",
+                    "editor.brush_size_short",
+                    88.,
+                ))
+                .child(
+                    compact::button(Button::new("brush-selection-cycle-shape"))
+                        .icon(match s.shape {
+                            BrushShape::Circle => IconName::Circle,
+                            BrushShape::Square => IconName::Square,
+                            BrushShape::Line => IconName::Minus,
+                        })
+                        .map(|button| {
+                            super::toolbar::attached_button(button, super::toolbar::SECONDARY, cx)
+                        })
+                        .xsmall()
+                        .flex_shrink_0()
+                        .w(compact::rem(24.))
+                        .h(compact::rem(24.))
+                        .disabled(disabled)
+                        .accessibility_label(t!("editor.brush_selection_shape").into_owned())
+                        .tooltip(t!("editor.brush_selection_shape"))
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            if let Some(mut s) = this.settings(cx) {
+                                s.shape = match s.shape {
+                                    BrushShape::Circle => BrushShape::Square,
+                                    BrushShape::Square => BrushShape::Line,
+                                    BrushShape::Line => BrushShape::Circle,
+                                };
+                                this.apply(s, cx);
+                            }
+                        })),
+                )
+                .child(div().flex_shrink_0().child(popover))
+                .into_any_element()
+        };
         let primary = super::toolbar::PRIMARY;
         div()
             .absolute()

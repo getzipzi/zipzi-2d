@@ -230,6 +230,9 @@ impl Editor {
             let target = session.modeling.tools.manual_target().unwrap();
             scene = scene.with_manual_reference(target);
             geometry = Arc::new(geometry.with_manual_uv(&session.document, target, scene.clone()));
+        } else if session.modeling.tools.manual_viewport() == Some(binding.viewport) {
+            geometry = Arc::new(geometry.without_glue(&session.document)?);
+            scene = geometry.source.clone();
         } else if !session.modeling.tools.manual_active() && session.modeling.tools.original_points
         {
             geometry = Arc::new(geometry.with_original_points(&session.document)?);

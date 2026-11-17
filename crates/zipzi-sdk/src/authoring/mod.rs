@@ -10,7 +10,7 @@ pub use project::{
     SavedMarker,
 };
 
-pub use commands::{Commands, NameTarget};
+pub use commands::{glue_binding_additions, validate_glue_weight_edit, Commands, NameTarget};
 pub use draft::{Draft, PreparedChange, PreparedPreview};
 pub use history::{HistoryLimits, HistoryState};
 pub use session::{AuthoringSession, Publication, PublicationKind};

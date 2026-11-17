@@ -28,20 +28,69 @@ impl CanvasScene {
     }
     /// Change control geometry only; the artwork and Glue preview keep the final pose.
     pub(crate) fn with_original_points(&self, document: &Document) -> anyhow::Result<Self> {
+        self.with_pre_glue_points(
+            document,
+            document
+                .context()
+                .selections
+                .iter()
+                .filter(|o| o.kind == K::Mesh)
+                .map(|o| o.id.as_str()),
+        )
+    }
+
+    /// Mesh Edit projects both artwork and handles before Glue. Runtime/export
+    /// and other viewports retain the evaluated frame and its relationship data.
+    pub(crate) fn without_glue(&self, document: &Document) -> anyhow::Result<Self> {
+        if self.glue_operations.is_empty() {
+            return Ok(self.clone());
+        }
+        let affected: HashSet<_> = self
+            .glue_operations
+            .iter()
+            .flat_map(|op| [op.mesh_a.as_str(), op.mesh_b.as_str()])
+            .collect();
+        let mut scene = self.with_pre_glue_points(document, affected.iter().copied())?;
+        {
+            let frame = Arc::make_mut(&mut scene.source.viewport_frame);
+            for drawable in &mut frame.drawables {
+                if !affected.contains(drawable.id.as_str()) {
+                    continue;
+                }
+                if let Some(mesh) = scene
+                    .mesh_slots
+                    .get(&drawable.id)
+                    .map(|&slot| &scene.meshes[slot])
+                {
+                    drawable.positions = mesh
+                        .vertices
+                        .iter()
+                        .map(|(_, p)| zipzi_core::Vec2::new(p.x, p.y))
+                        .collect();
+                }
+            }
+        }
+        scene.glue_operations = Arc::from([]);
+        scene.glue_map = Arc::new(crate::mesh_edit::GlueMap::default());
+        Ok(scene)
+    }
+
+    fn with_pre_glue_points<'a>(
+        &self,
+        document: &Document,
+        meshes_to_restore: impl Iterator<Item = &'a str>,
+    ) -> anyhow::Result<Self> {
         let mut scene = self.clone();
         let values = self.parameter_values();
         let doc = document.model();
         let mut meshes = self.meshes.to_vec();
-        for object in &document.context().selections {
-            if object.kind != K::Mesh {
-                continue;
-            }
-            let Some(&slot) = self.mesh_slots.get(&object.id) else {
+        for id in meshes_to_restore {
+            let Some(&slot) = self.mesh_slots.get(id) else {
                 continue;
             };
-            let mesh = doc.mesh(&object.id).unwrap();
+            let mesh = doc.mesh(id).unwrap();
             let space = crate::control_edit::ControlSpace::new(document, self, &mesh.deformer_id)?;
-            let local = zipzi_core::evaluation::authoring_mesh_positions(&*doc, &object.id, values)
+            let local = zipzi_core::evaluation::authoring_mesh_positions(&*doc, id, values)
                 .map_err(|e| anyhow::anyhow!("{}", e.message))?;
             let m = Arc::make_mut(&mut meshes[slot]);
             m.vertices = mesh
@@ -51,7 +100,7 @@ impl CanvasScene {
                 .zip(local.into_iter().map(|p| space.to_model(p)))
                 .collect();
             m.bounds = bounds(m.vertices.iter().map(|(_, p)| *p));
-            m.boundary = self.topology.meshes[&object.id]
+            m.boundary = self.topology.meshes[id]
                 .boundary
                 .iter()
                 .map(|&(a, b)| (m.vertices[a].1, m.vertices[b].1))
@@ -60,11 +109,17 @@ impl CanvasScene {
         scene.meshes = meshes.into();
         for g in scene.topology.glues.iter() {
             if let Some(control) = scene.controls.iter_mut().find(|c| c.object == g.object) {
+                let (Some(&a_slot), Some(&b_slot)) = (
+                    scene.mesh_slots.get(&g.mesh_a),
+                    scene.mesh_slots.get(&g.mesh_b),
+                ) else {
+                    continue;
+                };
                 control.points.clear();
                 for &(a, b) in &g.pairs {
                     control.points.extend([
-                        scene.meshes[scene.mesh_slots[&g.mesh_a]].vertices[a].1,
-                        scene.meshes[scene.mesh_slots[&g.mesh_b]].vertices[b].1,
+                        scene.meshes[a_slot].vertices[a].1,
+                        scene.meshes[b_slot].vertices[b].1,
                     ]);
                 }
             }

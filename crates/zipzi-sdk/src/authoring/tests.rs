@@ -479,6 +479,7 @@ mod conversions;
 mod scene;
 
 mod deletion;
+mod glue;
 mod mesh;
 
 mod metadata;

@@ -485,10 +485,12 @@ points filled in the same hue. Switching the current mesh or reordering selectio
 retains its color for the open document. The current mesh name has a matching swatch.
 
 Mesh Edit retains the complete model and its current camera. The selected mesh's
-handles follow the evaluated pose, including ordinary parameters, BlendShapes,
-parent deformers and Glue. Picking maps the displayed triangles back to UVs;
-drags freeze the source pose, invert Glue and the parent deformation, and resample
-all stored shapes through the resulting UVs. No authored keyform needs to be selected.
+handles and artwork follow ordinary parameters, BlendShapes and parent deformers,
+before Glue attachment. Glue is suspended only in the viewport editing the mesh;
+other viewports and Runtime/export retain the final pose. Picking maps these
+unglued triangles back to UVs; drags freeze the source pose, invert the parent
+deformation and resample all stored shapes through the resulting UVs. No authored
+keyform needs to be selected. Exiting Mesh Edit restores Glue attachment.
 
 The image button switches to **Edit on source image** for an optional pixel-space
 UV view. Both views allow topology editing, retain selection and use separate cameras.
@@ -497,8 +499,17 @@ inverse and retain the last valid candidate; the source view remains available.
 Other Modeling viewports retain their model view and cannot acquire this edit gesture.
 
 New and moved points resample every stored shape from the operation's frozen UV
-source. Glue endpoint markers remain visible; deleting a referenced endpoint
-requires releasing its pair first. Outside-domain operations explain their refusal
+source. Bound endpoints are represented by one square Glue marker at their
+midpoint, replacing both endpoint editing markers. Both meshes' incident topology
+edges converge on this marker, retaining their ownership colors; edge picking and
+highlights use the same positions. The marker retains its yellow Glue outline,
+without an additional control point or relationship line. Clicking or box-selecting the Glue
+point selects the pair; Shift adds and Alt removes it. The former endpoint
+positions no longer participate in point picking or region selection. Dragging
+the Glue point moves the pair in one Undo step; Unbind restores both separate
+vertex markers. Artwork retains its pre-Glue pose while in Mesh Edit. Locked
+bindings cannot be dragged.
+Deleting a referenced endpoint requires releasing its pair first. Outside-domain operations explain their refusal
 without closing the mode. Interior generation retains identities and Glue; edge
 and full rebuilds require that no old vertex is referenced. A generation preview
 is applied explicitly; saving only settles an active point drag.
@@ -508,6 +519,74 @@ each side per click. It remaps UVs without moving the artwork or resampling
 stored shapes; image and UV changes share one undo step. The extra space allows
 an affine mesh's outline to extend beyond the original image. Existing
 deformation sampling domains still apply to meshes with dependencies.
+
+## Glue
+
+Create and remove Glue connections in **Mesh Edit**. Select two meshes and choose
+**Add Glue point**. Each click in their overlapping area inserts or reuses one
+vertex on each mesh and binds them immediately, showing a single Glue point. Point creation and binding are one atomic Undo step. If either side or
+the binding cannot be edited, the entire click leaves both meshes unchanged.
+The tool stays active for adding more points to the same seam. Clicking an
+existing binding control selects it without creating duplicate points or history;
+its drag behavior remains available. A canceled or dragged empty-space click
+creates nothing. Choosing a selection tool exits Add Glue point mode.
+
+You can also select one existing vertex on each side (Shift adds the second
+selection) and click **Bind**. The vertices need not overlap: a new Glue uses
+equal weights and full attachment, so both endpoints meet at their midpoint
+after leaving Mesh Edit. While editing, the artwork retains its pre-Glue pose
+and both sides' topology edges meet at the merged marker. Existing
+seams retain their attachment value and parameter bindings. Batch binding
+requires uniquely matching coincident points; bind separated pairs individually.
+**Unbind** removes the selected connections while retaining mesh vertices, which
+Add Glue point can reuse when reconnecting.
+
+Mesh Edit presents Add Glue point, Bind, Unbind and **Edit Glue weights** as
+icon buttons in one row, separated from the mesh tools by a vertical rule.
+Tooltips supply their names and binding guidance; no hint row occupies the
+canvas. The seam target dropdown is hidden: the first binding creates a Glue
+and subsequent points use the current target. **Edit Glue weights** exits
+Mesh Edit and selects that Glue for painting. **Edit connections in Mesh Edit**
+restores the seam's two meshes and its identity for adding or removing connections.
+
+The Glue tool uses the same brush-and-junction icon as **Edit Glue weights**.
+With no single Glue selected, it shows all visible, in-scope Glue labels and
+waits for a label click; brush controls and colors appear only after choosing a
+target. Labels remain available for switching targets without painting or
+adding history. Locked labels are gray and expose the restriction when selected.
+
+Weight color covers the selected Glue's two mesh surfaces: A is red and B green.
+Unglued vertices retain their own mesh's color; bound vertices mix the two hues
+using the attachment coefficients, and the colors interpolate across the mesh's
+triangles. This is a display of the current stored weights, independent of the
+overall Attachment parameter. Brush edits and cancellation update the color
+immediately. Weight color opacity under Brush settings affects this surface
+display; zero hides it while leaving labels and connection markers available.
+The brush buttons use matching colored icons, replacing repeated A/B badges at
+every connection. Leaving the weight tool hides the surface colors.
+
+The weight toolbar shares Mesh Edit's single-row layout and icon-button styling.
+Vertical rules separate navigation, brush modes and settings. Follow A/B,
+Reattach and Release both have icon buttons; strength and diameter retain compact
+numeric fields, while shape, hardness, angle, opacity and single-side brushes
+remain under the settings icon. Names, modifier guidance and restrictions live
+in tooltips, with no target/count header or hint rows on the canvas. Single-side
+brushes tint the settings icon red or green while active. Whole-seam presets in
+Properties replace local brush edits.
+The toolbar has no Done button; switching to the primary Select tool exits
+weight editing. The primary toolbar places Edit Glue weights after Mesh Edit.
+A stroke commits one Undo step on release and cancels with Escape. Both meshes
+and the Glue must be visible and unlocked. Overall Attachment remains a separate
+parameter/keyform value; weights are stored per connection.
+Imported weight sums may exceed one by up to `1e-6` from floating-point rounding
+and remain editable. Opening the tool preserves the imported values; edited
+pairs return to the brush domain, and cancellation or Undo restores the exact
+source weights.
+
+This division follows the [Cubism Glue setup workflow](https://docs.live2d.com/en/cubism-editor-manual/glue/):
+prepare overlapping vertices while editing both meshes, bind the selected
+vertices, then leave Mesh Edit for weight adjustment. Zipzi uses an explicit
+simultaneous-insertion toggle rather than Cubism's active-mesh selection UI.
 
 ## Mesh generation controls
 

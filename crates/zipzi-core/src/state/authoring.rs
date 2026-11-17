@@ -1,11 +1,11 @@
 //! Domain operations on an isolated candidate. Record writes own all tracking;
 //! model rules borrow the candidate without constructing a legacy Document.
 use super::*;
-use crate::SceneTrackEvaluation;
 use crate::model_validation::binding_coordinates::coordinates;
 use crate::model_validation::bindings::{
     validate_rotation_keyform_payload, validate_warp_keyform_payload,
 };
+use crate::SceneTrackEvaluation;
 
 fn checked(status: Status) -> Result<(), Status> {
     if status.is_ok() {

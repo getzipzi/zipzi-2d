@@ -88,6 +88,12 @@ vertex CanvasOut canvas_vertex(uint v [[vertex_id]], uint id [[instance_id]],
     }
     float4 color=i.color;
     if (kind==3) color.a *= v==0 ? i.border.x : v==1 ? i.border.y : i.border.z;
+    if (kind==4) {
+        uint rgb=uint(i.border.w);
+        float3 other=float3((rgb>>16)&255,(rgb>>8)&255,rgb&255)/255.0;
+        float weight=v==0 ? i.border.x : v==1 ? i.border.y : i.border.z;
+        color.rgb=mix(other,color.rgb,clamp(weight,0.0,1.0));
+    }
     Out base = output(position,color,u);
     return {base.position,base.color,float4(i.border.rgb*i.border.a,i.border.a),local,half_size,
         i.parameters.y*u.scale,i.parameters.z*u.scale,kind};

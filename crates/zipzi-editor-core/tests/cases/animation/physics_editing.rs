@@ -335,12 +335,14 @@ fn cursor_preview_blinks_and_breathes_without_mouse_mapping_or_physics() -> anyh
     }
     let (closed_time, model_generation) = closed.expect("the configured eye closes");
     assert!(reopened, "the configured eye opens again");
-    assert!(editor
-        .animation()
-        .unwrap()
-        .physics_preview
-        .inputs
-        .is_empty());
+    assert!(
+        editor
+            .animation()
+            .unwrap()
+            .physics_preview
+            .inputs
+            .is_empty()
+    );
     assert_eq!(editor.document().unwrap().history_lengths(), history);
 
     let field = property::document::EYE_BLINK_PARAMETERS.key;
@@ -402,10 +404,14 @@ fn cursor_preview_drag_overrides_blink_until_release_and_replays() -> anyhow::Re
     editor.replace_cursor_preview_bindings(id, revision, Some(bindings))?;
     editor.set_physics_cursor(id, true)?;
     let mut evaluator = AnimationEvaluator::default();
-    assert_eq!(sample(&mut editor, &mut evaluator)?.snapshot.parameters[&eye], 1.);
+    assert_eq!(
+        sample(&mut editor, &mut evaluator)?.snapshot.parameters[&eye],
+        1.
+    );
 
     let binding = editor.primary_viewport_binding().unwrap();
-    let drag = editor.begin_cursor_preview_drag(binding, ViewportPoint { x: 0., y: 256. }, false)?;
+    let drag =
+        editor.begin_cursor_preview_drag(binding, ViewportPoint { x: 0., y: 256. }, false)?;
     editor.advance_animation_clock(0.05);
     editor.advance_animation_clock(1.05);
     let driven = sample(&mut editor, &mut evaluator)?;
@@ -543,10 +549,12 @@ fn cursor_preview_holds_and_switches_expressions_on_its_own_clock() -> anyhow::R
     assert_eq!(rewound.identity.time, 0.);
     assert_eq!(rewound.snapshot.active_expressions, [overwrite]);
     editor.dispatch(editor.command(CommandId::ClearExpression))?;
-    assert!(sample(&mut editor, &mut evaluator)?
-        .snapshot
-        .active_expressions
-        .is_empty());
+    assert!(
+        sample(&mut editor, &mut evaluator)?
+            .snapshot
+            .active_expressions
+            .is_empty()
+    );
     assert!(editor.cursor_physics_active());
 
     editor.set_physics_cursor(id, false)?;
@@ -568,16 +576,25 @@ fn cursor_preview_applies_expression_immediately_when_paused() -> anyhow::Result
     let overwrite = catalog.expressions[2].id.clone();
     let multiply = catalog.expressions[1].id.clone();
     let physics = doc.physics_definition().unwrap();
-    let input = physics.data.settings[0].inputs[0].source.parameter_id().unwrap();
+    let input = physics.data.settings[0].inputs[0]
+        .source
+        .parameter_id()
+        .unwrap();
     let mut evaluator = AnimationEvaluator::default();
     editor.set_physics_cursor(id, true)?;
     editor.set_physics_input(id, input, 0.5)?;
     editor.select_expression(id, overwrite.clone())?;
-    assert_eq!(sample(&mut editor, &mut evaluator)?.snapshot.parameters[input], 0.5);
+    assert_eq!(
+        sample(&mut editor, &mut evaluator)?.snapshot.parameters[input],
+        0.5
+    );
 
     editor.pause_animation();
     editor.select_expression(id, overwrite)?;
-    assert_eq!(sample(&mut editor, &mut evaluator)?.snapshot.parameters[input], 0.8);
+    assert_eq!(
+        sample(&mut editor, &mut evaluator)?.snapshot.parameters[input],
+        0.8
+    );
     editor.select_expression(id, multiply.clone())?;
     let frame = sample(&mut editor, &mut evaluator)?;
     assert_eq!(frame.snapshot.parameters[input], 0.25);

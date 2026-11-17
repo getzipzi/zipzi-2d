@@ -584,11 +584,9 @@ fn metadata_only_order_changes_and_net_zero_roots_are_tracked() {
         result.state.editor_state()
     ));
     let mut builder = base.builder();
-    assert!(
-        builder
-            .reorder(RecordDomain::Mesh, vec![id(6), id(6)])
-            .is_err()
-    );
+    assert!(builder
+        .reorder(RecordDomain::Mesh, vec![id(6), id(6)])
+        .is_err());
     assert!(builder.freeze().is_err());
 }
 

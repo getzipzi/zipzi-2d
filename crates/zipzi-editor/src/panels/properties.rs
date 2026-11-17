@@ -5,6 +5,7 @@ mod controls;
 mod cursor_mapping;
 mod deformer;
 mod deformer_original;
+mod glue;
 mod observe;
 pub(crate) mod physics;
 mod rich_controls;
@@ -356,6 +357,8 @@ impl PropertiesPanel {
             Row::AnimationActions(object) => {
                 Some(SharedString::from(format!("expression-action-new-{}", object.id)).into())
             }
+            Row::GlueActions(_) => Some("glue-paint-weights".into()),
+            Row::GlueFollow(_) => Some("property-glue-follow".into()),
             Row::Value { field, .. } => {
                 Some(SharedString::from(format!("object-property-{field}")).into())
             }
@@ -458,6 +461,8 @@ impl PropertiesPanel {
             Row::DeformerOriginal => self.deformer_original_actions(cx),
             Row::AnimationActions(object) => self.animation_actions(object, cx),
             Row::BusinessActions(object) => self.business_actions(object, cx),
+            Row::GlueActions(object) => self.glue_actions(object, cx),
+            Row::GlueFollow(object) => self.glue_follow(object, cx),
             Row::Field(id) => self.render_field(*id, window, cx),
             Row::Detail(row) => details::render(row, cx),
             Row::Group {

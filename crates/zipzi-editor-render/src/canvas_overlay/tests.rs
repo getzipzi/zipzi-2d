@@ -302,3 +302,40 @@ fn long_offscreen_segments_are_clipped_before_gpu_float_arithmetic() {
     assert_eq!(std::mem::offset_of!(CanvasPrimitive, color), 32);
     assert_eq!(std::mem::offset_of!(CanvasPrimitive, border), 48);
 }
+
+#[test]
+fn glue_binding_keeps_its_square_outline_and_wins_over_coincident_endpoint_markers() {
+    for dark in [false, true] {
+        let palette = CanvasPalette::new(dark);
+        let snapshot = OverlaySnapshot {
+            glues: vec![OverlayGlue {
+                pairs: vec![],
+                selected: true,
+                hovered: false,
+                points: vec![
+                    OverlayGluePoint {
+                        position: p(20., 20.),
+                        state: GluePointState::Editable,
+                        selected: true,
+                        hovered: true,
+                    },
+                    OverlayGluePoint {
+                        position: p(20., 20.),
+                        state: GluePointState::Binding,
+                        selected: true,
+                        hovered: false,
+                    },
+                ],
+            }],
+            ..Default::default()
+        };
+        let list =
+            CanvasDrawList::new(&snapshot, [100.; 2], palette, CanvasOptions::default()).unwrap();
+        assert_eq!(list.primitives.len(), 1);
+        assert_eq!(list.primitives[0].color, palette.mesh_selected);
+        assert_eq!(list.primitives[0].color[3], 1.);
+        assert_eq!(list.primitives[0].border, palette.glue);
+        assert_eq!(list.primitives[0].geometry[2], style::POINT_RADIUS);
+        assert_eq!(list.primitives[0].parameters[1], 0.);
+    }
+}

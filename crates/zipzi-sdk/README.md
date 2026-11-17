@@ -25,6 +25,11 @@ check expected values; domain operations enforce owner/child locks, preserve or
 remap stable identities and remove orphan EditorState. Forward references may be
 assembled in a batch, whose complete graph must validate before success.
 Canonical axis/sample identities remain in the working Builder for later commands.
+Glue weight editing accepts a sum up to `1e-6` above one to accommodate imported
+single-precision rounding. Preflight preserves the source values. Requested
+writes with a tiny excess are normalized while retaining their ratio; already
+valid values and unrequested pairs remain exact. Negative, non-finite and
+materially overflowing weights are rejected.
 Absolute vertex positions can be calculated from Draft::baseline without
 accumulating gesture deltas. Conversion admission bounds actual work independently
 of history policy. Manual mesh transfer samples ordinary and BlendShape channels.

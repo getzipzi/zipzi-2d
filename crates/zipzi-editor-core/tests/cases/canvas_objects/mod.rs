@@ -1,11 +1,11 @@
 //! Canvas object interactions, selection, deformation, and picking suites.
 mod brush_select;
-mod inflation;
 mod common;
 mod deformer_original;
 mod deformers;
 mod hierarchy_picking;
 mod hit_policy;
+mod inflation;
 mod lasso;
 mod object_frames;
 mod overlays_locks;

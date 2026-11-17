@@ -3,7 +3,7 @@ use crate::{
     AnimationSession, Document, DocumentId, Editor, ViewportBinding, ViewportInteractionKind,
     ViewportInteractionToken, ViewportKind, ViewportPoint,
 };
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use std::collections::BTreeMap;
 use zipzi_animation::ExpressionTransition;
 pub use zipzi_core::document::{CursorPreviewAxis, CursorPreviewBinding};

@@ -1,6 +1,6 @@
 mod brush_select;
-mod inflation;
 mod common;
+mod inflation;
 mod lasso;
 mod object_frames;
 mod pan_gestures;

@@ -175,15 +175,11 @@ impl Editor {
             &expression_id,
         ));
         if let Some(cursor) = &mut animation.cursor_physics {
-            if cursor
-                .expressions
-                .last()
-                .is_none_or(|trigger| {
-                    trigger.expression_id != expression_id
-                        || trigger.time > animation.time
-                        || (!playing && trigger.transition != transition)
-                })
-            {
+            if cursor.expressions.last().is_none_or(|trigger| {
+                trigger.expression_id != expression_id
+                    || trigger.time > animation.time
+                    || (!playing && trigger.transition != transition)
+            }) {
                 // New expressions can be added without invalidating an ongoing preview.
                 if animation.source.as_ref().is_some_and(|source| {
                     source

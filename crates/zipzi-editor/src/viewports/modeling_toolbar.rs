@@ -1,7 +1,12 @@
 use super::toolbar::SECONDARY;
 use crate::{t, ui::compact, viewports::ViewportSurface};
 use gpui_kit::assets::IconName;
-use gpui_kit::component::{ActiveTheme, Disableable, Icon, Sizable, button::Button};
+use gpui_kit::component::{
+    ActiveTheme, Disableable, Icon, Sizable,
+    button::Button,
+    separator::Separator,
+    toolbar::{Toolbar, ToolbarGroup},
+};
 use gpui_kit::{prelude::*, *};
 use zipzi_editor_core::{CommandId, CommandSource, ToolId};
 
@@ -24,7 +29,15 @@ pub(super) fn render_secondary(
     if state.editor.manual_for_viewport(canvas.viewport) {
         return render_mesh_edit_bar(canvas, &owner, modal, cx);
     }
-    if state.editor.active_tool() == ToolId::BrushSelect {
+    // Glue tool first exposes the canvas labels. Brush controls belong to the
+    // selected Glue and must not cover the labels before a target is chosen.
+    if state.editor.active_tool() == ToolId::Glue && !state.editor.glue_editing_weights() {
+        return div().into_any_element();
+    }
+    if matches!(
+        state.editor.active_tool(),
+        ToolId::BrushSelect | ToolId::Glue
+    ) {
         return canvas.brush_bar.clone().into_any_element();
     }
     div().into_any_element()
@@ -37,7 +50,7 @@ fn render_mesh_edit_bar(
     cx: &mut Context<ViewportSurface>,
 ) -> AnyElement {
     let state = owner.read(cx);
-    let mut tools = gpui_kit::component::toolbar::ToolbarGroup::new("mesh-edit-tools")
+    let mut tools = ToolbarGroup::new("mesh-edit-tools")
         .label(t!("editor.tool_manual_mesh"))
         .gap(compact::rem(1.));
     let targets = state.editor.manual_targets();
@@ -155,14 +168,119 @@ fn render_mesh_edit_bar(
                     owner.run_invocation(invocation, window, cx);
                 });
             });
-        tools = tools.content(
-            super::toolbar::attached_button(button, SECONDARY, cx)
-                .xsmall()
-                .w(compact::rem(SECONDARY.button_size))
-                .h(compact::rem(SECONDARY.button_size))
-                .min_w(compact::rem(SECONDARY.button_size))
-                .px(compact::rem(3.)),
-        );
+        tools = tools.content(super::toolbar::secondary_icon_button(button, cx));
     }
-    super::toolbar::secondary_bar("mesh-edit-actions", tools, cx)
+    let binding = canvas.binding(&state.editor);
+    let mut content = Toolbar::new("mesh-edit-toolbar")
+        .xsmall()
+        .disabled(modal)
+        .min_w_0()
+        .min_h(compact::rem(SECONDARY.button_size))
+        .max_w_full()
+        .p_0()
+        .gap(compact::rem(4.))
+        .content(tools);
+    if binding.is_some_and(|b| state.editor.manual_glue_controls(b).is_some()) {
+        let mut glue = ToolbarGroup::new("mesh-glue-tools")
+            .label("Glue")
+            .gap(compact::rem(1.));
+        for (id, command, icon) in [
+            (
+                "mesh-glue-add-point",
+                CommandId::GlueInsertPoint,
+                include_bytes!("../../assets/icons/glue-add-point.svg").as_slice(),
+            ),
+            (
+                "mesh-glue-bind",
+                CommandId::GlueBind,
+                include_bytes!("../../assets/icons/glue-bind.svg").as_slice(),
+            ),
+            (
+                "mesh-glue-unbind",
+                CommandId::GlueUnbind,
+                include_bytes!("../../assets/icons/glue-unbind.svg").as_slice(),
+            ),
+            (
+                "mesh-glue-weights",
+                CommandId::GlueWeights,
+                include_bytes!("../../assets/icons/glue-weights.svg").as_slice(),
+            ),
+        ] {
+            let invocation = canvas.command(&state.editor, command, CommandSource::Toolbar);
+            let status = state.editor.command_state(invocation);
+            let label = t!(command.spec().label).into_owned();
+            let tooltip = match command {
+                CommandId::GlueBind => format!("{label}\n{}", t!("editor.glue_bind_pair_hint")),
+                CommandId::GlueWeights if !status.enabled => {
+                    format!("{label}\n{}", t!("editor.glue_connect_first"))
+                }
+                _ => label.clone(),
+            };
+            let owner = owner.clone();
+            let focus = canvas.focus.clone();
+            let button = compact::button(Button::new(id))
+                .when(command == CommandId::GlueInsertPoint, |button| {
+                    compact::toggle(button, status.checked)
+                })
+                .icon(Icon::default().data(icon))
+                .accessibility_label(label)
+                .tooltip(tooltip)
+                .disabled(modal || !status.enabled)
+                .on_click(move |_, window, cx| {
+                    window.focus(&focus, cx);
+                    owner.update(cx, |owner, cx| owner.run_invocation(invocation, window, cx));
+                });
+            glue = glue.content(super::toolbar::secondary_icon_button(button, cx));
+        }
+        content = content
+            .content(Separator::vertical().h(compact::rem(16.)))
+            .content(glue);
+    }
+    let bar = super::toolbar::secondary_bar("mesh-edit-actions", content, cx);
+    if targets.len() != 2 {
+        return bar;
+    }
+    let primary = super::toolbar::PRIMARY;
+    div()
+        .absolute()
+        .top_0()
+        .left(compact::rem(primary.button_size + 2. * primary.inset + 2.))
+        .right_0()
+        .child(bar)
+        .into_any_element()
+}
+
+/// Weight editing can return directly to Mesh Edit.
+pub(super) fn glue_navigation(
+    owner: &Entity<crate::EditorView>,
+    binding: zipzi_editor_core::ViewportBinding,
+    modal: bool,
+    cx: &App,
+) -> AnyElement {
+    let editor = &owner.read(cx).editor;
+    let invocation =
+        editor.command_for_viewport(CommandId::GlueEditStitches, binding, CommandSource::Toolbar);
+    let enabled = editor.command_state(invocation).enabled;
+    let owner = owner.clone();
+    let button = compact::button(Button::new("glue-tab-points"))
+        .icon(Icon::default().data(include_bytes!("../../assets/icons/mesh-edit.svg")))
+        .accessibility_label(t!("editor.glue_edit_points").into_owned())
+        .tooltip(t!("editor.glue_edit_points").into_owned())
+        .disabled(modal || !enabled)
+        .on_click(move |_, window, cx| {
+            owner.update(cx, |owner, cx| {
+                if let Some(canvas) = owner.viewport_surface(binding.viewport, cx) {
+                    window.focus(&canvas.read(cx).focus.clone(), cx);
+                }
+                owner.run_invocation(invocation, window, cx);
+            });
+        });
+    div()
+        .id("glue-mode-tabs")
+        .test_support()
+        .flex()
+        .items_center()
+        .flex_shrink_0()
+        .child(super::toolbar::secondary_icon_button(button, cx))
+        .into_any_element()
 }

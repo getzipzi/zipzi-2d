@@ -4,7 +4,7 @@ use zipzi_core::evaluation::Drawable;
 use zipzi_core::state::DocumentState;
 use zipzi_core::types::Status;
 
-use crate::layout::{Layout, checked};
+use crate::layout::{checked, Layout};
 use crate::schema::section;
 use crate::types::{Moc3Artifact, TextureSlot};
 

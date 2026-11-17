@@ -9,6 +9,24 @@ use zipzi_editor_core::{
 pub type Color = [f32; 4];
 pub type Point = [f32; 2];
 
+pub const GLUE_WEIGHT_A: u32 = 0xf54e59;
+pub const GLUE_WEIGHT_B: u32 = 0x39bf69;
+
+fn rgb_color(rgb: u32, opacity: f32) -> Color {
+    [
+        ((rgb >> 16) & 255) as f32 / 255.,
+        ((rgb >> 8) & 255) as f32 / 255.,
+        (rgb & 255) as f32 / 255.,
+        opacity,
+    ]
+}
+
+pub fn glue_weight_color(red: f32, opacity: f32) -> Color {
+    let a = rgb_color(GLUE_WEIGHT_A, opacity);
+    let b = rgb_color(GLUE_WEIGHT_B, opacity);
+    std::array::from_fn(|i| b[i] + (a[i] - b[i]) * red.clamp(0., 1.))
+}
+
 /// Ownership hues stay independent of selection, hover and the current mesh.
 pub fn mesh_edit_color(index: usize) -> Color {
     const COLORS: [u32; 8] = [
@@ -96,6 +114,7 @@ pub enum PrimitiveKind {
     Marker,
     Triangle,
     WeightedTriangle,
+    GradientTriangle,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -112,7 +131,7 @@ pub struct CanvasRenderStats {
 pub struct CanvasPrimitive {
     /// Line endpoints; marker center/half size; triangle first two points.
     pub geometry: [f32; 4],
-    /// Kind (0/1/2), then line width; marker corner radius/border width;
+    /// Kind (0/1/2/3/4), then line width; marker corner radius/border width;
     /// or the triangle's third point.
     pub parameters: [f32; 4],
     pub color: Color,
@@ -124,6 +143,7 @@ impl CanvasPrimitive {
             0. => PrimitiveKind::Line,
             1. => PrimitiveKind::Marker,
             3. => PrimitiveKind::WeightedTriangle,
+            4. => PrimitiveKind::GradientTriangle,
             _ => PrimitiveKind::Triangle,
         }
     }
@@ -135,7 +155,9 @@ impl CanvasPrimitive {
                 [x.min(a) - r, y.min(b) - r, x.max(a) + r, y.max(b) + r]
             }
             PrimitiveKind::Marker => [x - a - 1., y - b - 1., x + a + 1., y + b + 1.],
-            PrimitiveKind::Triangle | PrimitiveKind::WeightedTriangle => {
+            PrimitiveKind::Triangle
+            | PrimitiveKind::WeightedTriangle
+            | PrimitiveKind::GradientTriangle => {
                 let [_, c, d, _] = self.parameters;
                 [
                     x.min(a).min(c) - 1.,
@@ -145,6 +167,14 @@ impl CanvasPrimitive {
                 ]
             }
         }
+    }
+
+    /// Gradient faces share opacity and interpolate between two RGB colors.
+    /// `border.xyz` holds the three interpolation factors and `border.w` stores
+    /// the second RGB8 color as an exact, integer-valued f32 (24 bits).
+    pub fn gradient_color(&self, influence: f32) -> Color {
+        let other = rgb_color(self.border[3] as u32, self.color[3]);
+        std::array::from_fn(|i| other[i] + (self.color[i] - other[i]) * influence.clamp(0., 1.))
     }
 }
 
@@ -217,6 +247,23 @@ impl CanvasDrawList {
             extent,
             overflow: false,
         };
+        if overlay.glue_weight_opacity > 0. {
+            for mesh in &overlay.glue_weight_meshes {
+                for (points, influences) in &mesh.triangles {
+                    b.push(CanvasPrimitive {
+                        geometry: [points[0].x, points[0].y, points[1].x, points[1].y],
+                        parameters: [4., points[2].x, points[2].y, 0.],
+                        color: rgb_color(GLUE_WEIGHT_A, overlay.glue_weight_opacity),
+                        border: [
+                            influences[0],
+                            influences[1],
+                            influences[2],
+                            GLUE_WEIGHT_B as f32,
+                        ],
+                    });
+                }
+            }
+        }
         if let Some(weights) = &overlay.selection_weights {
             for (points, influences) in &weights.triangles {
                 b.push(CanvasPrimitive {
@@ -488,7 +535,7 @@ impl CanvasDrawList {
                 );
             }
             // Highest-priority coincident endpoint wins. Spatial buckets keep seams linear.
-            let mut buckets: [Vec<_>; 12] = std::array::from_fn(|_| Vec::new());
+            let mut buckets: [Vec<_>; 16] = std::array::from_fn(|_| Vec::new());
             for v in overlay.glues.iter().flat_map(|g| &g.points) {
                 let priority =
                     v.state as usize * 4 + usize::from(v.selected) * 2 + usize::from(v.hovered);
@@ -521,7 +568,7 @@ impl CanvasDrawList {
                 let previous = cells.insert(cell, kept.len());
                 kept.push((pos, previous));
                 match v.state {
-                    GluePointState::Editable => b.marker(
+                    GluePointState::Binding | GluePointState::Editable => b.marker(
                         pos,
                         [style::POINT_RADIUS; 2],
                         0.,

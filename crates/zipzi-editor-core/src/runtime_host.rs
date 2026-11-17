@@ -293,6 +293,9 @@ impl HostedSession {
     pub(crate) fn document(&self) -> ModelRead {
         ModelRead(self.sourced_snapshot().snapshot)
     }
+    pub(crate) fn observed_version(&self) -> Version {
+        self.cursor
+    }
     pub(crate) fn sourced_snapshot(&self) -> SourcedSnapshot {
         self.host
             .read()

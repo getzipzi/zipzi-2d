@@ -185,7 +185,9 @@ fn model3_import_discovers_unreferenced_animation_sidecars() {
             .contains(&path.canonicalize().unwrap()));
     }
     for path in [foreign_expression, foreign_motion] {
-        assert!(!imported.protected_paths.contains(&path.canonicalize().unwrap()));
+        assert!(!imported
+            .protected_paths
+            .contains(&path.canonicalize().unwrap()));
     }
 
     other_model3["FileReferences"]["Expressions"][0]["File"] = "Other/foreign.exp3.json".into();

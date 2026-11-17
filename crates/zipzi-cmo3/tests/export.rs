@@ -34,14 +34,12 @@ fn cursor_preview_roundtrips_native_entries_and_explicit_clear() {
             ..Default::default()
         })
     });
-    assert!(
-        import_model(&encode(&doc, &png, 0).bytes)
-            .unwrap()
-            .document
-            .editor_state()
-            .cursor_preview_bindings
-            .is_none()
-    );
+    assert!(import_model(&encode(&doc, &png, 0).bytes)
+        .unwrap()
+        .document
+        .editor_state()
+        .cursor_preview_bindings
+        .is_none());
     let mappings: [std::collections::BTreeMap<String, CursorPreviewBinding>; 2] = [
         Default::default(),
         [
@@ -90,12 +88,10 @@ fn cursor_preview_roundtrips_native_entries_and_explicit_clear() {
     );
     let precise = prepare(&doc, |builder| builder.replace_editor_state(state));
     let report = inspect_export(&precise).unwrap();
-    assert!(
-        report
-            .diagnostics
-            .iter()
-            .any(|item| item.code == "CURSOR_PREVIEW_PRECISION")
-    );
+    assert!(report
+        .diagnostics
+        .iter()
+        .any(|item| item.code == "CURSOR_PREVIEW_PRECISION"));
     assert!(matches!(
         encode_cmo3(
             &precise,
@@ -111,10 +107,16 @@ fn cursor_preview_roundtrips_native_entries_and_explicit_clear() {
             loss_policy: LossPolicy::Allow,
             ..Default::default()
         },
-    ).unwrap();
+    )
+    .unwrap();
     let imported = import_model(&rounded.bytes).unwrap();
     assert_eq!(
-        imported.document.editor_state().cursor_preview_bindings.as_ref().unwrap()[PARAM]
+        imported
+            .document
+            .editor_state()
+            .cursor_preview_bindings
+            .as_ref()
+            .unwrap()[PARAM]
             .influence_percent,
         57.125
     );

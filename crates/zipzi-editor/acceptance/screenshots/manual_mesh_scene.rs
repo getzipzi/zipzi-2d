@@ -142,7 +142,7 @@ pub(super) fn details(directory: &std::path::Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn click_model(h: &mut Harness, p: ModelPoint) -> anyhow::Result<()> {
+pub(super) fn click_model(h: &mut Harness, p: ModelPoint) -> anyhow::Result<()> {
     h.cx.update_window(h.window, |_, window, cx| {
         let p = h
             .view
@@ -162,7 +162,7 @@ fn click_model(h: &mut Harness, p: ModelPoint) -> anyhow::Result<()> {
     })?;
     Ok(())
 }
-fn gesture_model(
+pub(super) fn gesture_model(
     h: &mut Harness,
     a: ModelPoint,
     b: ModelPoint,
