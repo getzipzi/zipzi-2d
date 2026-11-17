@@ -3,6 +3,9 @@ mod projection;
 pub use projection::*;
 mod editing;
 pub use editing::*;
+mod curve_settings;
+pub use curve_settings::*;
+mod curve_geometry;
 mod identity;
 pub(crate) use identity::TimelinePanels;
 pub use identity::*;
@@ -126,6 +129,7 @@ pub struct TimelineViewState {
     pub scroll: f64,
     pub normalized: bool,
     pub snap: bool,
+    pub aligned_handles: bool,
     pub channels: BTreeSet<TimelineRowId>,
     /// The channel whose units the curve ruler displays, without hiding peers.
     pub curve_focus: Option<TimelineChannelId>,
@@ -144,6 +148,7 @@ impl Default for TimelineViewState {
             scroll: 0.,
             normalized: true,
             snap: true,
+            aligned_handles: false,
             channels: BTreeSet::new(),
             curve_focus: None,
             keys: BTreeSet::new(),

@@ -90,6 +90,40 @@ See [test coverage and prerequisites](../../tools/README.md#test-coverage) and
 `./tools/test-editor.sh --help` for the available gates. Full and acceptance
 runs are more expensive than focused tests.
 
+## Animation interval curves
+
+Select starting keyframes in the Dope Sheet or Curves view, or click a curve
+segment. The persistent settings row controls interpolation to the following
+key: Linear, Auto Smooth, Bezier, Step or Inverse Step. Bezier exposes 25 easing
+presets with shape previews; `≈` marks an approximation of the named function.
+Imported and manually edited controls display Custom. The Handles menu selects
+independent/aligned editing or restores straight thirds with Tidy handles.
+
+Frame Step samples and holds each interval every N frames at the motion FPS.
+Off / N=1 evaluates continuously. The menu offers two and three frames; Custom
+focuses the positive integer N field. Step and Inverse Step retain N for later
+type changes. Inserting a key restarts the interval's grid. Fades, mixing and
+physics can continue changing the full-effects image; Motion only previews raw
+channel values. Events retain their real timestamps.
+
+Properties uses the same Interval curve state and provides exact handle fields.
+Mixed selections preserve every field the user has not changed. Terminal keys
+are excluded from the displayed interval count. Locked/read-only intervals and
+event selections disable the operation with a reason. Narrow panels expose a
+labeled Curve settings menu and the same N control. Number drags preview one
+Draft; release commits one undo step and Escape restores its baseline.
+
+Native `.zipzi` preserves editing modes, presets and N. Runtime motion3 export
+bakes the effect with a bounded preflight and reports its segment counts.
+Reimported motion3 contains ordinary Bezier/Step segments; editable CAN3 currently
+rejects interval Frame Step explicitly.
+
+Native curve entrypoint and focus screenshots:
+
+```sh
+env -u ZIPZI_DEV_SESSION_DIR ZIPZI_SCREENSHOT_SCENE=curve-authoring cargo test --locked -p zipzi-editor --features test-support --test headless_screenshot
+```
+
 ## Native project files
 
 Open and save `.zipzi` files from the File menu. A project is one ZIP archive

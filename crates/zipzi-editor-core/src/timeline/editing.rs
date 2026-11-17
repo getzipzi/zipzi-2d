@@ -42,6 +42,23 @@ pub enum TimelineCommand {
         keys: Vec<TimelineKeyRef>,
         kind: MotionInterpolation,
     },
+    EasingPreset {
+        keys: Vec<TimelineKeyRef>,
+        preset: zipzi_core::document::MotionEasingPreset,
+    },
+    FrameStep {
+        keys: Vec<TimelineKeyRef>,
+        frame_step: zipzi_core::document::MotionFrameStep,
+    },
+    TidyHandles {
+        keys: Vec<TimelineKeyRef>,
+    },
+    AlignedHandle {
+        end: TimelineKeyRef,
+        handle: MotionBezierHandle,
+        time: f64,
+        value: f32,
+    },
     Handle {
         end: TimelineKeyRef,
         handle: MotionBezierHandle,
@@ -80,6 +97,10 @@ impl TimelineCommand {
             Self::SetKey { key, .. } => format!("key:{key:?}"),
             Self::Delete { keys, events } => format!("delete:{keys:?}:{events:?}"),
             Self::Interpolation { keys, .. } => format!("interpolation:{keys:?}"),
+            Self::EasingPreset { keys, .. } => format!("preset:{keys:?}"),
+            Self::FrameStep { keys, .. } => format!("frame-step:{keys:?}"),
+            Self::TidyHandles { keys } => format!("tidy:{keys:?}"),
+            Self::AlignedHandle { end, handle, .. } => format!("aligned:{end:?}:{handle:?}"),
             Self::Handle { end, handle, .. } => format!("handle:{end:?}:{handle:?}"),
             Self::Event { id, .. } => format!("event:{id:?}"),
             Self::ScaleTime(_) => "scale".into(),
@@ -119,6 +140,15 @@ impl TimelineEdit {
                 "Key no longer exists in this clip"
             );
             Ok(())
+        };
+        let intervals = |keys: &Vec<TimelineKeyRef>| -> Result<Vec<zipzi_sdk::MotionKeyRef>> {
+            let settings = projection.curve_settings(keys, false);
+            ensure!(
+                settings.enabled(),
+                "Curve settings unavailable: {:?}",
+                settings.disabled
+            );
+            Ok(settings.keys.iter().map(TimelineKeyRef::sdk).collect())
         };
         match command {
             TimelineCommand::WriteValue {
@@ -256,15 +286,33 @@ impl TimelineEdit {
                 clip.events.retain(|event| !events.contains(&event.id));
             }
             TimelineCommand::Interpolation { keys, kind } => {
-                for key in keys {
-                    validate_key(key)?;
-                }
                 curves.push(MotionCurveEdit::Interpolation {
-                    keys: keys.iter().map(TimelineKeyRef::sdk).collect(),
+                    keys: intervals(keys)?,
                     kind: *kind,
                 });
             }
+            TimelineCommand::EasingPreset { keys, preset } => {
+                curves.push(MotionCurveEdit::EasingPreset {
+                    keys: intervals(keys)?,
+                    preset: *preset,
+                })
+            }
+            TimelineCommand::FrameStep { keys, frame_step } => {
+                curves.push(MotionCurveEdit::FrameStep {
+                    keys: intervals(keys)?,
+                    frame_step: *frame_step,
+                })
+            }
+            TimelineCommand::TidyHandles { keys } => curves.push(MotionCurveEdit::TidyHandles {
+                keys: intervals(keys)?,
+            }),
             TimelineCommand::Handle {
+                end,
+                handle,
+                time,
+                value,
+            }
+            | TimelineCommand::AlignedHandle {
                 end,
                 handle,
                 time,
@@ -278,14 +326,25 @@ impl TimelineEdit {
                     "Bezier handles are read-only for this segment"
                 );
                 ensure!(time.is_finite(), "Invalid handle time");
-                curves.push(MotionCurveEdit::BezierHandle {
-                    end: end.sdk(),
-                    handle: *handle,
-                    point: MotionPoint {
-                        time: *time as f32,
-                        value: *value,
+                let point = MotionPoint {
+                    time: *time as f32,
+                    value: *value,
+                };
+                curves.push(
+                    if matches!(command, TimelineCommand::AlignedHandle { .. }) {
+                        MotionCurveEdit::BezierHandleAligned {
+                            end: end.sdk(),
+                            handle: *handle,
+                            point,
+                        }
+                    } else {
+                        MotionCurveEdit::BezierHandle {
+                            end: end.sdk(),
+                            handle: *handle,
+                            point,
+                        }
                     },
-                });
+                );
             }
             TimelineCommand::Event { id, time, value } => {
                 if let Some(id) = id {

@@ -9,6 +9,7 @@ mod authoring;
 mod benchmark;
 mod canvas_overlay;
 mod commands;
+mod curve_authoring;
 #[cfg(windows)]
 mod dev_control;
 mod dev_session;

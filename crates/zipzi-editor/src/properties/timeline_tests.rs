@@ -26,6 +26,116 @@ fn select_key(editor: &mut Editor) -> zipzi_editor_core::TimelineKeyRef {
 }
 
 #[test]
+fn interval_form_preserves_mixed_fields_and_previews_integer_n_and_explicit_handles() {
+    use zipzi_contract::{
+        kernel_commands::MotionInterpolation,
+        motion_curve::{MotionEasingPreset, MotionFrameStep},
+    };
+    let (mut editor, _assets) = fixture();
+    let key = select_key(&mut editor);
+    let d = editor.active_id().unwrap();
+    let apply = |editor: &mut Editor, spec: PropertySpec, value: PropertyValue| {
+        let target = target(editor).unwrap();
+        let mut form = PropertyForm::default();
+        form.sync_definition(target.definition(editor), target.values(editor).unwrap());
+        form.set_value(&spec, value);
+        let patch = form.patch(ObjectKind::Motion, spec.key).unwrap();
+        target.commit(editor, patch)
+    };
+    apply(
+        &mut editor,
+        timeline::INTERPOLATION,
+        PropertyValue::Text("auto_smooth".into()),
+    )
+    .unwrap();
+    assert_eq!(
+        editor
+            .timeline_projection()
+            .unwrap()
+            .key(&key)
+            .unwrap()
+            .outgoing,
+        Some(MotionInterpolation::AutoSmooth)
+    );
+    apply(
+        &mut editor,
+        timeline::INTERPOLATION,
+        PropertyValue::Text("bezier".into()),
+    )
+    .unwrap();
+    apply(
+        &mut editor,
+        timeline::PRESET,
+        PropertyValue::Text("cubic_out".into()),
+    )
+    .unwrap();
+    apply(&mut editor, timeline::FRAME_STEP, PropertyValue::Double(7.)).unwrap();
+    let target = target(&editor).unwrap();
+    let definition = target.definition(&editor);
+    for spec in definition
+        .fields
+        .iter()
+        .filter(|f| f.binding.key != timeline::TIME.key && f.binding.key != timeline::VALUE.key)
+    {
+        assert_eq!(spec.section, Some("timeline.interval_curve"));
+    }
+    assert_eq!(
+        editor
+            .timeline_projection()
+            .unwrap()
+            .key(&key)
+            .unwrap()
+            .preset,
+        Some(MotionEasingPreset::CubicOut)
+    );
+    assert!(
+        apply(
+            &mut editor,
+            timeline::FRAME_STEP,
+            PropertyValue::Double(2.5)
+        )
+        .is_err()
+    );
+    assert_eq!(
+        editor
+            .timeline_projection()
+            .unwrap()
+            .key(&key)
+            .unwrap()
+            .frame_step,
+        MotionFrameStep::EveryFrames { frames: 7 }
+    );
+    let target = super::target(&editor).unwrap();
+    let mut form = PropertyForm::default();
+    form.sync_definition(target.definition(&editor), target.values(&editor).unwrap());
+    form.set_value(&timeline::FRAME_STEP, PropertyValue::Double(3.));
+    let patch = form
+        .patch(ObjectKind::Motion, timeline::FRAME_STEP.key)
+        .unwrap();
+    let token = begin_edit(&mut editor, &target, &patch).unwrap();
+    update_edit(&mut editor, &token, &patch).unwrap();
+    assert_eq!(
+        editor
+            .timeline_projection()
+            .unwrap()
+            .key(&key)
+            .unwrap()
+            .frame_step,
+        MotionFrameStep::EveryFrames { frames: 3 }
+    );
+    token.cancel(&mut editor);
+    assert_eq!(
+        editor
+            .timeline_projection()
+            .unwrap()
+            .key(&key)
+            .unwrap()
+            .frame_step,
+        MotionFrameStep::EveryFrames { frames: 7 }
+    );
+}
+
+#[test]
 fn explicit_resource_inspection_preserves_timeline_selection_and_time_navigation() {
     let (mut editor, _assets) = fixture();
     let document = editor.active_id().unwrap();

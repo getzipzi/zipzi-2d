@@ -278,6 +278,7 @@ impl Render for Timeline {
                 )
                 .into_any_element();
         };
+        panel = panel.child(self.curve_controls(&projection, &state, window, cx));
         self.update_range(&projection, &state);
         if let Some(reveal) = &state.reveal_row {
             if let Some(index) = rows.iter().position(|row| &row.id == reveal) {
@@ -369,6 +370,7 @@ impl Render for Timeline {
         let axis_color = axis_reference.map_or(cx.theme().muted_foreground, |channel| {
             drawing::channel_color(&projection, &channel.id)
         });
+        let context_panel = cx.weak_entity();
         let graph = div()
             .flex_1()
             .min_w_0()
@@ -422,6 +424,9 @@ impl Render for Timeline {
                     .on_mouse_down(MouseButton::Middle, cx.listener(Self::start_pan))
                     .when(self.pan_tool, |graph| graph.cursor(CursorStyle::ClosedHand))
                     .on_scroll_wheel(cx.listener(Self::wheel))
+                    .context_menu(move |menu, window, cx| {
+                        Self::curve_context_menu(menu, window, cx, context_panel.clone())
+                    })
                     .child(
                         self.tracks
                             .clone()

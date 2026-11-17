@@ -1,9 +1,11 @@
 //! Timeline selections describe ordinary inspector fields; only the value and
 //! command adapters know about curves, keys and events.
 use super::*;
+use crate::curve_authoring as curves;
 use zipzi_contract::kernel_commands::MotionInterpolation;
+use zipzi_contract::motion_curve::{MotionEasingPreset, MotionFrameStep};
 use zipzi_editor_core::{
-    Inspection, InspectionSource, TimelineCommand, TimelineKeyRef, TimelineRowId,
+    Inspection, InspectionSource, TimelineCommand, TimelineKeyRef, TimelineMixed, TimelineRowId,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -29,6 +31,14 @@ pub(crate) const TIME: PropertySpec = field("selection_time", PropertyType::Floa
     .preview();
 pub(crate) const VALUE: PropertySpec = field("selection_value", PropertyType::Float).preview();
 pub(crate) const INTERPOLATION: PropertySpec = field("interpolation", PropertyType::Text);
+pub(crate) const PRESET: PropertySpec = field("easing_preset", PropertyType::Text);
+pub(crate) const FRAME_STEP: PropertySpec = field("frame_step", PropertyType::Double)
+    .range(1., u32::MAX as f64, 1.)
+    .preview();
+const C1_TIME: PropertySpec = field("control1_time", PropertyType::Double).preview();
+const C1_VALUE: PropertySpec = field("control1_value", PropertyType::Float).preview();
+const C2_TIME: PropertySpec = field("control2_time", PropertyType::Double).preview();
+const C2_VALUE: PropertySpec = field("control2_value", PropertyType::Float).preview();
 pub(crate) const EVENT: PropertySpec = field("event_value", PropertyType::Text).allow_empty();
 
 pub(super) fn target(editor: &Editor, inspection: &Inspection) -> Option<TimelineTarget> {
@@ -66,27 +76,22 @@ pub(super) fn target(editor: &Editor, inspection: &Inspection) -> Option<Timelin
 }
 
 fn interpolations(_: &Document) -> Vec<Choice> {
-    [
-        ("linear", "timeline.linear"),
-        ("bezier", "timeline.bezier"),
-        ("stepped", "timeline.stepped"),
-        ("inverse", "timeline.inverse"),
-    ]
-    .into_iter()
-    .map(|(value, label)| Choice {
-        value: value.into(),
-        label: t!(label).into(),
-    })
-    .collect()
+    curves::INTERPOLATIONS
+        .into_iter()
+        .map(|(kind, value)| Choice {
+            value: value.into(),
+            label: curves::kind_label(kind).into(),
+        })
+        .collect()
 }
-fn interpolation(kind: MotionInterpolation) -> &'static str {
-    match kind {
-        MotionInterpolation::Linear => "linear",
-        MotionInterpolation::AutoSmooth => "auto_smooth",
-        MotionInterpolation::Bezier => "bezier",
-        MotionInterpolation::Stepped => "stepped",
-        MotionInterpolation::InverseStepped => "inverse",
-    }
+fn presets(_: &Document) -> Vec<Choice> {
+    MotionEasingPreset::ALL
+        .into_iter()
+        .map(|preset| Choice {
+            value: curves::preset_id(preset),
+            label: curves::preset_label(preset).into(),
+        })
+        .collect()
 }
 
 impl TimelineTarget {
@@ -121,19 +126,55 @@ impl TimelineTarget {
                     }
                     fields.push(FieldSpec::new(value, "timeline.value", FieldEditor::Number));
                 }
-                if keys.iter().any(|key| {
-                    projection
-                        .key(key)
-                        .is_some_and(|key| key.outgoing.is_some())
-                }) {
-                    fields.push(
-                        FieldSpec::new(
-                            INTERPOLATION,
-                            "timeline.interpolation",
-                            FieldEditor::Select,
-                        )
+                let settings = projection.curve_settings(keys, false);
+                let mut specs = vec![
+                    FieldSpec::new(INTERPOLATION, "timeline.interpolation", FieldEditor::Select)
                         .choices(false, interpolations),
+                ];
+                if settings.bezier() {
+                    let mut preset = PRESET;
+                    preset.readonly = settings.restricted_conversion_locked;
+                    specs.push(
+                        FieldSpec::new(preset, "timeline.easing", FieldEditor::Select)
+                            .choices(false, presets),
                     );
+                }
+                specs.push(FieldSpec::new(
+                    FRAME_STEP,
+                    "timeline.frame_step_n",
+                    FieldEditor::Number,
+                ));
+                if settings.keys.len() == 1 {
+                    let track = &projection.tracks[&settings.keys[0].track_id];
+                    if let Some(index) = track
+                        .keys
+                        .iter()
+                        .position(|k| k.reference == settings.keys[0])
+                    {
+                        let end = &track.keys[index + 1].reference;
+                        if let Some(handles) = projection.display_handles(end) {
+                            for (mut spec, label, horizontal) in [
+                                (C1_TIME, "timeline.control1_time", true),
+                                (C1_VALUE, "timeline.control1_value", false),
+                                (C2_TIME, "timeline.control2_time", true),
+                                (C2_VALUE, "timeline.control2_value", false),
+                            ] {
+                                spec.readonly = if horizontal {
+                                    !handles.horizontal_editable
+                                } else {
+                                    !handles.value_editable
+                                };
+                                let mut field = FieldSpec::new(spec, label, FieldEditor::Number);
+                                field.display_decimals = Some(6);
+                                specs.push(field);
+                            }
+                        }
+                    }
+                }
+                for mut spec in specs {
+                    spec.binding.readonly |= !settings.enabled();
+                    spec.section = Some("timeline.interval_curve");
+                    fields.push(spec);
                 }
             }
             Self::Events(events) if events.len() == 1 => {
@@ -203,17 +244,55 @@ impl TimelineTarget {
                     values.insert(TIME.key, PropertyValue::Float(key.time as f32));
                     values.insert(VALUE.key, PropertyValue::Float(key.value));
                 }
-                let kinds: Vec<_> = keys
-                    .iter()
-                    .filter_map(|key| projection.key(key)?.outgoing)
-                    .collect();
-                if let Some(first) = kinds.first() {
-                    let value = if kinds.iter().all(|kind| kind == first) {
-                        interpolation(*first).to_owned()
-                    } else {
-                        t!("properties.mixed").into_owned()
-                    };
-                    values.insert(INTERPOLATION.key, PropertyValue::Text(value));
+                let settings = projection.curve_settings(keys, false);
+                values.insert(
+                    INTERPOLATION.key,
+                    PropertyValue::Text(match settings.interpolation {
+                        TimelineMixed::Uniform(kind) => curves::kind_id(kind).into(),
+                        TimelineMixed::Mixed => t!("properties.mixed").into_owned(),
+                        TimelineMixed::Empty => "—".into(),
+                    }),
+                );
+                values.insert(
+                    PRESET.key,
+                    PropertyValue::Text(match settings.preset {
+                        TimelineMixed::Uniform(Some(preset)) => curves::preset_id(preset),
+                        TimelineMixed::Uniform(None) => t!("timeline.custom_curve").into_owned(),
+                        _ => t!("properties.mixed").into_owned(),
+                    }),
+                );
+                values.insert(
+                    FRAME_STEP.key,
+                    match settings.frame_step {
+                        TimelineMixed::Uniform(MotionFrameStep::EveryFrames { frames }) => {
+                            PropertyValue::Double(frames as f64)
+                        }
+                        TimelineMixed::Uniform(MotionFrameStep::Off {}) => {
+                            PropertyValue::Double(1.)
+                        }
+                        _ => PropertyValue::Text(t!("properties.mixed").into_owned()),
+                    },
+                );
+                if settings.keys.len() == 1 {
+                    let track = &projection.tracks[&settings.keys[0].track_id];
+                    if let Some(index) = track
+                        .keys
+                        .iter()
+                        .position(|k| k.reference == settings.keys[0])
+                        && let Some(handles) =
+                            projection.display_handles(&track.keys[index + 1].reference)
+                    {
+                        values.insert(
+                            C1_TIME.key,
+                            PropertyValue::Double(handles.control1.time.into()),
+                        );
+                        values.insert(C1_VALUE.key, PropertyValue::Float(handles.control1.value));
+                        values.insert(
+                            C2_TIME.key,
+                            PropertyValue::Double(handles.control2.time.into()),
+                        );
+                        values.insert(C2_VALUE.key, PropertyValue::Float(handles.control2.value));
+                    }
                 }
             }
             Self::Events(events) if events.len() == 1 => {
@@ -274,6 +353,7 @@ impl TimelineTarget {
                 };
                 let kind = match kind.as_str() {
                     "linear" => MotionInterpolation::Linear,
+                    "auto_smooth" => MotionInterpolation::AutoSmooth,
                     "bezier" => MotionInterpolation::Bezier,
                     "stepped" => MotionInterpolation::Stepped,
                     "inverse" => MotionInterpolation::InverseStepped,
@@ -282,6 +362,87 @@ impl TimelineTarget {
                 TimelineCommand::Interpolation {
                     keys: keys.clone(),
                     kind,
+                }
+            }
+            Self::Keys(keys) if id == PRESET.key => {
+                let PropertyValue::Text(value) = value else {
+                    anyhow::bail!("Choose a preset")
+                };
+                let preset = serde_json::from_value(serde_json::Value::String(value.clone()))?;
+                TimelineCommand::EasingPreset {
+                    keys: keys.clone(),
+                    preset,
+                }
+            }
+            Self::Keys(keys) if id == FRAME_STEP.key => {
+                let n = value
+                    .number()
+                    .ok_or_else(|| anyhow::anyhow!("Enter a positive integer"))?;
+                anyhow::ensure!(
+                    n.fract() == 0. && (1. ..=u32::MAX as f64).contains(&n),
+                    "Enter a positive integer"
+                );
+                TimelineCommand::FrameStep {
+                    keys: keys.clone(),
+                    frame_step: MotionFrameStep::from_frames(n as u32).unwrap(),
+                }
+            }
+            Self::Keys(keys)
+                if [C1_TIME.key, C1_VALUE.key, C2_TIME.key, C2_VALUE.key].contains(&id) =>
+            {
+                let settings = projection.curve_settings(keys, false);
+                anyhow::ensure!(
+                    settings.enabled() && settings.keys.len() == 1,
+                    "Select one editable interval"
+                );
+                let track = &projection.tracks[&settings.keys[0].track_id];
+                let index = track
+                    .keys
+                    .iter()
+                    .position(|k| k.reference == settings.keys[0])
+                    .unwrap();
+                let end = track.keys[index + 1].reference.clone();
+                let handles = projection
+                    .display_handles(&end)
+                    .ok_or_else(|| anyhow::anyhow!("No handles"))?;
+                let first = id == C1_TIME.key || id == C1_VALUE.key;
+                let point = if first {
+                    handles.control1
+                } else {
+                    handles.control2
+                };
+                let handle = if first {
+                    zipzi_sdk::MotionBezierHandle::Control1
+                } else {
+                    zipzi_sdk::MotionBezierHandle::Control2
+                };
+                let time = if id == C1_TIME.key || id == C2_TIME.key {
+                    value.number().unwrap()
+                } else {
+                    point.time.into()
+                };
+                let value = if id == C1_VALUE.key || id == C2_VALUE.key {
+                    value.number().unwrap() as f32
+                } else {
+                    point.value
+                };
+                if editor
+                    .timeline_view()
+                    .is_some_and(|view| view.aligned_handles)
+                {
+                    TimelineCommand::AlignedHandle {
+                        end,
+                        handle,
+                        time,
+                        value,
+                    }
+                } else {
+                    TimelineCommand::Handle {
+                        end,
+                        handle,
+                        time,
+                        value,
+                    }
                 }
             }
             Self::Keys(keys) if keys.len() == 1 => {
@@ -406,6 +567,26 @@ pub(crate) fn details(target: &PropertyTarget, editor: &Editor) -> Vec<DetailRow
         return vec![];
     };
     let mut rows = Vec::new();
+    if let TimelineTarget::Keys(keys) = selection
+        && let Some(projection) = selection.projection(editor)
+    {
+        let settings = projection.curve_settings(keys, false);
+        rows.push(DetailRow::Hint(curves::settings_hint(&settings).into()));
+        if settings.restricted_conversion_locked {
+            rows.push(DetailRow::Hint(
+                t!("timeline.preset_conversion_locked").into(),
+            ));
+        }
+        if let TimelineMixed::Uniform(Some(preset)) = settings.preset
+            && preset.definition().approximate
+        {
+            rows.push(DetailRow::Hint(t!("timeline.approximate_preset").into()));
+        }
+        rows.push(DetailRow::Hint(t!("timeline.step_semantics").into()));
+    }
+    if matches!(selection, TimelineTarget::Mixed { .. }) {
+        rows.push(DetailRow::Hint(t!("timeline.curve_events_selected").into()));
+    }
     if let TimelineTarget::Channel { row, .. } = selection
         && let Some(projection) = selection.projection(editor)
         && let Some(row) = projection.rows.iter().find(|r| &r.id == row)

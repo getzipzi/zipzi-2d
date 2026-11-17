@@ -1,6 +1,7 @@
 //! Animation editing UI. Geometry and input use the same cached, clipped scene.
 mod axis;
 mod controls;
+mod curve_settings;
 mod drawing;
 mod hints;
 mod input;
@@ -25,7 +26,7 @@ use gpui_kit::component::{
     button::{Button, ButtonVariants},
     dock::{BasePanel, Panel, PanelEvent},
     input::{InputEvent, InputState},
-    menu::{DropdownMenu, PopupMenuItem},
+    menu::{ContextMenuExt, DropdownMenu, PopupMenu, PopupMenuItem},
 };
 use gpui_kit::{prelude::*, *};
 use std::{cell::Cell, collections::HashMap, rc::Rc, sync::Arc};

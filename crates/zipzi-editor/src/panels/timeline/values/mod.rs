@@ -8,10 +8,22 @@ use crate::ui::slide_number_input::{
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(super) enum Field {
     RowValue(TimelineRowId),
+    FrameStep,
 }
 impl Field {
+    fn label(&self) -> String {
+        t!(if matches!(self, Self::FrameStep) {
+            "timeline.frame_step_n"
+        } else {
+            "timeline.value"
+        })
+        .into_owned()
+    }
     fn value_format(&self) -> fn(f64) -> String {
-        format_one_decimal
+        match self {
+            Self::RowValue(_) => format_one_decimal,
+            Self::FrameStep => |value| format!("{value:.0}"),
+        }
     }
     fn number_options(
         &self,
@@ -24,19 +36,26 @@ impl Field {
             value,
             min: range.0,
             max: range.1,
-            step: 0.001,
-            drag_distance: (range.1 - range.0 < 1e6).then_some(400.),
+            step: if matches!(self, Self::FrameStep) {
+                1.
+            } else {
+                0.001
+            },
+            drag_distance: (matches!(self, Self::RowValue(_)) && range.1 - range.0 < 1e6)
+                .then_some(400.),
             disabled,
         }
     }
     pub(super) fn exists(&self, projection: &TimelineProjection) -> bool {
-        let Self::RowValue(id) = self;
-        projection.rows.iter().any(|row| &row.id == id)
+        match self {
+            Self::RowValue(id) => projection.rows.iter().any(|row| &row.id == id),
+            Self::FrameStep => true,
+        }
     }
 }
 
 pub(super) struct FieldControl {
-    input: Entity<InputState>,
+    pub(super) input: Entity<InputState>,
     displayed: String,
     pub(super) number: Entity<SlideNumberInput>,
     _events: Vec<Subscription>,

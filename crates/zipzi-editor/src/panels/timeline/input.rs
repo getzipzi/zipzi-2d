@@ -156,7 +156,10 @@ impl Timeline {
         });
         let additive = event.modifiers.shift || event.modifiers.secondary();
         match hit {
-            Some(Ok(Some(Hit::Curve(channel)))) => {
+            Some(Ok(Some(Hit::Curve(channel, key)))) => {
+                if let Some(key) = key {
+                    self.select_keys(vec![key], additive, false, cx);
+                }
                 self.change_view(move |view| view.curve_focus = Some(channel), cx);
                 cx.stop_propagation();
                 return;
@@ -461,16 +464,30 @@ impl Timeline {
                 scale,
             } => Some((
                 *token,
-                TimelineCommand::Handle {
-                    end: end.clone(),
-                    handle: *handle,
-                    time: *time
-                        + if *horizontal {
-                            time_delta(origin.x)
-                        } else {
-                            0.
-                        },
-                    value: (f64::from(*value) + value_delta(origin.y, *scale)) as f32,
+                if state.aligned_handles {
+                    TimelineCommand::AlignedHandle {
+                        end: end.clone(),
+                        handle: *handle,
+                        time: *time
+                            + if *horizontal {
+                                time_delta(origin.x)
+                            } else {
+                                0.
+                            },
+                        value: (f64::from(*value) + value_delta(origin.y, *scale)) as f32,
+                    }
+                } else {
+                    TimelineCommand::Handle {
+                        end: end.clone(),
+                        handle: *handle,
+                        time: *time
+                            + if *horizontal {
+                                time_delta(origin.x)
+                            } else {
+                                0.
+                            },
+                        value: (f64::from(*value) + value_delta(origin.y, *scale)) as f32,
+                    }
                 },
             )),
             Gesture::Event {

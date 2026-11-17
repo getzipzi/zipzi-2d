@@ -5,7 +5,7 @@ use zipzi_contract::kernel_commands::MotionBezierHandle;
 
 #[derive(Clone)]
 pub(super) enum Hit {
-    Curve(zipzi_editor_core::TimelineChannelId),
+    Curve(zipzi_editor_core::TimelineChannelId, Option<TimelineKeyRef>),
     Key(TimelineKeyRef),
     Summary(Vec<TimelineKeyRef>),
     Event(String),
@@ -23,6 +23,7 @@ struct Stroke {
     points: Vec<Point<Pixels>>,
     color: Hsla,
     channel: Option<zipzi_editor_core::TimelineChannelId>,
+    track: Option<String>,
 }
 #[derive(Clone, PartialEq)]
 struct SceneKey {
@@ -78,7 +79,18 @@ impl Scene {
                 let d = (p.x - a.x - t * dx).powi(2) + (p.y - a.y - t * dy).powi(2);
                 if d < distance {
                     distance = d;
-                    closest = Some(Hit::Curve(channel.clone()));
+                    let key = stroke.track.as_ref().and_then(|id| {
+                        let track = self._projection.tracks.get(id)?;
+                        let time = x_time(
+                            position.x.as_f32(),
+                            self.key.time,
+                            self.key.size.width.as_f32(),
+                        ) as f32;
+                        let index = track.curve.segment_index(time);
+                        (index < track.curve.segments.len())
+                            .then(|| track.keys[index].reference.clone())
+                    });
+                    closest = Some(Hit::Curve(channel.clone(), key));
                 }
             }
         }
@@ -406,6 +418,24 @@ fn build_scene(
                 }
                 let left = a.time.max(start);
                 let right = b.time.min(end);
+                let max_edges = ((time_x(right, state.time_range, width)
+                    - time_x(left, state.time_range, width))
+                .ceil()
+                .max(1.)) as usize;
+                if let Some(steps) = projection.frame_step_points(
+                    track,
+                    segment_index,
+                    left as f32,
+                    right as f32,
+                    max_edges,
+                ) {
+                    points.extend(
+                        steps
+                            .into_iter()
+                            .map(|p| position(f64::from(p.time), p.value)),
+                    );
+                    continue;
+                }
                 match segment {
                     CompiledSegment::Stepped { .. } => {
                         points.push(position(left, a.value));
@@ -467,6 +497,7 @@ fn build_scene(
                 points,
                 color,
                 channel: Some(track.channel.clone()),
+                track: Some(track.id.clone()),
             });
             for key in track.visible_keys(start, end) {
                 scene.markers.push(Marker {
@@ -487,6 +518,7 @@ fn build_scene(
                     ] {
                         let point = position(f64::from(control.time), control.value);
                         scene.strokes.push(Stroke {
+                            track: None,
                             points: vec![position(anchor.time, anchor.value), point],
                             color,
                             channel: None,
@@ -513,6 +545,7 @@ fn build_scene(
                 points: vec![point(px(0.), y), point(px(width), y)],
                 color: channel_color(projection, &channel.id),
                 channel: Some(channel.id.clone()),
+                track: None,
             });
         }
         for event in &projection.events {
@@ -937,7 +970,7 @@ fn paint_scene(
         }
         for marker in &scene.markers {
             let selected = match &marker.hit {
-                Hit::Curve(_) => false,
+                Hit::Curve(..) => false,
                 Hit::Key(key) => state.keys.contains(key),
                 Hit::Event(id) => state.events.contains(id),
                 Hit::Handle { .. } => true,

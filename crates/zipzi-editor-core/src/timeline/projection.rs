@@ -37,6 +37,9 @@ pub struct TimelineKey {
     pub time: f64,
     pub value: f32,
     pub outgoing: Option<MotionInterpolation>,
+    pub preset: Option<zipzi_core::document::MotionEasingPreset>,
+    pub frame_step: zipzi_core::document::MotionFrameStep,
+    pub outgoing_locked: bool,
     pub time_editable: bool,
     pub outgoing_split_editable: bool,
 }
@@ -144,10 +147,40 @@ impl TimelineProjection {
                 return None;
             }
             let mut changed = (**existing).clone();
-            for (point, key) in points.iter().zip(&mut changed.keys) {
-                key.value = point.value;
-            }
             changed.curve = CompiledCurve::from_track(track, next.fps);
+            let monotonic: Vec<_> = changed
+                .curve
+                .segments
+                .iter()
+                .enumerate()
+                .map(|(i, segment)| match segment {
+                    zipzi_animation::CompiledSegment::Bezier {
+                        control1,
+                        control2,
+                        end,
+                    } if !next.restricted_beziers => motion_bezier_time_is_monotonic(
+                        points[i].time,
+                        control1.time,
+                        control2.time,
+                        end.time,
+                    ),
+                    _ => true,
+                })
+                .collect();
+            for (i, (point, key)) in points.iter().zip(&mut changed.keys).enumerate() {
+                key.value = point.value;
+                key.outgoing = track.segments.get(i).map(|s| curve_interpolation(&s.curve));
+                key.preset = track.segments.get(i).and_then(|s| match s.curve {
+                    MotionCurve::Bezier { preset, .. } => preset,
+                    _ => None,
+                });
+                key.frame_step = track.segments.get(i).map_or_default(|s| s.frame_step);
+                key.outgoing_split_editable =
+                    changed.editable && monotonic.get(i).copied().unwrap_or(false);
+                key.time_editable = changed.editable
+                    && (i == 0 || monotonic[i - 1])
+                    && monotonic.get(i).copied().unwrap_or(true);
+            }
             result.tracks.insert(track.id.clone(), Arc::new(changed));
         }
         Some(result)
@@ -281,6 +314,17 @@ impl TimelineProjection {
                     },
                     time: f64::from(key.time),
                     value: key.value,
+                    preset: track.segments.get(i).and_then(|s| match s.curve {
+                        MotionCurve::Bezier { preset, .. } => preset,
+                        _ => None,
+                    }),
+                    frame_step: track.segments.get(i).map_or_default(|s| s.frame_step),
+                    outgoing_locked: model.editor_state().get(&clip.id).locked
+                        || model.editor_state().get(&track.id).locked
+                        || model.editor_state().get(&key.id).locked
+                        || all
+                            .get(i + 1)
+                            .is_some_and(|end| model.editor_state().get(&end.id).locked),
                     outgoing: track.segments.get(i).map(|segment| match segment {
                         MotionSegment {
                             curve: MotionCurve::Linear {},
@@ -492,8 +536,10 @@ impl TimelineProjection {
             control1,
             control2,
             horizontal_editable: !self.restricted_beziers
-                && track.keys[index].outgoing_split_editable,
-            value_editable: track.keys[index].outgoing_split_editable,
+                && track.keys[index].outgoing_split_editable
+                && !track.keys[index].outgoing_locked,
+            value_editable: track.keys[index].outgoing_split_editable
+                && !track.keys[index].outgoing_locked,
         })
     }
     pub fn key(&self, key: &TimelineKeyRef) -> Option<&TimelineKey> {
@@ -615,5 +661,15 @@ impl TimelineProjection {
             result.push(row);
         }
         result
+    }
+}
+
+fn curve_interpolation(curve: &MotionCurve) -> MotionInterpolation {
+    match curve {
+        MotionCurve::Linear {} => MotionInterpolation::Linear,
+        MotionCurve::AutoSmooth {} => MotionInterpolation::AutoSmooth,
+        MotionCurve::Bezier { .. } => MotionInterpolation::Bezier,
+        MotionCurve::Stepped {} => MotionInterpolation::Stepped,
+        MotionCurve::InverseStepped {} => MotionInterpolation::InverseStepped,
     }
 }

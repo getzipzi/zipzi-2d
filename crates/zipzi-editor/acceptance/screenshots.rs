@@ -8,6 +8,7 @@ use super::harness::Harness;
 mod animation_scene;
 mod brush_scene;
 mod common;
+mod curve_authoring_scene;
 mod deformer_original_scene;
 mod deletion_scene;
 mod dock_and_layout;
@@ -41,6 +42,10 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("curve-authoring") {
+        curve_authoring_scene::run(&directory)?;
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("mesh-edit-details") {
         manual_mesh_scene::details(&directory)?;
         return Ok(());

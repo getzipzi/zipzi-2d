@@ -1,3 +1,4 @@
+mod curve_authoring;
 mod curve_axis;
 mod curves_navigation;
 mod events_inspector;

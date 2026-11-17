@@ -30,6 +30,13 @@ impl Timeline {
         let state = view.editor.timeline_view()?;
         let time = view.editor.animation()?.edit_time as f64;
         match field {
+            Field::FrameStep => {
+                let settings = projection.curve_settings(&state.keys, !state.events.is_empty());
+                settings.enabled().then_some(TimelineCommand::FrameStep {
+                    keys: settings.keys,
+                    frame_step: Default::default(),
+                })
+            }
             Field::RowValue(id) => {
                 let row = projection.rows.iter().find(|row| &row.id == id)?;
                 let selected_key = state
@@ -49,7 +56,7 @@ impl Timeline {
             }
         }
     }
-    pub(super) fn ensure_field(
+    pub(in crate::panels::timeline) fn ensure_field(
         &mut self,
         field: &Field,
         value: String,
@@ -67,14 +74,19 @@ impl Timeline {
         if !self.fields.contains_key(field) {
             let input = cx.new(|cx| InputState::new(window, cx).default_value(value.clone()));
             let number = cx.new(|cx| {
-                SlideNumberInput::new(
+                let number = SlideNumberInput::new(
                     input.clone(),
-                    t!("timeline.value").into_owned(),
+                    field.label(),
                     field.number_options(numeric_value, range, fps, disabled),
                     window,
                     cx,
                 )
-                .format_sliding_value(field.value_format())
+                .format_sliding_value(field.value_format());
+                if matches!(field, Field::FrameStep) {
+                    number.truncate_to_integer().snap_to_step()
+                } else {
+                    number
+                }
             });
             let slide_field = field.clone();
             let slide = cx.subscribe_in(
@@ -85,10 +97,16 @@ impl Timeline {
                         .fields
                         .get(&slide_field)
                         .is_some_and(|control| &control.number == source)
-                        && source.read(cx).is_sliding()
+                        && (source.read(cx).is_sliding() || matches!(slide_field, Field::FrameStep))
                         && this.editable(window, cx)
                     {
-                        this.number_change(slide_field.clone(), event.0.to_string(), true, cx);
+                        let sliding = source.read(cx).is_sliding();
+                        if !sliding {
+                            this.fields[&slide_field].input.update(cx, |input, cx| {
+                                input.set_value(event.0.to_string(), window, cx)
+                            });
+                        }
+                        this.number_change(slide_field.clone(), event.0.to_string(), sliding, cx);
                     }
                 },
             );
@@ -120,7 +138,13 @@ impl Timeline {
                                 .parse::<f64>()
                                 .ok()
                                 .zip(displayed.parse::<f64>().ok())
-                                .is_some_and(|(a, b)| a as f32 == b as f32);
+                                .is_some_and(|(a, b)| {
+                                    if matches!(text_field, Field::FrameStep) {
+                                        a == b
+                                    } else {
+                                        a as f32 == b as f32
+                                    }
+                                });
                             if !active && unchanged {
                                 return;
                             }
@@ -183,7 +207,7 @@ impl Timeline {
         }
         control.number.update(cx, |number, cx| {
             number.configure(
-                t!("timeline.value").into_owned(),
+                field.label(),
                 field.number_options(numeric_value, range, fps, disabled),
                 cx,
             )
@@ -215,7 +239,13 @@ impl Timeline {
         cx: &mut Context<Self>,
     ) {
         let numeric = match value.parse::<f64>() {
-            Ok(value) if value.is_finite() => value,
+            Ok(value)
+                if value.is_finite()
+                    && (!matches!(field, Field::FrameStep)
+                        || (value.fract() == 0. && (1. ..=u32::MAX as f64).contains(&value))) =>
+            {
+                value
+            }
             _ => {
                 if !sliding {
                     self.cancel_number_candidate(&field, cx);
@@ -264,6 +294,10 @@ impl Timeline {
         let mut command = edit.command.clone();
         if let TimelineCommand::WriteValue { value, .. } = &mut command {
             *value = numeric as f32;
+        }
+        if let TimelineCommand::FrameStep { frame_step, .. } = &mut command {
+            *frame_step =
+                zipzi_contract::motion_curve::MotionFrameStep::from_frames(numeric as u32).unwrap();
         }
         let token = edit.token;
         self.update_candidate(token, command, cx);
