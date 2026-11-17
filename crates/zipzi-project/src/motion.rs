@@ -1,6 +1,7 @@
 //! motion3 conversion between runtime IDs and persistent document UUIDs.
 use crate::export_preflight::OpaqueExportProblemCode;
 use std::collections::{BTreeMap, HashMap};
+use zipzi_core::document::MotionCurve;
 
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -89,40 +90,46 @@ fn wire_point(point: MotionPoint) -> WirePoint {
 
 fn segment(segment: WireSegment) -> MotionSegment {
     match segment {
-        WireSegment::Linear { end } => MotionSegment::Linear { end: key(end) },
+        WireSegment::Linear { end } => MotionSegment::new(key(end), MotionCurve::Linear {}),
         WireSegment::Bezier {
             control1,
             control2,
             end,
-        } => MotionSegment::Bezier {
-            control1: point(control1),
-            control2: point(control2),
-            end: key(end),
-        },
-        WireSegment::Stepped { end } => MotionSegment::Stepped { end: key(end) },
-        WireSegment::InverseStepped { end } => MotionSegment::InverseStepped { end: key(end) },
+        } => MotionSegment::new(
+            key(end),
+            MotionCurve::Bezier {
+                control1: point(control1),
+                control2: point(control2),
+                preset: None,
+            },
+        ),
+        WireSegment::Stepped { end } => MotionSegment::new(key(end), MotionCurve::Stepped {}),
+        WireSegment::InverseStepped { end } => {
+            MotionSegment::new(key(end), MotionCurve::InverseStepped {})
+        }
     }
 }
 
-fn wire_segment(segment: &MotionSegment) -> WireSegment {
+fn wire_segment(segment: &zipzi_animation::CompiledSegment) -> WireSegment {
+    use zipzi_animation::CompiledSegment as S;
     match segment {
-        MotionSegment::Linear { end } => WireSegment::Linear {
-            end: wire_point(end.point()),
+        S::Linear { end } => WireSegment::Linear {
+            end: wire_point(*end),
         },
-        MotionSegment::Bezier {
+        S::Bezier {
             control1,
             control2,
             end,
         } => WireSegment::Bezier {
             control1: wire_point(*control1),
             control2: wire_point(*control2),
-            end: wire_point(end.point()),
+            end: wire_point(*end),
         },
-        MotionSegment::Stepped { end } => WireSegment::Stepped {
-            end: wire_point(end.point()),
+        S::Stepped { end } => WireSegment::Stepped {
+            end: wire_point(*end),
         },
-        MotionSegment::InverseStepped { end } => WireSegment::InverseStepped {
-            end: wire_point(end.point()),
+        S::InverseStepped { end } => WireSegment::InverseStepped {
+            end: wire_point(*end),
         },
     }
 }
@@ -173,7 +180,11 @@ fn content_hash(clip: &MotionClip) -> String {
                 &track.id,
                 &track.target,
                 track.initial.point(),
-                track.segments.iter().map(wire_segment).collect::<Vec<_>>(),
+                track
+                    .segments
+                    .iter()
+                    .map(|s| (&s.curve, s.frame_step, s.end.point()))
+                    .collect::<Vec<_>>(),
                 track.fade_in,
                 track.fade_out,
                 &track.extensions,
@@ -372,6 +383,20 @@ fn export_clip_motion3(
     document: &DocumentState,
     clip: &MotionClip,
 ) -> Result<String, MotionProjectError> {
+    if clip.tracks.iter().any(|t| {
+        t.segments.iter().any(|s| {
+            matches!(
+                s.frame_step,
+                zipzi_contract::motion_curve::MotionFrameStep::EveryFrames { frames: 2.. }
+            )
+        })
+    }) {
+        return Err(error(
+            "MOTION_FRAME_STEP_BAKING_REQUIRED",
+            "$",
+            "Frame Step export baking is not yet available",
+        ));
+    }
     if let Some(problem) = opaque_export_problems(document, clip).first() {
         return Err(error(
             problem.code(),
@@ -429,7 +454,11 @@ fn export_clip_motion3(
             } else {
                 (
                     wire_point(track.initial.point()),
-                    track.segments.iter().map(wire_segment).collect(),
+                    zipzi_animation::CompiledCurve::from_track(track, clip.fps)
+                        .segments
+                        .iter()
+                        .map(wire_segment)
+                        .collect(),
                 )
             };
             Ok(Motion3Curve {
@@ -515,8 +544,9 @@ fn runtime_curve(
         }
         (lo + hi) * 0.5
     };
-    for segment in track.segments.iter() {
-        let end = segment.end().point();
+    let compiled = zipzi_animation::CompiledCurve::from_track(track, 1.);
+    for segment in compiled.segments.iter() {
+        let end = segment.end();
         if end.time <= 0. {
             previous = end;
             initial = wire_point(end);
@@ -532,7 +562,7 @@ fn runtime_curve(
             continue;
         }
         let (start, wire) = match segment {
-            MotionSegment::Bezier {
+            zipzi_animation::CompiledSegment::Bezier {
                 control1, control2, ..
             } => {
                 let mut p = [previous, *control1, *control2, end];
@@ -558,7 +588,7 @@ fn runtime_curve(
                     },
                 )
             }
-            MotionSegment::Linear { .. } => {
+            zipzi_animation::CompiledSegment::Linear { .. } => {
                 let value = |time: f32| {
                     lerp(
                         previous,
@@ -580,7 +610,7 @@ fn runtime_curve(
                     },
                 )
             }
-            MotionSegment::Stepped { .. } => (
+            zipzi_animation::CompiledSegment::Stepped { .. } => (
                 MotionPoint {
                     time: left,
                     value: previous.value,
@@ -596,7 +626,7 @@ fn runtime_curve(
                     },
                 },
             ),
-            MotionSegment::InverseStepped { .. } => (
+            zipzi_animation::CompiledSegment::InverseStepped { .. } => (
                 MotionPoint {
                     time: left,
                     value: if left == previous.time {
@@ -653,21 +683,24 @@ mod source_range_tests {
     #[test]
     fn source_preroll_and_tail_cubic_are_split_without_changing_playback_values() {
         // y(u)=u², time(u)=-1+3u. After cropping, y(t)=((t+1)/3)².
-        let source = track(MotionSegment::Bezier {
-            control1: MotionPoint {
-                time: 0.,
-                value: 0.,
-            },
-            control2: MotionPoint {
-                time: 1.,
-                value: 1. / 3.,
-            },
-            end: MotionKey {
+        let source = track(MotionSegment::new(
+            MotionKey {
                 id: "last".into(),
                 time: 2.,
                 value: 1.,
             },
-        });
+            MotionCurve::Bezier {
+                control1: MotionPoint {
+                    time: 0.,
+                    value: 0.,
+                },
+                control2: MotionPoint {
+                    time: 1.,
+                    value: 1. / 3.,
+                },
+                preset: None,
+            },
+        ));
         for restricted in [true, false] {
             let (initial, segments) = runtime_curve(&source, 1., restricted);
             assert_eq!(initial.time, 0.);
@@ -699,14 +732,17 @@ mod source_range_tests {
             value: 9.,
         };
         let (initial, segments) = runtime_curve(
-            &track(MotionSegment::Stepped { end: end.clone() }),
+            &track(MotionSegment::new(end.clone(), MotionCurve::Stepped {})),
             1.,
             true,
         );
         assert_eq!(initial.value, 0.);
         assert_eq!(segments[0].end().value, 0.);
-        let (initial, segments) =
-            runtime_curve(&track(MotionSegment::InverseStepped { end }), 1., true);
+        let (initial, segments) = runtime_curve(
+            &track(MotionSegment::new(end, MotionCurve::InverseStepped {})),
+            1.,
+            true,
+        );
         assert_eq!(initial.value, 9.);
         assert_eq!(segments[0].end().value, 9.);
     }

@@ -35,3 +35,5 @@ pub use spatial::{
 #[cfg(test)]
 #[path = "../tests/motion_editing.rs"]
 mod motion_curve_regression;
+
+pub use zipzi_contract::motion_curve::{MotionEasingPreset, MotionFrameStep};

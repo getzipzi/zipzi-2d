@@ -1,6 +1,7 @@
 use super::*;
 use crate::codec::{decode_state, encode_state};
 use serde_json::{json, Value};
+use zipzi_core::document::MotionCurve;
 use zipzi_core::state::{DocumentState, OwnedDocument};
 use zipzi_core::{
     BindingAxis, BindingAxisEditing, Mesh, MeshBinding, MeshKeyform, Parameter, Vec2,
@@ -99,12 +100,15 @@ fn motions(clips: usize, tracks: usize, keys: usize) -> Vec<u8> {
                     },
                     segments: std::sync::Arc::new(
                         (1..=keys)
-                            .map(|k| MotionSegment::Linear {
-                                end: MotionKey {
-                                    id: identity(),
-                                    time: k as f32,
-                                    value: (k % 2) as f32,
-                                },
+                            .map(|k| {
+                                MotionSegment::new(
+                                    MotionKey {
+                                        id: identity(),
+                                        time: k as f32,
+                                        value: (k % 2) as f32,
+                                    },
+                                    MotionCurve::Linear {},
+                                )
                             })
                             .collect(),
                     ),

@@ -9598,6 +9598,7 @@ dependencies = [
  "thiserror 2.0.20",
  "uuid",
  "zip 9.0.3",
+ "zipzi-animation",
  "zipzi-api-derive",
  "zipzi-cmo3",
  "zipzi-contract",

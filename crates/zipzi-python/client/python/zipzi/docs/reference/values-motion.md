@@ -13,13 +13,24 @@ Import from `zipzi.values.motion` or `zipzi.values`; both expose the same classe
 - [zipzi.values.MotionContainer](values-motion.md#zipzi-values-motioncontainer)
 - [zipzi.values.MotionContainerRoot](values-motion.md#zipzi-values-motioncontainerroot)
 - [zipzi.values.MotionContainerGroup](values-motion.md#zipzi-values-motioncontainergroup)
+- [zipzi.values.MotionCurve](values-motion.md#zipzi-values-motioncurve)
+- [zipzi.values.MotionCurveLinear](values-motion.md#zipzi-values-motioncurvelinear)
+- [zipzi.values.MotionCurveAutoSmooth](values-motion.md#zipzi-values-motioncurveautosmooth)
+- [zipzi.values.MotionCurveBezier](values-motion.md#zipzi-values-motioncurvebezier)
+- [zipzi.values.MotionCurveStepped](values-motion.md#zipzi-values-motioncurvestepped)
+- [zipzi.values.MotionCurveInverseStepped](values-motion.md#zipzi-values-motioncurveinversestepped)
 - [zipzi.values.MotionCurveEdit](values-motion.md#zipzi-values-motioncurveedit)
 - [zipzi.values.MotionCurveEditMoveKeys](values-motion.md#zipzi-values-motioncurveeditmovekeys)
 - [zipzi.values.MotionCurveEditInsertKey](values-motion.md#zipzi-values-motioncurveeditinsertkey)
 - [zipzi.values.MotionCurveEditDeleteKeys](values-motion.md#zipzi-values-motioncurveeditdeletekeys)
 - [zipzi.values.MotionCurveEditInterpolation](values-motion.md#zipzi-values-motioncurveeditinterpolation)
+- [zipzi.values.MotionCurveEditEasingPreset](values-motion.md#zipzi-values-motioncurveediteasingpreset)
+- [zipzi.values.MotionCurveEditFrameStep](values-motion.md#zipzi-values-motioncurveeditframestep)
 - [zipzi.values.MotionCurveEditBezierHandle](values-motion.md#zipzi-values-motioncurveeditbezierhandle)
+- [zipzi.values.MotionCurveEditBezierHandleAligned](values-motion.md#zipzi-values-motioncurveeditbezierhandlealigned)
+- [zipzi.values.MotionCurveEditTidyHandles](values-motion.md#zipzi-values-motioncurveedittidyhandles)
 - [zipzi.values.MotionCurveEditScaleTime](values-motion.md#zipzi-values-motioncurveeditscaletime)
+- [zipzi.values.MotionEasingPreset](values-motion.md#zipzi-values-motioneasingpreset)
 - [zipzi.values.MotionEdit](values-motion.md#zipzi-values-motionedit)
 - [zipzi.values.MotionEditCreate](values-motion.md#zipzi-values-motioneditcreate)
 - [zipzi.values.MotionEditCreateGroup](values-motion.md#zipzi-values-motioneditcreategroup)
@@ -45,6 +56,9 @@ Import from `zipzi.values.motion` or `zipzi.values`; both expose the same classe
 - [zipzi.values.MotionEditDeleteEvents](values-motion.md#zipzi-values-motioneditdeleteevents)
 - [zipzi.values.MotionEditMoveEvents](values-motion.md#zipzi-values-motioneditmoveevents)
 - [zipzi.values.MotionEvent](values-motion.md#zipzi-values-motionevent)
+- [zipzi.values.MotionFrameStep](values-motion.md#zipzi-values-motionframestep)
+- [zipzi.values.MotionFrameStepOff](values-motion.md#zipzi-values-motionframestepoff)
+- [zipzi.values.MotionFrameStepEveryFrames](values-motion.md#zipzi-values-motionframestepeveryframes)
 - [zipzi.values.MotionInterpolation](values-motion.md#zipzi-values-motioninterpolation)
 - [zipzi.values.MotionKey](values-motion.md#zipzi-values-motionkey)
 - [zipzi.values.MotionKeyMove](values-motion.md#zipzi-values-motionkeymove)
@@ -52,10 +66,6 @@ Import from `zipzi.values.motion` or `zipzi.values`; both expose the same classe
 - [zipzi.values.MotionPoint](values-motion.md#zipzi-values-motionpoint)
 - [zipzi.values.MotionRegistration](values-motion.md#zipzi-values-motionregistration)
 - [zipzi.values.MotionSegment](values-motion.md#zipzi-values-motionsegment)
-- [zipzi.values.MotionSegmentLinear](values-motion.md#zipzi-values-motionsegmentlinear)
-- [zipzi.values.MotionSegmentBezier](values-motion.md#zipzi-values-motionsegmentbezier)
-- [zipzi.values.MotionSegmentStepped](values-motion.md#zipzi-values-motionsegmentstepped)
-- [zipzi.values.MotionSegmentInverseStepped](values-motion.md#zipzi-values-motionsegmentinversestepped)
 - [zipzi.values.MotionTrack](values-motion.md#zipzi-values-motiontrack)
 - [zipzi.values.MotionTrackTarget](values-motion.md#zipzi-values-motiontracktarget)
 - [zipzi.values.MotionTrackTargetUnspecified](values-motion.md#zipzi-values-motiontracktargetunspecified)
@@ -149,6 +159,85 @@ Select registrations in one motion group.
 
 Related: [zipzi.values.MotionContainer](values-motion.md#zipzi-values-motioncontainer)
 
+<a id="zipzi-values-motioncurve"></a>
+
+## zipzi.values.MotionCurve
+
+```python
+class MotionCurve(Value)
+```
+
+Persistent interpolation mode. Auto Smooth controls are derived from its
+uninterrupted group and are never a second persisted source of authority.
+
+Variants: [MotionCurveLinear](values-motion.md#zipzi-values-motioncurvelinear), [MotionCurveAutoSmooth](values-motion.md#zipzi-values-motioncurveautosmooth), [MotionCurveBezier](values-motion.md#zipzi-values-motioncurvebezier), [MotionCurveStepped](values-motion.md#zipzi-values-motioncurvestepped), [MotionCurveInverseStepped](values-motion.md#zipzi-values-motioncurveinversestepped)
+
+<a id="zipzi-values-motioncurvelinear"></a>
+
+## zipzi.values.MotionCurveLinear
+
+```python
+class MotionCurveLinear(MotionCurve)
+```
+
+Linear interpolation in clip-local time.
+
+Related: [zipzi.values.MotionCurve](values-motion.md#zipzi-values-motioncurve)
+
+<a id="zipzi-values-motioncurveautosmooth"></a>
+
+## zipzi.values.MotionCurveAutoSmooth
+
+```python
+class MotionCurveAutoSmooth(MotionCurve)
+```
+
+Monotone cubic Hermite interpolation with automatic group tangents.
+
+Related: [zipzi.values.MotionCurve](values-motion.md#zipzi-values-motioncurve)
+
+<a id="zipzi-values-motioncurvebezier"></a>
+
+## zipzi.values.MotionCurveBezier
+
+```python
+class MotionCurveBezier(MotionCurve)
+```
+
+Explicit cubic Bezier controls, optionally carrying a validated preset source.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `control1` | `MotionPoint` | Required | First control in seconds and channel-value units. |
+| `control2` | `MotionPoint` | Required | Second control in seconds and channel-value units. |
+| `preset` | `MotionEasingPreset \| None` | `null` (`None`) | None means Custom; hand edits and curve splits clear this source. |
+
+Related: [zipzi.values.MotionCurve](values-motion.md#zipzi-values-motioncurve), [zipzi.values.MotionEasingPreset](values-motion.md#zipzi-values-motioneasingpreset), [zipzi.values.MotionPoint](values-motion.md#zipzi-values-motionpoint)
+
+<a id="zipzi-values-motioncurvestepped"></a>
+
+## zipzi.values.MotionCurveStepped
+
+```python
+class MotionCurveStepped(MotionCurve)
+```
+
+Hold the preceding key value until the endpoint.
+
+Related: [zipzi.values.MotionCurve](values-motion.md#zipzi-values-motioncurve)
+
+<a id="zipzi-values-motioncurveinversestepped"></a>
+
+## zipzi.values.MotionCurveInverseStepped
+
+```python
+class MotionCurveInverseStepped(MotionCurve)
+```
+
+Use the endpoint value until the next outgoing segment takes over.
+
+Related: [zipzi.values.MotionCurve](values-motion.md#zipzi-values-motioncurve)
+
 <a id="zipzi-values-motioncurveedit"></a>
 
 ## zipzi.values.MotionCurveEdit
@@ -159,7 +248,7 @@ class MotionCurveEdit(Value)
 
 Key time order and Bezier roles use dedicated curve operations, never row sorting.
 
-Variants: [MotionCurveEditMoveKeys](values-motion.md#zipzi-values-motioncurveeditmovekeys), [MotionCurveEditInsertKey](values-motion.md#zipzi-values-motioncurveeditinsertkey), [MotionCurveEditDeleteKeys](values-motion.md#zipzi-values-motioncurveeditdeletekeys), [MotionCurveEditInterpolation](values-motion.md#zipzi-values-motioncurveeditinterpolation), [MotionCurveEditBezierHandle](values-motion.md#zipzi-values-motioncurveeditbezierhandle), [MotionCurveEditScaleTime](values-motion.md#zipzi-values-motioncurveeditscaletime)
+Variants: [MotionCurveEditMoveKeys](values-motion.md#zipzi-values-motioncurveeditmovekeys), [MotionCurveEditInsertKey](values-motion.md#zipzi-values-motioncurveeditinsertkey), [MotionCurveEditDeleteKeys](values-motion.md#zipzi-values-motioncurveeditdeletekeys), [MotionCurveEditInterpolation](values-motion.md#zipzi-values-motioncurveeditinterpolation), [MotionCurveEditEasingPreset](values-motion.md#zipzi-values-motioncurveediteasingpreset), [MotionCurveEditFrameStep](values-motion.md#zipzi-values-motioncurveeditframestep), [MotionCurveEditBezierHandle](values-motion.md#zipzi-values-motioncurveeditbezierhandle), [MotionCurveEditBezierHandleAligned](values-motion.md#zipzi-values-motioncurveeditbezierhandlealigned), [MotionCurveEditTidyHandles](values-motion.md#zipzi-values-motioncurveedittidyhandles), [MotionCurveEditScaleTime](values-motion.md#zipzi-values-motioncurveeditscaletime)
 
 <a id="zipzi-values-motioncurveeditmovekeys"></a>
 
@@ -185,7 +274,8 @@ Related: [zipzi.values.MotionCurveEdit](values-motion.md#zipzi-values-motioncurv
 class MotionCurveEditInsertKey(MotionCurveEdit)
 ```
 
-InsertKey variant of MotionCurveEdit.
+Insert a stable key, splitting the base curve and inheriting its mode and
+frame count. Each new interval restarts stepping, so its rhythm can change.
 
 | Field | Type | Constructor default (wire JSON) | Description |
 | --- | --- | --- | --- |
@@ -229,6 +319,40 @@ Interpolation variant of MotionCurveEdit.
 
 Related: [zipzi.values.MotionCurveEdit](values-motion.md#zipzi-values-motioncurveedit), [zipzi.values.MotionInterpolation](values-motion.md#zipzi-values-motioninterpolation), [zipzi.values.MotionKeyRef](values-motion.md#zipzi-values-motionkeyref)
 
+<a id="zipzi-values-motioncurveediteasingpreset"></a>
+
+## zipzi.values.MotionCurveEditEasingPreset
+
+```python
+class MotionCurveEditEasingPreset(MotionCurveEdit)
+```
+
+Apply a shared easing preset to selected outgoing intervals, retaining frame stepping.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `keys` | `tuple[MotionKeyRef, ...]` | Required |  |
+| `preset` | `MotionEasingPreset` | Required |  |
+
+Related: [zipzi.values.MotionCurveEdit](values-motion.md#zipzi-values-motioncurveedit), [zipzi.values.MotionEasingPreset](values-motion.md#zipzi-values-motioneasingpreset), [zipzi.values.MotionKeyRef](values-motion.md#zipzi-values-motionkeyref)
+
+<a id="zipzi-values-motioncurveeditframestep"></a>
+
+## zipzi.values.MotionCurveEditFrameStep
+
+```python
+class MotionCurveEditFrameStep(MotionCurveEdit)
+```
+
+Set selected outgoing intervals' sample-and-hold; one frame normalizes to Off.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `keys` | `tuple[MotionKeyRef, ...]` | Required |  |
+| `frame_step` | `MotionFrameStep` | Required |  |
+
+Related: [zipzi.values.MotionCurveEdit](values-motion.md#zipzi-values-motioncurveedit), [zipzi.values.MotionFrameStep](values-motion.md#zipzi-values-motionframestep), [zipzi.values.MotionKeyRef](values-motion.md#zipzi-values-motionkeyref)
+
 <a id="zipzi-values-motioncurveeditbezierhandle"></a>
 
 ## zipzi.values.MotionCurveEditBezierHandle
@@ -247,6 +371,41 @@ BezierHandle variant of MotionCurveEdit.
 
 Related: [zipzi.values.MotionBezierHandle](values-motion.md#zipzi-values-motionbezierhandle), [zipzi.values.MotionCurveEdit](values-motion.md#zipzi-values-motioncurveedit), [zipzi.values.MotionKeyRef](values-motion.md#zipzi-values-motionkeyref), [zipzi.values.MotionPoint](values-motion.md#zipzi-values-motionpoint)
 
+<a id="zipzi-values-motioncurveeditbezierhandlealigned"></a>
+
+## zipzi.values.MotionCurveEditBezierHandleAligned
+
+```python
+class MotionCurveEditBezierHandleAligned(MotionCurveEdit)
+```
+
+Move a handle and align the adjacent opposite handle, retaining its
+length. Automatic intervals involved become explicit Beziers atomically.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `end` | `MotionKeyRef` | Required |  |
+| `handle` | `MotionBezierHandle` | Required |  |
+| `point` | `MotionPoint` | Required |  |
+
+Related: [zipzi.values.MotionBezierHandle](values-motion.md#zipzi-values-motionbezierhandle), [zipzi.values.MotionCurveEdit](values-motion.md#zipzi-values-motioncurveedit), [zipzi.values.MotionKeyRef](values-motion.md#zipzi-values-motionkeyref), [zipzi.values.MotionPoint](values-motion.md#zipzi-values-motionpoint)
+
+<a id="zipzi-values-motioncurveedittidyhandles"></a>
+
+## zipzi.values.MotionCurveEditTidyHandles
+
+```python
+class MotionCurveEditTidyHandles(MotionCurveEdit)
+```
+
+Restore selected outgoing Bezier controls to straight thirds and Custom.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `keys` | `tuple[MotionKeyRef, ...]` | Required |  |
+
+Related: [zipzi.values.MotionCurveEdit](values-motion.md#zipzi-values-motioncurveedit), [zipzi.values.MotionKeyRef](values-motion.md#zipzi-values-motionkeyref)
+
 <a id="zipzi-values-motioncurveeditscaletime"></a>
 
 ## zipzi.values.MotionCurveEditScaleTime
@@ -262,6 +421,45 @@ ScaleTime variant of MotionCurveEdit.
 | `duration` | `float` | Required |  |
 
 Related: [zipzi.values.MotionCurveEdit](values-motion.md#zipzi-values-motioncurveedit)
+
+<a id="zipzi-values-motioneasingpreset"></a>
+
+## zipzi.values.MotionEasingPreset
+
+```python
+class MotionEasingPreset(StrEnum)
+```
+
+Source of explicit Bezier controls. Absence of a source means Custom; imported
+or manually edited controls must not be matched back to a preset by tolerance.
+
+| Member | Value | Description |
+| --- | --- | --- |
+| `EASE` | `'ease'` | CSS-style ease, defined directly by its Bezier controls. |
+| `EASE_IN` | `'ease_in'` | CSS-style ease in, defined directly by its Bezier controls. |
+| `EASE_OUT` | `'ease_out'` | CSS-style ease out, defined directly by its Bezier controls. |
+| `EASE_IN_OUT` | `'ease_in_out'` | CSS-style ease in out, defined directly by its Bezier controls. |
+| `CUBIC_IN` | `'cubic_in'` | Cubic acceleration, exact apart from floating-point rounding. |
+| `CUBIC_OUT` | `'cubic_out'` | Cubic deceleration, exact apart from floating-point rounding. |
+| `CUBIC_IN_OUT` | `'cubic_in_out'` | Single-Bezier approximation of piecewise cubic easing. |
+| `SINE_IN` | `'sine_in'` | Single-Bezier approximation of sine acceleration. |
+| `SINE_OUT` | `'sine_out'` | Single-Bezier approximation of sine deceleration. |
+| `SINE_IN_OUT` | `'sine_in_out'` | Single-Bezier approximation of sine easing at both ends. |
+| `QUAD_IN` | `'quad_in'` | Quadratic acceleration, exact apart from floating-point rounding. |
+| `QUAD_OUT` | `'quad_out'` | Quadratic deceleration, exact apart from floating-point rounding. |
+| `QUAD_IN_OUT` | `'quad_in_out'` | Single-Bezier approximation of piecewise quadratic easing. |
+| `QUART_IN` | `'quart_in'` | Single-Bezier approximation of quartic acceleration. |
+| `QUART_OUT` | `'quart_out'` | Single-Bezier approximation of quartic deceleration. |
+| `QUART_IN_OUT` | `'quart_in_out'` | Single-Bezier approximation of piecewise quartic easing. |
+| `QUINT_IN` | `'quint_in'` | Single-Bezier approximation of quintic acceleration. |
+| `QUINT_OUT` | `'quint_out'` | Single-Bezier approximation of quintic deceleration. |
+| `QUINT_IN_OUT` | `'quint_in_out'` | Single-Bezier approximation of piecewise quintic easing. |
+| `EXPO_IN` | `'expo_in'` | Single-Bezier approximation of exponential acceleration. |
+| `EXPO_OUT` | `'expo_out'` | Single-Bezier approximation of exponential deceleration. |
+| `EXPO_IN_OUT` | `'expo_in_out'` | Single-Bezier approximation of piecewise exponential easing. |
+| `CIRC_IN` | `'circ_in'` | Single-Bezier approximation of circular acceleration. |
+| `CIRC_OUT` | `'circ_out'` | Single-Bezier approximation of circular deceleration. |
+| `CIRC_IN_OUT` | `'circ_in_out'` | Single-Bezier approximation of piecewise circular easing. |
 
 <a id="zipzi-values-motionedit"></a>
 
@@ -694,6 +892,47 @@ Timed string event owned by a motion clip.
 | `value` | `str` | Required | Event's string payload, delivered at its clip-local time. |
 | `extensions` | `Mapping[str, object]` | Required | Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed. |
 
+<a id="zipzi-values-motionframestep"></a>
+
+## zipzi.values.MotionFrameStep
+
+```python
+class MotionFrameStep(Value)
+```
+
+Segment-local sample-and-hold, independent of the base interpolation.
+One frame means continuous sampling and is canonicalized to Off.
+
+Variants: [MotionFrameStepOff](values-motion.md#zipzi-values-motionframestepoff), [MotionFrameStepEveryFrames](values-motion.md#zipzi-values-motionframestepeveryframes)
+
+<a id="zipzi-values-motionframestepoff"></a>
+
+## zipzi.values.MotionFrameStepOff
+
+```python
+class MotionFrameStepOff(MotionFrameStep)
+```
+
+Evaluate continuously, including at subframe times.
+
+Related: [zipzi.values.MotionFrameStep](values-motion.md#zipzi-values-motionframestep)
+
+<a id="zipzi-values-motionframestepeveryframes"></a>
+
+## zipzi.values.MotionFrameStepEveryFrames
+
+```python
+class MotionFrameStepEveryFrames(MotionFrameStep)
+```
+
+Hold each base-curve sample for this many frames at the clip's FPS.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `frames` | `int` | Required | Positive frame count. Zero is invalid; one normalizes to Off. |
+
+Related: [zipzi.values.MotionFrameStep](values-motion.md#zipzi-values-motionframestep)
+
 <a id="zipzi-values-motioninterpolation"></a>
 
 ## zipzi.values.MotionInterpolation
@@ -706,10 +945,11 @@ MotionInterpolation choices.
 
 | Member | Value | Description |
 | --- | --- | --- |
-| `LINEAR` | `'linear'` |  |
-| `BEZIER` | `'bezier'` |  |
-| `STEPPED` | `'stepped'` |  |
-| `INVERSE_STEPPED` | `'inverse_stepped'` |  |
+| `LINEAR` | `'linear'` | Interpolate linearly between keys before optional frame stepping. |
+| `AUTO_SMOOTH` | `'auto_smooth'` | Derive monotone smooth handles from adjacent automatic intervals. |
+| `BEZIER` | `'bezier'` | Interpolate using explicitly editable cubic controls. |
+| `STEPPED` | `'stepped'` | Hold the interval's starting value. |
+| `INVERSE_STEPPED` | `'inverse_stepped'` | Use the interval's endpoint value, including at the outgoing start key. |
 
 <a id="zipzi-values-motionkey"></a>
 
@@ -803,75 +1043,16 @@ Related: [zipzi.values.AttachmentRef](values-resources.md#zipzi-values-attachmen
 class MotionSegment(Value)
 ```
 
-Interpolation from a preceding key to a stable endpoint key.
-
-Variants: [MotionSegmentLinear](values-motion.md#zipzi-values-motionsegmentlinear), [MotionSegmentBezier](values-motion.md#zipzi-values-motionsegmentbezier), [MotionSegmentStepped](values-motion.md#zipzi-values-motionsegmentstepped), [MotionSegmentInverseStepped](values-motion.md#zipzi-values-motionsegmentinversestepped)
-
-<a id="zipzi-values-motionsegmentlinear"></a>
-
-## zipzi.values.MotionSegmentLinear
-
-```python
-class MotionSegmentLinear(MotionSegment)
-```
-
-Interpolate linearly between the preceding and endpoint key.
+An interval from the preceding key to its stable endpoint. Settings belong to
+the outgoing interval of the preceding key, not to the endpoint identity.
 
 | Field | Type | Constructor default (wire JSON) | Description |
 | --- | --- | --- | --- |
-| `end` | `MotionKey` | Required | Persistent endpoint key of this segment. |
+| `end` | `MotionKey` | Required | Persistent endpoint key. |
+| `curve` | `MotionCurve` | Required | Authored base interpolation, preserving automatic mode and preset source. |
+| `frame_step` | `MotionFrameStep` | Required | Segment-local sample-and-hold at the owning clip's FPS. |
 
-Related: [zipzi.values.MotionKey](values-motion.md#zipzi-values-motionkey), [zipzi.values.MotionSegment](values-motion.md#zipzi-values-motionsegment)
-
-<a id="zipzi-values-motionsegmentbezier"></a>
-
-## zipzi.values.MotionSegmentBezier
-
-```python
-class MotionSegmentBezier(MotionSegment)
-```
-
-Interpolate using two time/value control points and the endpoint key.
-
-| Field | Type | Constructor default (wire JSON) | Description |
-| --- | --- | --- | --- |
-| `control1` | `MotionPoint` | Required | First Bezier control point in seconds/channel-value coordinates; it has no key identity. |
-| `control2` | `MotionPoint` | Required | Second Bezier control point in seconds/channel-value coordinates; it has no key identity. |
-| `end` | `MotionKey` | Required | Persistent endpoint key of this segment. |
-
-Related: [zipzi.values.MotionKey](values-motion.md#zipzi-values-motionkey), [zipzi.values.MotionPoint](values-motion.md#zipzi-values-motionpoint), [zipzi.values.MotionSegment](values-motion.md#zipzi-values-motionsegment)
-
-<a id="zipzi-values-motionsegmentstepped"></a>
-
-## zipzi.values.MotionSegmentStepped
-
-```python
-class MotionSegmentStepped(MotionSegment)
-```
-
-Hold the preceding value through the segment before its endpoint.
-
-| Field | Type | Constructor default (wire JSON) | Description |
-| --- | --- | --- | --- |
-| `end` | `MotionKey` | Required | Persistent endpoint key of this segment. |
-
-Related: [zipzi.values.MotionKey](values-motion.md#zipzi-values-motionkey), [zipzi.values.MotionSegment](values-motion.md#zipzi-values-motionsegment)
-
-<a id="zipzi-values-motionsegmentinversestepped"></a>
-
-## zipzi.values.MotionSegmentInverseStepped
-
-```python
-class MotionSegmentInverseStepped(MotionSegment)
-```
-
-Use the endpoint value over the segment before its endpoint.
-
-| Field | Type | Constructor default (wire JSON) | Description |
-| --- | --- | --- | --- |
-| `end` | `MotionKey` | Required | Persistent endpoint key of this segment. |
-
-Related: [zipzi.values.MotionKey](values-motion.md#zipzi-values-motionkey), [zipzi.values.MotionSegment](values-motion.md#zipzi-values-motionsegment)
+Related: [zipzi.values.MotionCurve](values-motion.md#zipzi-values-motioncurve), [zipzi.values.MotionFrameStep](values-motion.md#zipzi-values-motionframestep), [zipzi.values.MotionKey](values-motion.md#zipzi-values-motionkey)
 
 <a id="zipzi-values-motiontrack"></a>
 

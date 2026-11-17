@@ -1,5 +1,6 @@
 //! Value-only motion workspace; curves retain their shared payloads.
 use super::*;
+use crate::document::MotionCurve;
 
 pub(crate) struct MotionChanges {
     pub groups: Vec<MotionGroup>,
@@ -130,8 +131,30 @@ impl Model<'_> {
             for t in &old.tracks {
                 if tracks.get(&t.id).copied() != Some(t) {
                     self.motion_unlocked(&t.id)?;
-                    for k in t.keys() {
-                        self.motion_unlocked(&k.id)?;
+                    let next = tracks.get(&t.id).copied();
+                    let old_keys: Vec<_> = t.keys().collect();
+                    let new_keys: HashMap<_, _> = next
+                        .into_iter()
+                        .flat_map(|t| t.keys())
+                        .map(|k| (&k.id, k))
+                        .collect();
+                    for k in &old_keys {
+                        if new_keys.get(&k.id).copied() != Some(*k)
+                            || next.is_none_or(|next| next.target != t.target)
+                        {
+                            self.motion_unlocked(&k.id)?;
+                        }
+                    }
+                    let new_segments: HashMap<_, _> = next
+                        .into_iter()
+                        .flat_map(|t| t.keys().zip(t.segments.iter()))
+                        .map(|(key, s)| (&key.id, s))
+                        .collect();
+                    for (index, segment) in t.segments.iter().enumerate() {
+                        if new_segments.get(&old_keys[index].id).copied() != Some(segment) {
+                            self.motion_unlocked(&old_keys[index].id)?;
+                            self.motion_unlocked(&segment.end.id)?;
+                        }
                     }
                 }
             }
@@ -456,9 +479,15 @@ impl Model<'_> {
                     for t in &clip.tracks {
                         if ids.contains(&t.id) {
                             if clip.restricted_beziers != target.restricted_beziers
-                                && t.segments
-                                    .iter()
-                                    .any(|s| matches!(s, MotionSegment::Bezier { .. }))
+                                && t.segments.iter().any(|s| {
+                                    matches!(
+                                        s,
+                                        MotionSegment {
+                                            curve: MotionCurve::Bezier { .. },
+                                            ..
+                                        }
+                                    )
+                                })
                             {
                                 return Err(Status::error(
                                     "INCOMPATIBLE_BEZIER_MODE",
@@ -624,7 +653,13 @@ impl Model<'_> {
                             let right = &all[i + 1].id;
                             if ids.contains(left) && ids.contains(right) {
                                 if clip.restricted_beziers != destination_clip.restricted_beziers
-                                    && matches!(segment, MotionSegment::Bezier { .. })
+                                    && matches!(
+                                        segment,
+                                        MotionSegment {
+                                            curve: MotionCurve::Bezier { .. },
+                                            ..
+                                        }
+                                    )
                                 {
                                     return Err(Status::error(
                                         "INCOMPATIBLE_BEZIER_MODE",
@@ -634,12 +669,29 @@ impl Model<'_> {
                                 let mut segment = segment.clone();
                                 segment.end_mut().id = remap[right].clone();
                                 segment.end_mut().time += time_offset;
-                                if let MotionSegment::Bezier {
-                                    control1, control2, ..
+                                if let MotionSegment {
+                                    curve:
+                                        MotionCurve::Bezier {
+                                            control1, control2, ..
+                                        },
+                                    ..
                                 } = &mut segment
                                 {
                                     control1.time += time_offset;
                                     control2.time += time_offset;
+                                }
+                                if let MotionCurve::Bezier {
+                                    control1,
+                                    control2,
+                                    preset: Some(source),
+                                } = &mut segment.curve
+                                {
+                                    let start = MotionPoint {
+                                        time: all[i].time + time_offset,
+                                        value: all[i].value,
+                                    };
+                                    [*control1, *control2] =
+                                        source.mapped_controls(start, segment.end.point()).unwrap();
                                 }
                                 internal
                                     .insert((remap[left].clone(), remap[right].clone()), segment);
@@ -659,15 +711,11 @@ impl Model<'_> {
                             if !t.keys().any(|k| ids.contains(&k.id)) {
                                 continue;
                             }
-                            let keys = t
-                                .keys()
-                                .filter(|k| !ids.contains(&k.id))
-                                .cloned()
-                                .collect::<Vec<_>>();
-                            if keys.is_empty() {
+                            if !t.retain_keys(
+                                |key| !ids.iter().any(|id| id == key),
+                                a.restricted_beziers,
+                            ) {
                                 empty.insert(t.id.clone());
-                            } else {
-                                rebuild_key_connections(t, keys, &BTreeMap::new())?;
                             }
                         }
                         a.tracks
@@ -1206,7 +1254,7 @@ fn rebuild_key_connections(
                         .filter(|segment| segment.end() == &p[1] && old.iter().any(|k| **k == p[0]))
                 })
                 .cloned()
-                .unwrap_or_else(|| MotionSegment::Linear { end: p[1].clone() })
+                .unwrap_or_else(|| MotionSegment::new(p[1].clone(), MotionCurve::Linear {}))
         })
         .collect();
     track.initial = keys[0].clone();

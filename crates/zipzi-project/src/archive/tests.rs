@@ -724,7 +724,7 @@ fn native_document_admission_rejects_duplicate_members_and_incompatible_headers(
             "Unknown project document identifier",
         ),
         (
-            r#"{"format":"zipzi-project","format_version":22,"document":{"unused":"\u0000"}}"#
+            r#"{"format":"zipzi-project","format_version":23,"document":{"unused":"\u0000"}}"#
                 .into(),
             "INVALID_PROJECT",
             "Embedded NUL",

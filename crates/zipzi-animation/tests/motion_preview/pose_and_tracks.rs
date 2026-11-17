@@ -221,13 +221,14 @@ fn editing_one_track_preserves_shared_snapshots_and_other_track_storage() {
     let before = original.motion(MOTION).unwrap();
     let segment = &mut Arc::make_mut(&mut clip.tracks[0].segments)[0];
     let key_id = segment.end().id.clone();
-    *segment = zipzi_core::document::MotionSegment::Linear {
-        end: zipzi_core::document::MotionKey {
+    *segment = zipzi_core::document::MotionSegment::new(
+        zipzi_core::document::MotionKey {
             id: key_id,
             time: 1.0,
             value: 0.25,
         },
-    };
+        zipzi_core::document::MotionCurve::Linear {},
+    );
     assert!(!Arc::ptr_eq(
         &clip.tracks[0].segments,
         &before.tracks[0].segments

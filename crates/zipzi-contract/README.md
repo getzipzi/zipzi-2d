@@ -7,8 +7,10 @@ input and output types. This crate does not depend on execution packages.
 
 `motion_curve` defines the shared easing-preset identities, fixed normalized
 control table and approximation labels, plus canonical segment-local Frame Step
-values. These preparatory types have shape/binary codecs; command and document
-integration, including their Python projection, follows the curve-authoring plan.
+values. `MotionSegment` stores endpoint, persistent curve mode and frame stepping;
+the same values and curve commands have shape/binary codecs and generated Python
+projections. Automatic controls remain derived, and preset sources validate
+against the actual explicit controls.
 
 `kernel` contains the new authoring kernel's content/resource identities, publication
 and candidate sources, and path-independent image records. These preparatory values

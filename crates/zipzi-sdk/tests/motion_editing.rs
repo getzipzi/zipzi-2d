@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use zipzi_core::document::MotionCurve;
 
 use crate as zipzi_sdk;
 use crate::motion_curve::CurveWorkspace;
@@ -67,12 +68,15 @@ fn session() -> AuthoringSession {
                             initial: key(100 + index * 10, 0., 0.),
                             segments: Arc::new(
                                 (1..=4)
-                                    .map(|i| MotionSegment::Linear {
-                                        end: key(
-                                            100 + index * 10 + i,
-                                            i as f32 * 0.25,
-                                            (i % 2) as f32,
-                                        ),
+                                    .map(|i| {
+                                        MotionSegment::new(
+                                            key(
+                                                100 + index * 10 + i,
+                                                i as f32 * 0.25,
+                                                (i % 2) as f32,
+                                            ),
+                                            MotionCurve::Linear {},
+                                        )
                                     })
                                     .collect(),
                             ),
@@ -129,17 +133,20 @@ fn bezier_session(restricted: bool) -> AuthoringSession {
     let mut s = session();
     let mut clip = s.snapshot().document().motion(&id(3)).cloned().unwrap();
     clip.restricted_beziers = restricted;
-    clip.tracks[0].segments = Arc::new(vec![MotionSegment::Bezier {
-        control1: MotionPoint {
-            time: 0.2,
-            value: 1.8,
+    clip.tracks[0].segments = Arc::new(vec![MotionSegment::new(
+        key(104, 1., 1.),
+        MotionCurve::Bezier {
+            control1: MotionPoint {
+                time: 0.2,
+                value: 1.8,
+            },
+            control2: MotionPoint {
+                time: 0.9,
+                value: -1.2,
+            },
+            preset: None,
         },
-        control2: MotionPoint {
-            time: 0.9,
-            value: -1.2,
-        },
-        end: key(104, 1., 1.),
-    }]);
+    )]);
     {
         let mut draft = s.begin_draft();
         draft
@@ -154,7 +161,7 @@ fn bezier_session(restricted: bool) -> AuthoringSession {
 }
 
 fn samples(clip: &MotionClip) -> Vec<f32> {
-    let curve = CompiledCurve::from(&clip.tracks[0]);
+    let curve = CompiledCurve::from_track(&clip.tracks[0], clip.fps);
     (0..=1000)
         .map(|i| sample_motion_curve(&curve, i as f32 / 1000., clip.restricted_beziers))
         .collect()
@@ -338,7 +345,7 @@ fn insertion_preserves_all_four_interpolations_including_step_boundaries() {
         assert_samples_equal(&before, &samples(c.clip()));
         assert_eq!(c.clip().tracks[0].segments[0].end().id, id(500));
         assert_eq!(c.clip().tracks[0].segments[1].end().id, id(101));
-        let curve = CompiledCurve::from(&c.clip().tracks[0]);
+        let curve = CompiledCurve::from_track(&c.clip().tracks[0], c.clip().fps);
         assert_eq!(sample_motion_curve(&curve, 0.25, false), before[250]);
     }
 }
@@ -363,10 +370,13 @@ fn de_casteljau_preserves_restricted_and_ordinary_bezier_samples() {
             if restricted {
                 let mut start = 0.;
                 for segment in c.clip().tracks[0].segments.iter() {
-                    let MotionSegment::Bezier {
-                        control1,
-                        control2,
+                    let MotionSegment {
                         end,
+                        curve:
+                            MotionCurve::Bezier {
+                                control1, control2, ..
+                            },
+                        ..
                     } = segment
                     else {
                         panic!()
@@ -404,25 +414,41 @@ fn insertion_value_change_moves_only_adjoining_handles() {
             Some(0.8),
         )
         .unwrap();
-    let [MotionSegment::Bezier {
-        control1: a1,
-        control2: a2,
+    let [MotionSegment {
+        curve:
+            MotionCurve::Bezier {
+                control1: a1,
+                control2: a2,
+                ..
+            },
         ..
-    }, MotionSegment::Bezier {
-        control1: b1,
-        control2: b2,
+    }, MotionSegment {
+        curve:
+            MotionCurve::Bezier {
+                control1: b1,
+                control2: b2,
+                ..
+            },
         ..
     }] = written.clip().tracks[0].segments.as_slice()
     else {
         panic!()
     };
-    let [MotionSegment::Bezier {
-        control1: x1,
-        control2: x2,
+    let [MotionSegment {
+        curve:
+            MotionCurve::Bezier {
+                control1: x1,
+                control2: x2,
+                ..
+            },
         ..
-    }, MotionSegment::Bezier {
-        control1: y1,
-        control2: y2,
+    }, MotionSegment {
+        curve:
+            MotionCurve::Bezier {
+                control1: y1,
+                control2: y2,
+                ..
+            },
         ..
     }] = split.clip().tracks[0].segments.as_slice()
     else {
@@ -497,8 +523,8 @@ fn multi_delete_uses_final_survivors_and_removes_empty_track() {
         assert_eq!(c, reverse);
         assert_eq!(c.clip().tracks[0].segments[0].end().id, id(103));
         assert_eq!(
-            std::mem::discriminant(&c.clip().tracks[0].segments[0]),
-            std::mem::discriminant(&c.clip().tracks[0].segments[1])
+            std::mem::discriminant(&c.clip().tracks[0].segments[0].curve),
+            std::mem::discriminant(&c.clip().tracks[0].segments[1].curve)
         );
         c.delete_keys(
             &s.snapshot().document().builder(),
@@ -511,7 +537,7 @@ fn multi_delete_uses_final_survivors_and_removes_empty_track() {
 }
 
 #[test]
-fn mixed_deletion_connects_linearly_and_keeps_outer_bezier_values_when_merging() {
+fn deletion_inherits_the_left_curve_and_keeps_outer_bezier_values_when_merging() {
     let s = session();
     let mut c = candidate(&s);
     c.set_interpolation(
@@ -524,7 +550,10 @@ fn mixed_deletion_connects_linearly_and_keeps_outer_bezier_values_when_merging()
         .unwrap();
     assert!(matches!(
         c.clip().tracks[0].segments[0],
-        MotionSegment::Linear { .. }
+        MotionSegment {
+            curve: MotionCurve::Bezier { .. },
+            ..
+        }
     ));
     let mut c = candidate(&s);
     c.set_interpolation(
@@ -533,17 +562,29 @@ fn mixed_deletion_connects_linearly_and_keeps_outer_bezier_values_when_merging()
         MotionInterpolation::Bezier,
     )
     .unwrap();
-    let MotionSegment::Bezier { control1, .. } = c.clip().tracks[0].segments[0] else {
+    let MotionSegment {
+        curve: MotionCurve::Bezier { control1, .. },
+        ..
+    } = c.clip().tracks[0].segments[0]
+    else {
         panic!()
     };
-    let MotionSegment::Bezier { control2, .. } = c.clip().tracks[0].segments[1] else {
+    let MotionSegment {
+        curve: MotionCurve::Bezier { control2, .. },
+        ..
+    } = c.clip().tracks[0].segments[1]
+    else {
         panic!()
     };
     c.delete_keys(&s.snapshot().document().builder(), &[reference(0, 1)])
         .unwrap();
-    let MotionSegment::Bezier {
-        control1: first,
-        control2: second,
+    let MotionSegment {
+        curve:
+            MotionCurve::Bezier {
+                control1: first,
+                control2: second,
+                ..
+            },
         ..
     } = c.clip().tracks[0].segments[0]
     else {
@@ -585,8 +626,11 @@ fn restricted_handle_time_is_locked_and_endpoint_edits_normalize_only_touched_se
         },
     )
     .unwrap();
-    let MotionSegment::Bezier {
-        control1, control2, ..
+    let MotionSegment {
+        curve: MotionCurve::Bezier {
+            control1, control2, ..
+        },
+        ..
     } = c.clip().tracks[0].segments[0]
     else {
         panic!()
@@ -621,8 +665,11 @@ fn common_endpoint_translation_translates_entire_ordinary_curve() {
         &[movement(0, 0, 0.5, 0.2), movement(0, 4, 1.5, 1.2)],
     )
     .unwrap();
-    let MotionSegment::Bezier {
-        control1, control2, ..
+    let MotionSegment {
+        curve: MotionCurve::Bezier {
+            control1, control2, ..
+        },
+        ..
     } = c.clip().tracks[0].segments[0]
     else {
         panic!()
@@ -637,8 +684,11 @@ fn common_endpoint_translation_translates_entire_ordinary_curve() {
 fn non_monotonic_bezier_supports_value_edits_and_rejects_splits_and_time_edits() {
     let mut s = bezier_session(false);
     let mut clip = s.snapshot().document().motion(&id(3)).cloned().unwrap();
-    let MotionSegment::Bezier {
-        control1, control2, ..
+    let MotionSegment {
+        curve: MotionCurve::Bezier {
+            control1, control2, ..
+        },
+        ..
     } = &mut Arc::make_mut(&mut clip.tracks[0].segments)[0]
     else {
         panic!()
@@ -684,8 +734,11 @@ fn non_monotonic_bezier_supports_value_edits_and_rejects_splits_and_time_edits()
         &[movement(0, 4, 1., 0.8)],
     )
     .unwrap();
-    let MotionSegment::Bezier {
-        control1, control2, ..
+    let MotionSegment {
+        curve: MotionCurve::Bezier {
+            control1, control2, ..
+        },
+        ..
     } = c.clip().tracks[0].segments[0]
     else {
         panic!()
@@ -905,8 +958,11 @@ fn scale_time_transforms_controls_events_and_keys_preserving_ids() {
             assert_eq!(b.time, a.time * 2.5);
         }
     }
-    let MotionSegment::Bezier {
-        control1, control2, ..
+    let MotionSegment {
+        curve: MotionCurve::Bezier {
+            control1, control2, ..
+        },
+        ..
     } = c.clip().tracks[0].segments[0]
     else {
         panic!()
@@ -1049,7 +1105,7 @@ fn single_key_track_is_constant_without_an_implicit_zero_key_and_opacity_is_boun
     let mut c = candidate(&s);
     let track = &c.clip().tracks[2];
     assert_eq!(track.keys().count(), 1);
-    let curve = CompiledCurve::from(track);
+    let curve = CompiledCurve::from_track(track, 30.);
     for time in [0., 0.3, 0.6137, 1.] {
         assert_eq!(sample_motion_curve(&curve, time, false), 0.4);
     }
@@ -1102,10 +1158,12 @@ fn ill_conditioned_f32_bezier_splits_preserve_samples_or_reject_atomically() {
         let mut clip = s.snapshot().document().motion(&id(3)).cloned().unwrap();
         clip.duration = start + span + 1.;
         clip.tracks[0].initial.time = start;
-        let MotionSegment::Bezier {
-            control1,
-            control2,
+        let MotionSegment {
             end,
+            curve: MotionCurve::Bezier {
+                control1, control2, ..
+            },
+            ..
         } = &mut Arc::make_mut(&mut clip.tracks[0].segments)[0]
         else {
             panic!()
@@ -1125,7 +1183,7 @@ fn ill_conditioned_f32_bezier_splits_preserve_samples_or_reject_atomically() {
         .unwrap();
         let mut c = candidate(&s);
         let original = c.clone();
-        let before = CompiledCurve::from(&original.clip().tracks[0]);
+        let before = CompiledCurve::from_track(&original.clip().tracks[0], original.clip().fps);
         let inserted = c.insert_key(
             &s.snapshot().document().builder(),
             &id(10),
@@ -1135,7 +1193,7 @@ fn ill_conditioned_f32_bezier_splits_preserve_samples_or_reject_atomically() {
         );
         match inserted {
             Ok(()) => {
-                let after = CompiledCurve::from(&c.clip().tracks[0]);
+                let after = CompiledCurve::from_track(&c.clip().tracks[0], c.clip().fps);
                 for i in 0..=200 {
                     let time = (f64::from(start) + f64::from(span) * f64::from(i) / 200.) as f32;
                     let (a, b) = (

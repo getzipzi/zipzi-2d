@@ -115,7 +115,7 @@ fn behavior(document: &DocumentState) -> Result<Value> {
         let clip = document.motion(id).unwrap();
         let mut tracks = BTreeMap::new();
         for track in &clip.tracks {
-            let curve = CompiledCurve::from(track);
+            let curve = CompiledCurve::from_track(track, 30.);
             let mut times: Vec<_> = (0..=128).map(|i| clip.duration * i as f32 / 128.).collect();
             times.extend([1. / clip.fps, (clip.duration - 1. / clip.fps).max(0.)]);
             tracks.insert(

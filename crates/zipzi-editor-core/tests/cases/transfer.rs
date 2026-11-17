@@ -217,8 +217,12 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
             for segment in segments {
                 let old_end = segment.end().time;
                 let new_end = (f64::from(old_end) * 60.).round() as f32 / 60.;
-                if let zipzi_core::document::MotionSegment::Bezier {
-                    control1, control2, ..
+                if let zipzi_core::document::MotionSegment {
+                    curve:
+                        zipzi_core::document::MotionCurve::Bezier {
+                            control1, control2, ..
+                        },
+                    ..
                 } = segment
                 {
                     if before.restricted_beziers {
@@ -237,8 +241,8 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
                 start = old_end;
                 normalized_start = new_end;
             }
-            let source_curve = zipzi_animation::CompiledCurve::from(&normalized);
-            let result_curve = zipzi_animation::CompiledCurve::from(actual);
+            let source_curve = zipzi_animation::CompiledCurve::from_track(&normalized, 30.);
+            let result_curve = zipzi_animation::CompiledCurve::from_track(actual, 30.);
             let mut reference_values = Vec::new();
             let mut extra_checks = Vec::new();
             for frame in 0..=(before.duration * 60.).round() as usize {
@@ -278,21 +282,46 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
             original_beziers += track
                 .segments
                 .iter()
-                .filter(|s| matches!(s, zipzi_core::document::MotionSegment::Bezier { .. }))
+                .filter(|s| {
+                    matches!(
+                        s,
+                        zipzi_core::document::MotionSegment {
+                            curve: zipzi_core::document::MotionCurve::Bezier { .. },
+                            ..
+                        }
+                    )
+                })
                 .count();
             exported_beziers += actual
                 .segments
                 .iter()
-                .filter(|s| matches!(s, zipzi_core::document::MotionSegment::Bezier { .. }))
+                .filter(|s| {
+                    matches!(
+                        s,
+                        zipzi_core::document::MotionSegment {
+                            curve: zipzi_core::document::MotionCurve::Bezier { .. },
+                            ..
+                        }
+                    )
+                })
                 .count();
             let mut start = normalized.initial.time;
             for (index, segment) in normalized.segments.iter().enumerate() {
-                if matches!(segment, zipzi_core::document::MotionSegment::Bezier { .. }) {
+                if matches!(
+                    segment,
+                    zipzi_core::document::MotionSegment {
+                        curve: zipzi_core::document::MotionCurve::Bezier { .. },
+                        ..
+                    }
+                ) {
                     let mut end = segment.end().time;
                     if normalized.segments.get(index + 1).is_some_and(|s| {
                         matches!(
                             s,
-                            zipzi_core::document::MotionSegment::InverseStepped { .. }
+                            zipzi_core::document::MotionSegment {
+                                curve: zipzi_core::document::MotionCurve::InverseStepped {},
+                                ..
+                            }
                         )
                     }) {
                         end -= 1. / 60.;

@@ -1,3 +1,4 @@
+use zipzi_core::document::MotionCurve;
 use zipzi_core::state::*;
 mod common;
 use common::*;
@@ -28,23 +29,22 @@ fn automatic_time_grid_preserves_millisecond_rounded_beziers_at_sixty_fps() {
         },
         initial: key(11, 0., 0.),
         segments: Arc::new(vec![
-            MotionSegment::Linear {
-                end: key(12, 0.017, -0.2),
-            },
-            MotionSegment::Bezier {
-                control1: MotionPoint {
-                    time: 0.139,
-                    value: 0.8,
+            MotionSegment::new(key(12, 0.017, -0.2), MotionCurve::Linear {}),
+            MotionSegment::new(
+                key(13, 0.383, 0.6),
+                MotionCurve::Bezier {
+                    control1: MotionPoint {
+                        time: 0.139,
+                        value: 0.8,
+                    },
+                    control2: MotionPoint {
+                        time: 0.261,
+                        value: -0.7,
+                    },
+                    preset: None,
                 },
-                control2: MotionPoint {
-                    time: 0.261,
-                    value: -0.7,
-                },
-                end: key(13, 0.383, 0.6),
-            },
-            MotionSegment::Linear {
-                end: key(14, 1., 1.),
-            },
+            ),
+            MotionSegment::new(key(14, 1., 1.), MotionCurve::Linear {}),
         ]),
         fade_in: None,
         fade_out: None,
@@ -85,16 +85,19 @@ fn automatic_time_grid_preserves_millisecond_rounded_beziers_at_sixty_fps() {
     assert_eq!(track.segments.len(), clip.tracks[0].segments.len());
     assert_eq!(track.segments[0].end().time, 1. / 60.);
     assert_eq!(track.segments[1].end().time, 23. / 60.);
-    let MotionSegment::Bezier {
-        control1, control2, ..
+    let MotionSegment {
+        curve: MotionCurve::Bezier {
+            control1, control2, ..
+        },
+        ..
     } = &track.segments[1]
     else {
         panic!("Bezier was lost")
     };
     assert_eq!(control1.value, 0.8);
     assert_eq!(control2.value, -0.7);
-    let before = zipzi_animation::CompiledCurve::from(&clip.tracks[0]);
-    let result = zipzi_animation::CompiledCurve::from(track);
+    let before = zipzi_animation::CompiledCurve::from_track(&clip.tracks[0], clip.fps);
+    let result = zipzi_animation::CompiledCurve::from_track(track, 30.);
     for step in 0..=100 {
         let fraction = step as f32 / 100.;
         let source = 0.017 + (0.383 - 0.017) * fraction;
@@ -120,17 +123,20 @@ fn automatic_grid_keeps_unrestricted_bezier_time_handles() {
             parameter_id: PARAM.into(),
         },
         initial: key(11, 0.017, 0.),
-        segments: Arc::new(vec![MotionSegment::Bezier {
-            control1: MotionPoint {
-                time: 0.05,
-                value: 0.9,
+        segments: Arc::new(vec![MotionSegment::new(
+            key(12, 0.383, 0.6),
+            MotionCurve::Bezier {
+                control1: MotionPoint {
+                    time: 0.05,
+                    value: 0.9,
+                },
+                control2: MotionPoint {
+                    time: 0.3,
+                    value: -0.7,
+                },
+                preset: None,
             },
-            control2: MotionPoint {
-                time: 0.3,
-                value: -0.7,
-            },
-            end: key(12, 0.383, 0.6),
-        }]),
+        )]),
         fade_in: None,
         fade_out: None,
         extensions: Default::default(),
@@ -152,8 +158,8 @@ fn automatic_grid_keeps_unrestricted_bezier_time_handles() {
     assert_eq!(after.fps, 60.);
     assert!(!after.restricted_beziers);
     assert_eq!(after.tracks[0].keys().count(), 2);
-    let before = zipzi_animation::CompiledCurve::from(&clip.tracks[0]);
-    let result = zipzi_animation::CompiledCurve::from(&after.tracks[0]);
+    let before = zipzi_animation::CompiledCurve::from_track(&clip.tracks[0], clip.fps);
+    let result = zipzi_animation::CompiledCurve::from_track(&after.tracks[0], after.fps);
     for step in 0..=100 {
         let fraction = step as f32 / 100.;
         let a = zipzi_animation::sample_motion_curve(&before, 0.017 + 0.366 * fraction, false);
@@ -175,23 +181,22 @@ fn automatic_time_grid_repairs_only_inverse_step_boundaries() {
         },
         initial: key(11, 0., 0.),
         segments: Arc::new(vec![
-            MotionSegment::Bezier {
-                control1: MotionPoint {
-                    time: 0.167,
-                    value: 0.2,
+            MotionSegment::new(
+                key(12, 0.5, 1.),
+                MotionCurve::Bezier {
+                    control1: MotionPoint {
+                        time: 0.167,
+                        value: 0.2,
+                    },
+                    control2: MotionPoint {
+                        time: 0.333,
+                        value: 0.8,
+                    },
+                    preset: None,
                 },
-                control2: MotionPoint {
-                    time: 0.333,
-                    value: 0.8,
-                },
-                end: key(12, 0.5, 1.),
-            },
-            MotionSegment::InverseStepped {
-                end: key(13, 0.517, -0.5),
-            },
-            MotionSegment::Linear {
-                end: key(14, 1., 0.),
-            },
+            ),
+            MotionSegment::new(key(13, 0.517, -0.5), MotionCurve::InverseStepped {}),
+            MotionSegment::new(key(14, 1., 0.), MotionCurve::Linear {}),
         ]),
         fade_in: None,
         fade_out: None,
@@ -225,10 +230,13 @@ fn automatic_time_grid_repairs_only_inverse_step_boundaries() {
     assert_eq!(after.tracks[0].keys().count(), 5);
     assert!(matches!(
         after.tracks[0].segments[0],
-        MotionSegment::Bezier { .. }
+        MotionSegment {
+            curve: MotionCurve::Bezier { .. },
+            ..
+        }
     ));
-    let a = zipzi_animation::CompiledCurve::from(&clip.tracks[0]);
-    let b = zipzi_animation::CompiledCurve::from(&after.tracks[0]);
+    let a = zipzi_animation::CompiledCurve::from_track(&clip.tracks[0], clip.fps);
+    let b = zipzi_animation::CompiledCurve::from_track(&after.tracks[0], after.fps);
     for frame in 0..=60 {
         let time = frame as f32 / 60.;
         // Restore the source's millisecond-rounded final short interval.
@@ -257,9 +265,10 @@ fn unsupported_precision_uses_only_explicit_baking_fallback() {
             parameter_id: PARAM.into(),
         },
         initial: key(11, 0., 0.),
-        segments: Arc::new(vec![MotionSegment::Linear {
-            end: key(12, 0.012345, 1.),
-        }]),
+        segments: Arc::new(vec![MotionSegment::new(
+            key(12, 0.012345, 1.),
+            MotionCurve::Linear {},
+        )]),
         fade_in: None,
         fade_out: None,
         extensions: Default::default(),
@@ -339,26 +348,23 @@ fn fixture_motion() -> (zipzi_core::state::DocumentState, Vec<u8>) {
         },
         initial: key(11, 0., -1.),
         segments: Arc::new(vec![
-            MotionSegment::Linear {
-                end: key(12, 0.2, 1.),
-            },
-            MotionSegment::Bezier {
-                control1: MotionPoint {
-                    time: 0.275,
-                    value: 0.75,
+            MotionSegment::new(key(12, 0.2, 1.), MotionCurve::Linear {}),
+            MotionSegment::new(
+                key(13, 0.4, 0.5),
+                MotionCurve::Bezier {
+                    control1: MotionPoint {
+                        time: 0.275,
+                        value: 0.75,
+                    },
+                    control2: MotionPoint {
+                        time: 0.325,
+                        value: 0.6,
+                    },
+                    preset: None,
                 },
-                control2: MotionPoint {
-                    time: 0.325,
-                    value: 0.6,
-                },
-                end: key(13, 0.4, 0.5),
-            },
-            MotionSegment::Stepped {
-                end: key(14, 0.6, 0.),
-            },
-            MotionSegment::InverseStepped {
-                end: key(15, 1., 1.),
-            },
+            ),
+            MotionSegment::new(key(14, 0.6, 0.), MotionCurve::Stepped {}),
+            MotionSegment::new(key(15, 1., 1.), MotionCurve::InverseStepped {}),
         ]),
         fade_in: Some(0.1),
         fade_out: Some(0.2),
@@ -377,9 +383,10 @@ fn fixture_motion() -> (zipzi_core::state::DocumentState, Vec<u8>) {
             id: uuid(n),
             target,
             initial: key(n + 1, 0., 1.),
-            segments: Arc::new(vec![MotionSegment::Linear {
-                end: key(n + 2, 1., 0.25),
-            }]),
+            segments: Arc::new(vec![MotionSegment::new(
+                key(n + 2, 1., 0.25),
+                MotionCurve::Linear {},
+            )]),
             fade_in: None,
             fade_out: None,
             extensions: Default::default(),
@@ -641,9 +648,10 @@ fn quantization_and_collisions_are_reported_before_asset_io() {
             parameter_id: PARAM.into(),
         },
         initial: key(11, 0., 0.),
-        segments: Arc::new(vec![MotionSegment::Linear {
-            end: key(12, 0.01, 1.),
-        }]),
+        segments: Arc::new(vec![MotionSegment::new(
+            key(12, 0.01, 1.),
+            MotionCurve::Linear {},
+        )]),
         fade_in: Some(0.0005),
         fade_out: None,
         extensions: Default::default(),
@@ -831,17 +839,20 @@ fn delayed_bezier_tracks_retain_absolute_frames() {
             parameter_id: PARAM.into(),
         },
         initial: key(11, 0.5, 0.),
-        segments: Arc::new(vec![MotionSegment::Bezier {
-            control1: MotionPoint {
-                time: 5. / 6.,
-                value: 0.2,
+        segments: Arc::new(vec![MotionSegment::new(
+            key(12, 1.5, 1.),
+            MotionCurve::Bezier {
+                control1: MotionPoint {
+                    time: 5. / 6.,
+                    value: 0.2,
+                },
+                control2: MotionPoint {
+                    time: 7. / 6.,
+                    value: 0.8,
+                },
+                preset: None,
             },
-            control2: MotionPoint {
-                time: 7. / 6.,
-                value: 0.8,
-            },
-            end: key(12, 1.5, 1.),
-        }]),
+        )]),
         fade_in: None,
         fade_out: None,
         extensions: Default::default(),
@@ -852,17 +863,20 @@ fn delayed_bezier_tracks_retain_absolute_frames() {
     unrestricted.restricted_beziers = false;
     unrestricted.tracks[0].id = uuid(21);
     unrestricted.tracks[0].initial.id = uuid(22);
-    unrestricted.tracks[0].segments = Arc::new(vec![MotionSegment::Bezier {
-        control1: MotionPoint {
-            time: 0.7,
-            value: 0.2,
+    unrestricted.tracks[0].segments = Arc::new(vec![MotionSegment::new(
+        key(23, 1.5, 1.),
+        MotionCurve::Bezier {
+            control1: MotionPoint {
+                time: 0.7,
+                value: 0.2,
+            },
+            control2: MotionPoint {
+                time: 1.1,
+                value: 0.8,
+            },
+            preset: None,
         },
-        control2: MotionPoint {
-            time: 1.1,
-            value: 0.8,
-        },
-        end: key(23, 1.5, 1.),
-    }]);
+    )]);
     doc = prepare(&doc, |builder| builder.create_motion(clip));
     doc = prepare(&doc, |builder| builder.create_motion(unrestricted));
     let artifact = encode_cubism(
@@ -999,9 +1013,10 @@ fn baked_expression_blends_keep_default_model_poses_and_source_data() {
             parameter_id: PARAM.into(),
         },
         initial: key(601, 0., 0.8),
-        segments: Arc::new(vec![MotionSegment::Linear {
-            end: key(602, 1., -0.8),
-        }]),
+        segments: Arc::new(vec![MotionSegment::new(
+            key(602, 1., -0.8),
+            MotionCurve::Linear {},
+        )]),
         fade_in: Some(0.),
         fade_out: Some(0.),
         extensions: Default::default(),
@@ -1043,29 +1058,24 @@ fn baking_retains_frame_samples_when_keys_collide_and_inverse_steps_jump() {
         },
         initial: key(11, 0., -0.5),
         segments: Arc::new(vec![
-            MotionSegment::Linear {
-                end: key(12, 0.01, 0.8),
-            },
-            MotionSegment::Linear {
-                end: key(13, 0.017, -0.2),
-            },
-            MotionSegment::Bezier {
-                control1: MotionPoint {
-                    time: 0.09,
-                    value: 0.9,
+            MotionSegment::new(key(12, 0.01, 0.8), MotionCurve::Linear {}),
+            MotionSegment::new(key(13, 0.017, -0.2), MotionCurve::Linear {}),
+            MotionSegment::new(
+                key(14, 0.41, 0.3),
+                MotionCurve::Bezier {
+                    control1: MotionPoint {
+                        time: 0.09,
+                        value: 0.9,
+                    },
+                    control2: MotionPoint {
+                        time: 0.22,
+                        value: -0.8,
+                    },
+                    preset: None,
                 },
-                control2: MotionPoint {
-                    time: 0.22,
-                    value: -0.8,
-                },
-                end: key(14, 0.41, 0.3),
-            },
-            MotionSegment::InverseStepped {
-                end: key(15, 0.6, 0.7),
-            },
-            MotionSegment::Stepped {
-                end: key(16, 1.017, -0.9),
-            },
+            ),
+            MotionSegment::new(key(15, 0.6, 0.7), MotionCurve::InverseStepped {}),
+            MotionSegment::new(key(16, 1.017, -0.9), MotionCurve::Stepped {}),
         ]),
         fade_in: None,
         fade_out: None,
@@ -1089,8 +1099,8 @@ fn baking_retains_frame_samples_when_keys_collide_and_inverse_steps_jump() {
     let mut returned = fixture().0;
     returned = import_animation(&artifact.bytes, &returned).unwrap();
     let after = returned.motion(&clip.id).unwrap();
-    let curve = zipzi_animation::CompiledCurve::from(&clip.tracks[0]);
-    let actual = zipzi_animation::CompiledCurve::from(&after.tracks[0]);
+    let curve = zipzi_animation::CompiledCurve::from_track(&clip.tracks[0], clip.fps);
+    let actual = zipzi_animation::CompiledCurve::from_track(&after.tracks[0], after.fps);
     for frame in 0..=31 {
         let time = frame as f32 / clip.fps;
         let expected = zipzi_animation::sample_motion_curve(&curve, time, clip.restricted_beziers);
@@ -1115,9 +1125,10 @@ fn baking_keeps_exact_curves_and_still_rejects_unsupported_targets() {
             parameter_id: PARAM.into(),
         },
         initial: key(11, 0., -0.5),
-        segments: Arc::new(vec![MotionSegment::Linear {
-            end: key(12, 1., 0.8),
-        }]),
+        segments: Arc::new(vec![MotionSegment::new(
+            key(12, 1., 0.8),
+            MotionCurve::Linear {},
+        )]),
         fade_in: None,
         fade_out: None,
         extensions: Default::default(),

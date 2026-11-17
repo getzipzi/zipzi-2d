@@ -1,5 +1,6 @@
 use super::*;
 use anyhow::{Result, ensure};
+use zipzi_core::document::MotionCurve;
 use zipzi_core::document::{MotionClip, MotionKey, MotionSegment, MotionTrack};
 
 #[derive(Debug, Clone)]
@@ -198,16 +199,24 @@ impl TimelineClipboard {
                     if let Some(segment) = &copied.keys[*right_index].incoming {
                         let mut segment = segment.clone();
                         *segment.end_mut() = right.clone();
-                        if let MotionSegment::Bezier {
-                            control1, control2, ..
+                        if let MotionSegment {
+                            curve:
+                                MotionCurve::Bezier {
+                                    control1, control2, ..
+                                },
+                            ..
                         } = &mut segment
                         {
                             for point in [control1, control2] {
                                 point.time = (f64::from(point.time) - self.anchor + anchor) as f32;
                             }
                             if clip.restricted_beziers {
-                                let MotionSegment::Bezier {
-                                    control1, control2, ..
+                                let MotionSegment {
+                                    curve:
+                                        MotionCurve::Bezier {
+                                            control1, control2, ..
+                                        },
+                                    ..
                                 } = &mut segment
                                 else {
                                     unreachable!()
@@ -217,12 +226,21 @@ impl TimelineClipboard {
                                 control2.time = (f64::from(right.time) - span / 3.) as f32;
                             }
                         }
+                        if let MotionCurve::Bezier {
+                            control1,
+                            control2,
+                            preset: Some(source),
+                        } = &mut segment.curve
+                        {
+                            [*control1, *control2] =
+                                source.mapped_controls(left.point(), right.point()).unwrap();
+                        }
                         segment
                     } else {
-                        MotionSegment::Linear { end: right.clone() }
+                        MotionSegment::new(right.clone(), MotionCurve::Linear {})
                     }
                 } else {
-                    MotionSegment::Linear { end: right.clone() }
+                    MotionSegment::new(right.clone(), MotionCurve::Linear {})
                 };
                 segments.push(segment);
             }

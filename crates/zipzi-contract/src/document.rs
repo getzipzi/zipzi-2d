@@ -1,6 +1,7 @@
 //! Persistent document values.
 
 use crate::model::*;
+pub use crate::motion_curve::{MotionEasingPreset, MotionFrameStep};
 use crate::scene_reference::SceneReference;
 use crate::warp_bezier::WarpBezier;
 use serde::{Deserialize, Serialize};

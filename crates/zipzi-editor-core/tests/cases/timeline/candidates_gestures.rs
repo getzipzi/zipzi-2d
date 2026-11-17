@@ -1,5 +1,6 @@
 use super::common::*;
 use std::{collections::HashSet, sync::Arc};
+use zipzi_core::document::MotionCurve;
 use zipzi_core::document::MotionSegment;
 use zipzi_editor_core::*;
 
@@ -659,7 +660,12 @@ fn handle_command_uses_segment_end_identity_and_allows_value_overshoot() -> anyh
         },
     )?;
     let clip = e.document().unwrap().motion_definition(&id(4)).unwrap();
-    let MotionSegment::Bezier { control1, end, .. } = &clip.tracks[0].segments[0] else {
+    let MotionSegment {
+        end,
+        curve: MotionCurve::Bezier { control1, .. },
+        ..
+    } = &clip.tracks[0].segments[0]
+    else {
         panic!()
     };
     assert_eq!(control1.value, 3.);

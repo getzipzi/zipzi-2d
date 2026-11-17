@@ -1,6 +1,7 @@
 use tempfile::TempDir;
 use uuid::Uuid;
 use zipzi_core::BindingAxisEditing;
+use zipzi_core::document::MotionCurve;
 use zipzi_core::document::OrganizationEdit;
 use zipzi_core::{Canvas, Mesh, Vec2};
 use zipzi_editor_core::{CanvasFrame, Document, Editor, ObjectKind, ObjectRef};
@@ -475,12 +476,15 @@ pub fn animation_document_with_sound_bytes(
                 value: 0.,
             },
             segments: (duration > 0.)
-                .then(|| MotionSegment::Linear {
-                    end: MotionKey {
-                        id: Uuid::new_v4().to_string(),
-                        time: duration,
-                        value: 1.,
-                    },
+                .then(|| {
+                    MotionSegment::new(
+                        MotionKey {
+                            id: Uuid::new_v4().to_string(),
+                            time: duration,
+                            value: 1.,
+                        },
+                        MotionCurve::Linear {},
+                    )
                 })
                 .into_iter()
                 .collect::<Vec<_>>()

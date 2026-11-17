@@ -371,6 +371,50 @@ class Lifecycle:
             ))).records(v.Parameter)
             self.assertEqual(parameter_value.default_value, 0)
 
+    def test_motion_curve_modes_presets_steps_and_history_roundtrip(self):
+        import math
+        from zipzi.docs import recipes
+        with self.factory() as runtime:
+            session = runtime.sessions.create()
+            parameter, _, _ = recipes.create_scene(session)
+            clip_id = recipes.create_linear_motion(session, parameter)
+            address = v.ObjectAddress(kind=v.ObjectKind.MOTION, id=clip_id)
+
+            def read_clip():
+                clip, = session.query(v.QueryObjects(addresses=(address,))).records(v.MotionClip)
+                return clip
+
+            original = read_clip()
+            key = v.MotionKeyRef(track_id=original.tracks[0].id,
+                                 key_id=original.tracks[0].initial.id)
+            with session.draft("Cubic Out on threes") as draft:
+                draft.apply(v.CommandMotionCurve(clip=clip_id, edit=v.MotionCurveEditEasingPreset(
+                    keys=(key,), preset=v.MotionEasingPreset.CUBIC_OUT)))
+                draft.apply(v.CommandMotionCurve(clip=clip_id, edit=v.MotionCurveEditFrameStep(
+                    keys=(key,), frame_step=v.MotionFrameStepEveryFrames(frames=3))))
+            curve = read_clip().tracks[0].segments[0]
+            self.assertIsInstance(curve.curve, v.MotionCurveBezier)
+            self.assertEqual(curve.curve.preset, v.MotionEasingPreset.CUBIC_OUT)
+            self.assertEqual(curve.frame_step.frames, 3)
+            report = recipes.sample_animation(session, (0., .05, .15, .25, .45, 1.),
+                                               motions=((clip_id, 0.),))
+            for frame in report['frames']:
+                animation = frame['animation']
+                local = animation['motion_positions'][0]['local_time']
+                quantized = math.floor(local * original.fps / 3) * 3 / original.fps
+                expected = -20. + 40. * (1. - (1. - quantized) ** 3)
+                self.assertAlmostEqual(animation['parameters'][parameter], expected, places=4)
+            session.undo()
+            self.assertEqual(read_clip(), original)
+            session.redo()
+            self.assertEqual(read_clip().tracks[0].segments[0], curve)
+            with session.draft("Auto Smooth") as draft:
+                draft.apply(v.CommandMotionCurve(clip=clip_id, edit=v.MotionCurveEditInterpolation(
+                    keys=(key,), kind=v.MotionInterpolation.AUTO_SMOOTH)))
+            automatic = read_clip().tracks[0].segments[0]
+            self.assertIsInstance(automatic.curve, v.MotionCurveAutoSmooth)
+            self.assertEqual(automatic.frame_step.frames, 3)
+
     def test_installed_recipes_complete_authoring_pagination_sampling_and_save(self):
         from zipzi.docs import recipes
         with self.factory() as runtime, tempfile.TemporaryDirectory(prefix='zipzi-recipes-') as directory:

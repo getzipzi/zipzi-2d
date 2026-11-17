@@ -3,6 +3,7 @@ use anyhow::{Result, ensure};
 use zipzi_animation::CompiledCurve;
 use zipzi_animation::motion_bezier_time_is_monotonic;
 use zipzi_animation::sample_motion_curve;
+use zipzi_core::document::MotionCurve;
 use zipzi_core::document::{
     MOTION_EFFECT_GROUPS, MotionClip, MotionEvent, MotionSegment, MotionTrackTarget,
     supported_model_motion_channel,
@@ -121,6 +122,7 @@ impl TimelineProjection {
             || previous.tracks.len() != next.tracks.len()
             || previous.track_order != next.track_order
             || previous.restricted_beziers != next.restricted_beziers
+            || previous.fps != next.fps
         {
             return None;
         }
@@ -145,7 +147,7 @@ impl TimelineProjection {
             for (point, key) in points.iter().zip(&mut changed.keys) {
                 key.value = point.value;
             }
-            changed.curve = CompiledCurve::from(track);
+            changed.curve = CompiledCurve::from_track(track, next.fps);
             result.tracks.insert(track.id.clone(), Arc::new(changed));
         }
         Some(result)
@@ -252,10 +254,13 @@ impl TimelineProjection {
                 .iter()
                 .enumerate()
                 .map(|(i, segment)| match segment {
-                    MotionSegment::Bezier {
-                        control1,
-                        control2,
+                    MotionSegment {
                         end,
+                        curve:
+                            MotionCurve::Bezier {
+                                control1, control2, ..
+                            },
+                        ..
                     } if !clip.restricted_beziers => motion_bezier_time_is_monotonic(
                         all[i].time,
                         control1.time,
@@ -277,10 +282,26 @@ impl TimelineProjection {
                     time: f64::from(key.time),
                     value: key.value,
                     outgoing: track.segments.get(i).map(|segment| match segment {
-                        MotionSegment::Linear { .. } => MotionInterpolation::Linear,
-                        MotionSegment::Bezier { .. } => MotionInterpolation::Bezier,
-                        MotionSegment::Stepped { .. } => MotionInterpolation::Stepped,
-                        MotionSegment::InverseStepped { .. } => MotionInterpolation::InverseStepped,
+                        MotionSegment {
+                            curve: MotionCurve::Linear {},
+                            ..
+                        } => MotionInterpolation::Linear,
+                        MotionSegment {
+                            curve: MotionCurve::AutoSmooth {},
+                            ..
+                        } => MotionInterpolation::AutoSmooth,
+                        MotionSegment {
+                            curve: MotionCurve::Bezier { .. },
+                            ..
+                        } => MotionInterpolation::Bezier,
+                        MotionSegment {
+                            curve: MotionCurve::Stepped {},
+                            ..
+                        } => MotionInterpolation::Stepped,
+                        MotionSegment {
+                            curve: MotionCurve::InverseStepped {},
+                            ..
+                        } => MotionInterpolation::InverseStepped,
                     }),
                     time_editable: editable
                         && (i == 0 || monotonic[i - 1])
@@ -309,7 +330,7 @@ impl TimelineProjection {
                         .collect(),
                     keys,
                     editable,
-                    curve: CompiledCurve::from(track),
+                    curve: CompiledCurve::from_track(track, clip.fps),
                 }),
             );
         }

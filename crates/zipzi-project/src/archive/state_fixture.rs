@@ -1,5 +1,6 @@
 use serde_json::json;
 use std::sync::Arc;
+use zipzi_core::document::MotionCurve;
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::{document::*, state::*, *};
 
@@ -51,13 +52,14 @@ fn clip() -> MotionClip {
                 time: 0.,
                 value: 0.,
             },
-            segments: Arc::new(vec![MotionSegment::Linear {
-                end: MotionKey {
+            segments: Arc::new(vec![MotionSegment::new(
+                MotionKey {
                     id: id(33),
                     time: 1.,
                     value: 1.,
                 },
-            }]),
+                MotionCurve::Linear {},
+            )]),
             fade_in: None,
             fade_out: None,
             extensions: Default::default(),

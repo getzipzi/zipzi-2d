@@ -115,7 +115,7 @@ pub(super) fn parse_wire(text: &str) -> Result<ProjectWire, Status> {
             "Unknown project document identifier",
         ));
     }
-    if version != Some(22) {
+    if version != Some(23) {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
             "Unsupported project document version",

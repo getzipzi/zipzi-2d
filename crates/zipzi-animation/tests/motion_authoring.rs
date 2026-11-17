@@ -125,10 +125,10 @@ fn automatic_groups_end_at_manual_segments_and_recompile_without_history() {
     };
     let left = compile_motion_auto_smooth(&[a, b]).unwrap();
     let right = compile_motion_auto_smooth(&[c, d]).unwrap();
-    let curve = CompiledCurve {
-        initial: a,
-        segments: Arc::new(vec![left.segments[0], manual, right.segments[0]]),
-    };
+    let curve = CompiledCurve::new(
+        a,
+        Arc::new(vec![left.segments[0], manual, right.segments[0]]),
+    );
     let CompiledSegment::Bezier { control2, .. } = curve.segments[0] else {
         panic!()
     };
@@ -264,14 +264,14 @@ fn cubic_out_on_threes_samples_the_base_curve_and_holds_the_tail() {
     let end = point([0.5, 1.]);
     let [control1, control2] =
         motion_easing_controls(MotionEasingPreset::CubicOut, start, end).unwrap();
-    let curve = CompiledCurve {
-        initial: start,
-        segments: Arc::new(vec![CompiledSegment::Bezier {
+    let curve = CompiledCurve::new(
+        start,
+        Arc::new(vec![CompiledSegment::Bezier {
             control1,
             control2,
             end,
         }]),
-    };
+    );
     let step = MotionFrameStep::from_frames(3).unwrap();
     let expected = [
         0., 0., 0., 0.578125, 0.578125, 0.578125, 0.875, 0.875, 0.875, 0.984375, 0.984375,
@@ -288,9 +288,9 @@ fn cubic_out_on_threes_samples_the_base_curve_and_holds_the_tail() {
 
 #[test]
 fn frame_step_does_not_delay_non_frame_endpoints_or_inverse_step_boundaries() {
-    let curve = CompiledCurve {
-        initial: point([0., 0.]),
-        segments: Arc::new(vec![
+    let curve = CompiledCurve::new(
+        point([0., 0.]),
+        Arc::new(vec![
             CompiledSegment::Linear {
                 end: point([0.26, 1.]),
             },
@@ -301,7 +301,7 @@ fn frame_step_does_not_delay_non_frame_endpoints_or_inverse_step_boundaries() {
                 end: point([0.77, 5.]),
             },
         ]),
-    };
+    );
     for frames in [1, 2, 3, 17, u32::MAX] {
         let step = MotionFrameStep::from_frames(frames).unwrap();
         assert_eq!(sample_stepped(&curve, 0.26, 24., step), 3.);
@@ -414,4 +414,23 @@ fn auto_smooth_on_threes_keeps_its_subframe_origin_and_can_sample_in_any_order()
         0.31640625,
     );
     assert_eq!(curve.segments.len(), 1);
+}
+
+#[test]
+fn finite_wide_curve_values_do_not_overflow_during_sampling() {
+    let curve =
+        compile_motion_auto_smooth(&[point([0., -f32::MAX]), point([1., f32::MAX])]).unwrap();
+    for restricted in [false, true] {
+        assert_eq!(sample_motion_curve(&curve, 0.5, restricted), 0.);
+        for time in [0., 0.125, 0.25, 0.75, 0.875, 1.] {
+            assert!(sample_motion_curve(&curve, time, restricted).is_finite());
+        }
+    }
+    let curve = CompiledCurve::new(
+        point([-f32::MAX, -f32::MAX]),
+        Arc::new(vec![CompiledSegment::Linear {
+            end: point([f32::MAX, f32::MAX]),
+        }]),
+    );
+    assert_eq!(sample_motion_curve(&curve, 0., false), 0.);
 }

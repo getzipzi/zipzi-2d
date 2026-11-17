@@ -72,7 +72,7 @@ fn key_ids_persist_in_project_and_reimport_allocates_fresh_identities() {
     );
     let project = native_bytes(&imported.candidate);
     let wire = project_json(&project);
-    assert_eq!(wire["format_version"], 22);
+    assert_eq!(wire["format_version"], 23);
     let reopened = load_native(&project).unwrap();
     assert_eq!(reopened.motion(MOTION), Some(clip));
     assert_eq!(project_json(&native_bytes(&reopened)), wire);

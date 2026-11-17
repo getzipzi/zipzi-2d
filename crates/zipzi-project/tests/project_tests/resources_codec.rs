@@ -67,7 +67,7 @@ fn native_roundtrip_preserves_frames_and_moc3_bytes() {
     let encoded = fixture_bytes(&before);
     let wire = project_json(&encoded);
     assert_eq!(wire["format"], "zipzi-project");
-    assert_eq!(wire["format_version"], 22);
+    assert_eq!(wire["format_version"], 23);
     let decoded = load_native(&encoded).unwrap();
     assert_eq!(project_json(&resaved_native(&encoded)), wire);
     let p = HashMap::from([(id(6), 0.5)]);

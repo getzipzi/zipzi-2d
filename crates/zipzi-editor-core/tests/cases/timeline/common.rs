@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use zipzi_core::document::MotionCurve;
 use zipzi_core::{
     Canvas, Parameter, Part, Vec2,
     document::{
@@ -84,28 +85,32 @@ pub(super) fn fixture(
                 value: -0.8,
             },
             segments: Arc::new(vec![
-                MotionSegment::Bezier {
-                    control1: MotionPoint {
-                        time: 0.2,
-                        value: 1.2,
-                    },
-                    control2: MotionPoint {
-                        time: 0.45,
-                        value: -0.2,
-                    },
-                    end: MotionKey {
+                MotionSegment::new(
+                    MotionKey {
                         id: id(11),
                         time: 0.6,
                         value: 0.5,
                     },
-                },
-                MotionSegment::Linear {
-                    end: MotionKey {
+                    MotionCurve::Bezier {
+                        control1: MotionPoint {
+                            time: 0.2,
+                            value: 1.2,
+                        },
+                        control2: MotionPoint {
+                            time: 0.45,
+                            value: -0.2,
+                        },
+                        preset: None,
+                    },
+                ),
+                MotionSegment::new(
+                    MotionKey {
                         id: id(12),
                         time: 1.5,
                         value: 0.8,
                     },
-                },
+                    MotionCurve::Linear {},
+                ),
             ]),
             fade_in: None,
             fade_out: None,

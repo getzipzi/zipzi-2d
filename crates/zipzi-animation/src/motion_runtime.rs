@@ -7,6 +7,7 @@ use crate::{
     MotionSnapshot,
 };
 use std::collections::BTreeMap;
+use zipzi_core::document::MotionCurve;
 use zipzi_core::{
     document::{MotionClip, MotionSegment, MotionTrack},
     state::DocumentState,
@@ -400,12 +401,24 @@ fn sample_track(track: &MotionTrack, curve: &CompiledCurve, time: f32, clip: &Mo
             .map_or(&track.initial, MotionSegment::end);
         let cycle = clip.duration + 1.0 / clip.fps;
         return match track.segments.last() {
-            Some(MotionSegment::Linear { .. } | MotionSegment::Bezier { .. }) => lerp(
+            Some(
+                MotionSegment {
+                    curve: MotionCurve::Linear {} | MotionCurve::AutoSmooth {},
+                    ..
+                }
+                | MotionSegment {
+                    curve: MotionCurve::Bezier { .. },
+                    ..
+                },
+            ) => lerp(
                 end.value,
                 track.initial.value,
                 ((time - end.time) / (cycle - end.time)).clamp(0.0, 1.0),
             ),
-            Some(MotionSegment::InverseStepped { .. }) => track.initial.value,
+            Some(MotionSegment {
+                curve: MotionCurve::InverseStepped {},
+                ..
+            }) => track.initial.value,
             _ => value,
         };
     }

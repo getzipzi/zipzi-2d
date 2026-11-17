@@ -102,3 +102,58 @@ fn frame_step_has_a_canonical_off_state_and_accepts_the_full_positive_range() {
         );
     }
 }
+
+#[test]
+fn authored_intervals_roundtrip_modes_preset_sources_and_frame_steps() {
+    use zipzi_contract::document::{MotionCurve, MotionKey, MotionPoint, MotionSegment};
+    let end = MotionKey {
+        id: "endpoint".into(),
+        time: 1.,
+        value: 1.,
+    };
+    let start = MotionPoint {
+        time: 0.,
+        value: 0.,
+    };
+    let [control1, control2] = MotionEasingPreset::CubicInOut
+        .mapped_controls(start, end.point())
+        .unwrap();
+    for curve in [
+        MotionCurve::Linear {},
+        MotionCurve::AutoSmooth {},
+        MotionCurve::Bezier {
+            control1,
+            control2,
+            preset: Some(MotionEasingPreset::CubicInOut),
+        },
+        MotionCurve::Stepped {},
+        MotionCurve::InverseStepped {},
+    ] {
+        let segment = MotionSegment {
+            end: end.clone(),
+            curve,
+            frame_step: MotionFrameStep::EveryFrames { frames: u32::MAX },
+        };
+        let encoded = serde_json::to_value(&segment).unwrap();
+        assert_eq!(encoded["frame_step"]["frames"], u32::MAX);
+        assert_eq!(
+            serde_json::from_value::<MotionSegment>(encoded).unwrap(),
+            segment
+        );
+        wire_roundtrip(&segment);
+    }
+    let shape = serde_json::to_value(MotionSegment::api_shape()).unwrap();
+    assert_eq!(
+        shape["fields"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f["name"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        ["end", "curve", "frame_step"]
+    );
+    assert!(serde_json::from_str::<MotionCurve>(
+        r#"{"kind":"auto_smooth","control1":{"time":0,"value":0}}"#
+    )
+    .is_err());
+}

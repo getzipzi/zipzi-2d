@@ -1,4 +1,5 @@
 use zipzi_core::document::AllocateModelMetadata;
+use zipzi_core::document::MotionCurve;
 use zipzi_core::state::*;
 use zipzi_core::BindingAxisEditing;
 mod common;
@@ -181,13 +182,14 @@ fn later_keys_events_and_non_parameter_scenes_remain_motions() {
     let mut later = initial_scene(100, 8.);
     later.name = "exp_01".into();
     // Even equal-valued keys are authored animation, not just initial state.
-    later.tracks[0].segments = vec![MotionSegment::Linear {
-        end: MotionKey {
+    later.tracks[0].segments = vec![MotionSegment::new(
+        MotionKey {
             id: uuid(103),
             time: 4. / 30.,
             value: 0.7,
         },
-    }]
+        MotionCurve::Linear {},
+    )]
     .into();
     let mut event = initial_scene(200, 8.);
     event.events.push(MotionEvent {
@@ -389,28 +391,32 @@ fn opacity_curve_roundtrip_preserves_initial_keys_and_bezier_controls() {
     };
     track.initial.value = 1.;
     track.segments = vec![
-        MotionSegment::Bezier {
-            control1: MotionPoint {
-                time: 0.25,
-                value: 0.9,
-            },
-            control2: MotionPoint {
-                time: 0.75,
-                value: 0.4,
-            },
-            end: MotionKey {
+        MotionSegment::new(
+            MotionKey {
                 id: uuid(103),
                 time: 1.,
                 value: 0.5,
             },
-        },
-        MotionSegment::Linear {
-            end: MotionKey {
+            MotionCurve::Bezier {
+                control1: MotionPoint {
+                    time: 0.25,
+                    value: 0.9,
+                },
+                control2: MotionPoint {
+                    time: 0.75,
+                    value: 0.4,
+                },
+                preset: None,
+            },
+        ),
+        MotionSegment::new(
+            MotionKey {
                 id: uuid(104),
                 time: 2.,
                 value: 0.,
             },
-        },
+            MotionCurve::Linear {},
+        ),
     ]
     .into();
     source = prepare(&source, |builder| builder.create_motion(clip.clone()));
@@ -423,13 +429,21 @@ fn opacity_curve_roundtrip_preserves_initial_keys_and_bezier_controls() {
         assert_eq!(actual.initial.point(), expected.initial.point());
         for (a, b) in actual.segments.iter().zip(expected.segments.iter()) {
             assert_eq!(a.end().point(), b.end().point());
-            if let MotionSegment::Bezier {
-                control1, control2, ..
+            if let MotionSegment {
+                curve:
+                    MotionCurve::Bezier {
+                        control1, control2, ..
+                    },
+                ..
             } = a
             {
-                let MotionSegment::Bezier {
-                    control1: c1,
-                    control2: c2,
+                let MotionSegment {
+                    curve:
+                        MotionCurve::Bezier {
+                            control1: c1,
+                            control2: c2,
+                            ..
+                        },
                     ..
                 } = b
                 else {

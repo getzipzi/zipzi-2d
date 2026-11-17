@@ -5,6 +5,7 @@ use super::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 use zipzi_core::document::MotionClipEditing;
+use zipzi_core::document::MotionCurve;
 use zipzi_core::{
     document::{
         ExpressionAsset, ExpressionBlend, ExpressionEntry, ExpressionTarget, MotionClip,
@@ -469,14 +470,17 @@ fn track(
             .and_then(|n| n.attribute("v"))
             .unwrap_or("SMOOTH");
         segments.push(match mode {
-            "LINEAR" => MotionSegment::Linear { end },
-            "STEP" => MotionSegment::Stepped { end },
-            "INVERSE_STEP" => MotionSegment::InverseStepped { end },
-            "SMOOTH" | "BEZIER" => MotionSegment::Bezier {
-                control1: control(pair[0], "next")?,
-                control2: control(pair[1], "prev")?,
+            "LINEAR" => MotionSegment::new(end, MotionCurve::Linear {}),
+            "STEP" => MotionSegment::new(end, MotionCurve::Stepped {}),
+            "INVERSE_STEP" => MotionSegment::new(end, MotionCurve::InverseStepped {}),
+            "SMOOTH" | "BEZIER" => MotionSegment::new(
                 end,
-            },
+                MotionCurve::Bezier {
+                    control1: control(pair[0], "next")?,
+                    control2: control(pair[1], "prev")?,
+                    preset: None,
+                },
+            ),
             _ => return Err(invalid(format!("Unsupported CAN3 curve type {mode}"))),
         });
     }

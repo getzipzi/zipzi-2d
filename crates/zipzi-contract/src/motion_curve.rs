@@ -85,6 +85,41 @@ pub struct MotionEasingPresetDefinition {
 }
 
 impl MotionEasingPreset {
+    /// Map normalized controls to finite increasing-time endpoints using f64
+    /// intermediate arithmetic. Shared with document validation and authoring.
+    pub fn mapped_controls(
+        self,
+        start: crate::document::MotionPoint,
+        end: crate::document::MotionPoint,
+    ) -> Option<[crate::document::MotionPoint; 2]> {
+        if ![start.time, start.value, end.time, end.value]
+            .into_iter()
+            .all(f32::is_finite)
+            || start.time >= end.time
+        {
+            return None;
+        }
+        Some(
+            self.definition()
+                .controls
+                .map(|[x, y]| crate::document::MotionPoint {
+                    time: (f64::from(start.time)
+                        + f64::from(x) * (f64::from(end.time) - f64::from(start.time)))
+                        as f32,
+                    value: (f64::from(start.value)
+                        + f64::from(y) * (f64::from(end.value) - f64::from(start.value)))
+                        as f32,
+                }),
+        )
+    }
+
+    /// Restricted clips parameterize time linearly and can retain only presets
+    /// whose normalized time controls are the two thirds.
+    pub fn supports_restricted_time(self) -> bool {
+        let [[first, _], [second, _]] = self.definition().controls;
+        first == 1.0 / 3.0 && second == 2.0 / 3.0
+    }
+
     /// Stable menu order: basic, Cubic, then Sine/Quad/Quart/Quint/Expo/Circ.
     pub const ALL: [Self; 25] = [
         Self::Ease,

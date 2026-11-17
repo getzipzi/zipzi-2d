@@ -2,10 +2,12 @@
 //! No source registry, Session, history or publication state is retained here.
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use zipzi_core::document::MotionCurve;
 use zipzi_core::document::MotionTrackEditing;
 
 use zipzi_animation::{
-    motion_bezier_parameter, motion_bezier_time_is_monotonic, sample_motion_curve, CompiledCurve,
+    motion_bezier_parameter, motion_bezier_time_is_monotonic, sample_motion_curve_base,
+    CompiledCurve, CompiledSegment,
 };
 use zipzi_core::document::{
     supported_model_motion_channel, MotionClip, MotionKey, MotionPoint, MotionSegment, MotionTrack,
@@ -14,6 +16,9 @@ use zipzi_core::document::{
 use zipzi_core::state::DocumentBuilder;
 
 use crate::Status;
+#[cfg(test)]
+use zipzi_animation::sample_motion_curve;
+use zipzi_contract::motion_curve::{MotionEasingPreset, MotionFrameStep};
 
 pub use zipzi_contract::kernel_commands::{
     MotionBezierHandle, MotionCurveEdit, MotionInterpolation, MotionKeyMove, MotionKeyRef,
@@ -128,19 +133,88 @@ fn constrain_handles(
         (first.time, second.time) = thirds(start, end);
     } else {
         first.time = first.time.clamp(start, end);
-        second.time = second.time.clamp(first.time, end);
+        second.time = second.time.clamp(start, end);
     }
 }
 
 fn is_monotonic(start: f32, segment: &MotionSegment) -> bool {
     match segment {
-        MotionSegment::Bezier {
-            control1,
-            control2,
+        MotionSegment {
             end,
+            curve: MotionCurve::Bezier {
+                control1, control2, ..
+            },
+            ..
         } => motion_bezier_time_is_monotonic(start, control1.time, control2.time, end.time),
         _ => true,
     }
+}
+
+fn outgoing_targets(
+    clip: &MotionClip,
+    keys: &[MotionKeyRef],
+) -> Result<Vec<(usize, usize)>, Status> {
+    let tracks: HashMap<_, _> = clip
+        .tracks
+        .iter()
+        .enumerate()
+        .map(|(i, t)| (t.id.as_str(), i))
+        .collect();
+    let mut indices = HashMap::new();
+    let mut seen = HashSet::new();
+    let mut targets = Vec::new();
+    for key in keys {
+        let track_index = *tracks
+            .get(key.track_id.as_str())
+            .ok_or_else(|| error("MISSING_MOTION_TRACK", &key.track_id))?;
+        let track = &clip.tracks[track_index];
+        let keys = indices.entry(track_index).or_insert_with(|| {
+            track
+                .keys()
+                .enumerate()
+                .map(|(i, k)| (k.id.as_str(), i))
+                .collect::<HashMap<_, _>>()
+        });
+        let index = *keys
+            .get(key.key_id.as_str())
+            .ok_or_else(|| error("MISSING_MOTION_KEY", &key.key_id))?;
+        if index < track.segments.len() && seen.insert((track_index, index)) {
+            editable(track)?;
+            targets.push((track_index, index));
+        }
+    }
+    Ok(targets)
+}
+
+fn unrestrict_beziers(clip: &mut MotionClip) {
+    for track in &mut clip.tracks {
+        let mut start = track.initial.point();
+        if !track
+            .segments
+            .iter()
+            .any(|s| matches!(s.curve, MotionCurve::Bezier { .. }))
+        {
+            continue;
+        }
+        for segment in Arc::make_mut(&mut track.segments) {
+            if let MotionCurve::Bezier {
+                control1,
+                control2,
+                preset,
+            } = &mut segment.curve
+            {
+                (control1.time, control2.time) = thirds(start.time, segment.end.time);
+                if preset.is_some_and(|source| {
+                    source.mapped_controls(start, segment.end.point())
+                        != Some([*control1, *control2])
+                }) {
+                    *preset = None;
+                }
+            }
+            start = segment.end.point();
+        }
+    }
+    clip.restricted_beziers = false;
 }
 
 impl CurveWorkspace {
@@ -250,8 +324,14 @@ impl CurveWorkspace {
                         let slot = &mut Arc::make_mut(&mut track.segments)[index];
                         slot.end_mut().time = new_end.time;
                         slot.end_mut().value = new_end.value;
-                        if let MotionSegment::Bezier {
-                            control1, control2, ..
+                        if let MotionSegment {
+                            curve:
+                                MotionCurve::Bezier {
+                                    control1,
+                                    control2,
+                                    preset,
+                                },
+                            ..
                         } = slot
                         {
                             control1.time += new_start.time - start.time;
@@ -272,6 +352,17 @@ impl CurveWorkspace {
                                     restricted,
                                 );
                             }
+                            if let Some(source) = *preset {
+                                let common = new_end.time
+                                    == end.time + (new_start.time - start.time)
+                                    && new_end.value == end.value + (new_start.value - start.value);
+                                if common {
+                                    [*control1, *control2] =
+                                        source.mapped_controls(new_start, new_end).unwrap();
+                                } else {
+                                    *preset = None;
+                                }
+                            }
                         }
                     }
                     start = end;
@@ -283,7 +374,8 @@ impl CurveWorkspace {
 
     /// Insert a new UUID at exact f32 time. `None` samples the original curve;
     /// `Some` first splits it, then moves the inserted value and its handles.
-    /// At either end, the new connection is Linear and existing keys retain IDs.
+    /// The first authored interval is Auto Smooth; later exterior connections are
+    /// Linear. Existing keys retain their identities.
     pub fn insert_key(
         &mut self,
         document: &DocumentBuilder,
@@ -295,6 +387,7 @@ impl CurveWorkspace {
         self.apply(document, |clip| {
             time_in_clip(clip, time)?;
             let restricted = clip.restricted_beziers;
+            let fps = clip.fps;
             let track = track_mut(clip, track_id)?;
             if let Some(value) = value {
                 value_in_track(document, track, value)?;
@@ -302,7 +395,11 @@ impl CurveWorkspace {
             if let Some(existing) = track.keys().find(|k| k.time == time) {
                 return Err(collision(track_id, &existing.id, key_id));
             }
-            let sampled = sample_motion_curve(&CompiledCurve::from(&*track), time, restricted);
+            let sampled = sample_motion_curve_base(
+                &CompiledCurve::from_track(&*track, fps),
+                time,
+                restricted,
+            );
             let mut key = MotionKey {
                 id: key_id.into(),
                 time,
@@ -313,7 +410,12 @@ impl CurveWorkspace {
                 // its inverse branch; endpoint insertion always holds that endpoint.
                 key.value = track.initial.value;
                 let old = std::mem::replace(&mut track.initial, key);
-                Arc::make_mut(&mut track.segments).insert(0, MotionSegment::Linear { end: old });
+                let curve = if track.segments.is_empty() {
+                    MotionCurve::AutoSmooth {}
+                } else {
+                    MotionCurve::Linear {}
+                };
+                Arc::make_mut(&mut track.segments).insert(0, MotionSegment::new(old, curve));
             } else if let Some(index) = track.segments.iter().position(|s| time < s.end().time) {
                 let start = if index == 0 {
                     track.initial.point()
@@ -323,7 +425,12 @@ impl CurveWorkspace {
                 let (left, right) = split(start, &track.segments[index], key, restricted)?;
                 Arc::make_mut(&mut track.segments).splice(index..=index, [left, right]);
             } else {
-                Arc::make_mut(&mut track.segments).push(MotionSegment::Linear { end: key });
+                let curve = if track.segments.is_empty() {
+                    MotionCurve::AutoSmooth {}
+                } else {
+                    MotionCurve::Linear {}
+                };
+                Arc::make_mut(&mut track.segments).push(MotionSegment::new(key, curve));
             }
             if let Some(value) = value {
                 // Reuse handle-following semantics without publishing an intermediate state.
@@ -379,8 +486,8 @@ impl CurveWorkspace {
         })
     }
 
-    /// Interpolation belongs to the outgoing segment. Last keys are ignored.
-    /// Switching to Bezier starts with straight one-third/two-thirds handles.
+    /// Apply to selected outgoing intervals. Endpoint-only keys are ignored.
+    /// Auto Smooth to Bezier materializes the pre-operation compiled handles.
     pub fn set_interpolation(
         &mut self,
         document: &DocumentBuilder,
@@ -388,48 +495,104 @@ impl CurveWorkspace {
         kind: MotionInterpolation,
     ) -> Result<(), Status> {
         self.apply(document, |clip| {
-            for key in keys {
-                let track = track_mut(clip, &key.track_id)?;
-                let index = key_index(track, &key.key_id)?;
-                if index == track.segments.len() {
-                    continue;
+            let targets = outgoing_targets(clip, keys)?;
+            let mut compiled = HashMap::new();
+            if kind == MotionInterpolation::Bezier {
+                for &(track, _) in &targets {
+                    compiled.entry(track).or_insert_with(|| {
+                        CompiledCurve::from_track(&clip.tracks[track], clip.fps)
+                    });
                 }
+            }
+            for (track_index, index) in targets {
+                let track = &mut clip.tracks[track_index];
                 let start = track.keys().nth(index).unwrap().point();
                 let segment = &track.segments[index];
-                if matches!(
-                    (kind, segment),
-                    (MotionInterpolation::Linear, MotionSegment::Linear { .. })
-                        | (MotionInterpolation::Bezier, MotionSegment::Bezier { .. })
-                        | (MotionInterpolation::Stepped, MotionSegment::Stepped { .. })
-                        | (
-                            MotionInterpolation::InverseStepped,
-                            MotionSegment::InverseStepped { .. }
-                        )
-                ) {
-                    continue;
-                }
-                let end = segment.end().clone();
-                let segment = match kind {
-                    MotionInterpolation::Linear => MotionSegment::Linear { end },
-                    MotionInterpolation::Stepped => MotionSegment::Stepped { end },
-                    MotionInterpolation::InverseStepped => MotionSegment::InverseStepped { end },
+                let curve = match kind {
+                    MotionInterpolation::Linear => MotionCurve::Linear {},
+                    MotionInterpolation::AutoSmooth => MotionCurve::AutoSmooth {},
+                    MotionInterpolation::Stepped => MotionCurve::Stepped {},
+                    MotionInterpolation::InverseStepped => MotionCurve::InverseStepped {},
                     MotionInterpolation::Bezier => {
-                        let (first, second) = thirds(start.time, end.time);
-                        let delta = f64::from(end.value) - f64::from(start.value);
-                        MotionSegment::Bezier {
-                            control1: MotionPoint {
-                                time: first,
-                                value: (f64::from(start.value) + delta / 3.0) as f32,
-                            },
-                            control2: MotionPoint {
-                                time: second,
-                                value: (f64::from(end.value) - delta / 3.0) as f32,
-                            },
-                            end,
+                        if matches!(segment.curve, MotionCurve::Bezier { .. }) {
+                            continue;
+                        }
+                        if matches!(segment.curve, MotionCurve::AutoSmooth {}) {
+                            let CompiledSegment::Bezier {
+                                control1, control2, ..
+                            } = compiled[&track_index].segments[index]
+                            else {
+                                unreachable!()
+                            };
+                            MotionCurve::Bezier {
+                                control1,
+                                control2,
+                                preset: None,
+                            }
+                        } else {
+                            let end = segment.end.point();
+                            MotionCurve::Bezier {
+                                control1: lerp(start, end, 1. / 3.),
+                                control2: lerp(start, end, 2. / 3.),
+                                preset: None,
+                            }
                         }
                     }
                 };
-                Arc::make_mut(&mut track.segments)[index] = segment;
+                if segment.curve != curve {
+                    Arc::make_mut(&mut track.segments)[index].curve = curve;
+                }
+            }
+            Ok(())
+        })
+    }
+
+    /// Presets use each interval's own time/value range and retain its N.
+    pub fn set_easing_preset(
+        &mut self,
+        document: &DocumentBuilder,
+        keys: &[MotionKeyRef],
+        preset: MotionEasingPreset,
+    ) -> Result<(), Status> {
+        self.apply(document, |clip| {
+            let targets = outgoing_targets(clip, keys)?;
+            if !targets.is_empty() && clip.restricted_beziers && !preset.supports_restricted_time()
+            {
+                unrestrict_beziers(clip);
+            }
+            for (track_index, index) in targets {
+                let track = &mut clip.tracks[track_index];
+                let start = track.keys().nth(index).unwrap().point();
+                let end = track.segments[index].end.point();
+                let [control1, control2] = preset.mapped_controls(start, end).unwrap();
+                let curve = MotionCurve::Bezier {
+                    control1,
+                    control2,
+                    preset: Some(preset),
+                };
+                if track.segments[index].curve != curve {
+                    Arc::make_mut(&mut track.segments)[index].curve = curve;
+                }
+            }
+            Ok(())
+        })
+    }
+
+    pub fn set_frame_step(
+        &mut self,
+        document: &DocumentBuilder,
+        keys: &[MotionKeyRef],
+        step: MotionFrameStep,
+    ) -> Result<(), Status> {
+        self.apply(document, |clip| {
+            let step = step.normalized().ok_or_else(|| {
+                error("INVALID_MOTION_FRAME_STEP", "Frame count must be positive")
+            })?;
+            for (track_index, index) in outgoing_targets(clip, keys)? {
+                let track = &mut clip.tracks[track_index];
+                if track.segments[index].frame_step != step {
+                    Arc::make_mut(&mut track.segments)[index].frame_step = step;
+                }
             }
             Ok(())
         })
@@ -449,16 +612,36 @@ impl CurveWorkspace {
                 return Err(error("INVALID_MOTION_BEZIER", &end_key.key_id));
             }
             let restricted = clip.restricted_beziers;
+            let fps = clip.fps;
             let track = track_mut(clip, &end_key.track_id)?;
             let index = key_index(track, &end_key.key_id)?
                 .checked_sub(1)
                 .ok_or_else(|| error("MISSING_MOTION_SEGMENT", &end_key.key_id))?;
             let start = track.keys().nth(index).unwrap().time;
+            if matches!(track.segments[index].curve, MotionCurve::AutoSmooth {}) {
+                let curve = CompiledCurve::from_track(track, fps);
+                let CompiledSegment::Bezier {
+                    control1, control2, ..
+                } = curve.segments[index]
+                else {
+                    unreachable!()
+                };
+                Arc::make_mut(&mut track.segments)[index].curve = MotionCurve::Bezier {
+                    control1,
+                    control2,
+                    preset: None,
+                };
+            }
             let segment = &mut Arc::make_mut(&mut track.segments)[index];
-            let MotionSegment::Bezier {
-                control1,
-                control2,
+            let MotionSegment {
                 end,
+                curve:
+                    MotionCurve::Bezier {
+                        control1,
+                        control2,
+                        preset,
+                    },
+                ..
             } = segment
             else {
                 return Err(error("NOT_MOTION_BEZIER", &end_key.key_id));
@@ -481,13 +664,139 @@ impl CurveWorkspace {
                 MotionBezierHandle::Control2 => *control2 = point,
             }
             if !(start <= control1.time
-                && control1.time <= control2.time
+                && control1.time <= end.time
+                && start <= control2.time
                 && control2.time <= end.time)
+                || !motion_bezier_time_is_monotonic(start, control1.time, control2.time, end.time)
             {
                 return Err(error(
                     "INVALID_MOTION_BEZIER",
-                    "Handle time must stay inside its segment and preserve handle order",
+                    "Handle times must define a monotone curve inside its interval",
                 ));
+            }
+            *preset = None;
+            Ok(())
+        })
+    }
+
+    /// Align the other handle at the shared key without forcing equal length.
+    pub fn set_handle_aligned(
+        &mut self,
+        document: &DocumentBuilder,
+        end_key: &MotionKeyRef,
+        handle: MotionBezierHandle,
+        point: MotionPoint,
+    ) -> Result<(), Status> {
+        self.apply(document, |clip| {
+            let fps = clip.fps;
+            let track = track_mut(clip, &end_key.track_id)?;
+            let index = key_index(track, &end_key.key_id)?
+                .checked_sub(1)
+                .ok_or_else(|| error("MISSING_MOTION_SEGMENT", &end_key.key_id))?;
+            let anchor_index = match handle {
+                MotionBezierHandle::Control1 => index,
+                MotionBezierHandle::Control2 => index + 1,
+            };
+            let anchor = track.keys().nth(anchor_index).unwrap().point();
+            let other_index = match handle {
+                MotionBezierHandle::Control1 => index.checked_sub(1),
+                MotionBezierHandle::Control2 => {
+                    (index + 1 < track.segments.len()).then_some(index + 1)
+                }
+            };
+            let compiled = CompiledCurve::from_track(track, fps);
+            for i in std::iter::once(index).chain(other_index) {
+                if matches!(track.segments[i].curve, MotionCurve::AutoSmooth {}) {
+                    let CompiledSegment::Bezier {
+                        control1, control2, ..
+                    } = compiled.segments[i]
+                    else {
+                        unreachable!()
+                    };
+                    Arc::make_mut(&mut track.segments)[i].curve = MotionCurve::Bezier {
+                        control1,
+                        control2,
+                        preset: None,
+                    };
+                }
+            }
+            let opposite = other_index.and_then(|i| {
+                if let MotionCurve::Bezier {
+                    control1, control2, ..
+                } = track.segments[i].curve
+                {
+                    let (old, other_handle) = match handle {
+                        MotionBezierHandle::Control1 => (control2, MotionBezierHandle::Control2),
+                        MotionBezierHandle::Control2 => (control1, MotionBezierHandle::Control1),
+                    };
+                    Some((track.segments[i].end.id.clone(), old, other_handle))
+                } else {
+                    None
+                }
+            });
+            let mut candidate = Self { clip: clip.clone() };
+            candidate.set_handle(document, end_key, handle, point)?;
+            if let Some((id, old, other_handle)) = opposite {
+                let dx = f64::from(point.time) - f64::from(anchor.time);
+                let dy = f64::from(point.value) - f64::from(anchor.value);
+                let length = dx.hypot(dy);
+                if length > 0. {
+                    let old_length = (f64::from(old.time) - f64::from(anchor.time))
+                        .hypot(f64::from(old.value) - f64::from(anchor.value));
+                    let scale = old_length / length;
+                    candidate.set_handle(
+                        document,
+                        &MotionKeyRef {
+                            track_id: end_key.track_id.clone(),
+                            key_id: id,
+                        },
+                        other_handle,
+                        MotionPoint {
+                            time: (f64::from(anchor.time) - dx * scale) as f32,
+                            value: (f64::from(anchor.value) - dy * scale) as f32,
+                        },
+                    )?;
+                }
+            }
+            *clip = candidate.into_clip();
+            Ok(())
+        })
+    }
+
+    /// Tidy restores straight thirds; the explicit user operation clears source
+    /// labels and retains frame stepping. All selected intervals commit together.
+    pub fn tidy_handles(
+        &mut self,
+        document: &DocumentBuilder,
+        keys: &[MotionKeyRef],
+    ) -> Result<(), Status> {
+        self.apply(document, |clip| {
+            for (track_index, index) in outgoing_targets(clip, keys)? {
+                let track = &mut clip.tracks[track_index];
+                if !matches!(
+                    track.segments[index].curve,
+                    MotionCurve::Bezier { .. } | MotionCurve::AutoSmooth {}
+                ) {
+                    return Err(error("NOT_MOTION_BEZIER", &track.segments[index].end.id));
+                }
+                let start = track.keys().nth(index).unwrap().point();
+                let end = track.segments[index].end.point();
+                let (first, second) = thirds(start.time, end.time);
+                Arc::make_mut(&mut track.segments)[index].curve = MotionCurve::Bezier {
+                    control1: MotionPoint {
+                        time: first,
+                        value: (f64::from(start.value)
+                            + (f64::from(end.value) - f64::from(start.value)) / 3.)
+                            as f32,
+                    },
+                    control2: MotionPoint {
+                        time: second,
+                        value: (f64::from(end.value)
+                            - (f64::from(end.value) - f64::from(start.value)) / 3.)
+                            as f32,
+                    },
+                    preset: None,
+                };
             }
             Ok(())
         })
@@ -509,30 +818,52 @@ impl CurveWorkspace {
             }
             let ratio = f64::from(duration) / f64::from(clip.duration);
             let scale = |time: f32| (f64::from(time) * ratio) as f32;
+            let source_range = clip.source_key_range();
             let restricted = clip.restricted_beziers;
             for track in &mut clip.tracks {
                 track.initial.time = scale(track.initial.time);
-                let mut start = track.initial.time;
+                let mut start = track.initial.point();
                 for segment in Arc::make_mut(&mut track.segments) {
                     segment.end_mut().time = scale(segment.end().time);
                     let end = segment.end().time;
-                    if let MotionSegment::Bezier {
-                        control1, control2, ..
+                    let end_point = segment.end.point();
+                    if let MotionSegment {
+                        curve:
+                            MotionCurve::Bezier {
+                                control1,
+                                control2,
+                                preset,
+                            },
+                        ..
                     } = segment
                     {
                         control1.time = scale(control1.time);
                         control2.time = scale(control2.time);
                         if restricted {
-                            constrain_handles(start, end, control1, control2, true);
+                            constrain_handles(start.time, end, control1, control2, true);
+                        }
+                        if let Some(source) = preset {
+                            [*control1, *control2] =
+                                source.mapped_controls(start, end_point).unwrap();
                         }
                     }
-                    start = end;
+                    start = end_point;
                 }
             }
             for event in &mut clip.events {
                 event.time = scale(event.time);
             }
             clip.duration = duration;
+            if let Some(range) = source_range {
+                clip.meta_extensions.insert(
+                    "ZipziSourceKeyRange".into(),
+                    serde_json::to_value(zipzi_core::document::MotionSourceRange {
+                        start: scale(range.start),
+                        end: scale(range.end),
+                    })
+                    .expect("finite source range serializes"),
+                );
+            }
             Ok(())
         })
     }
@@ -540,8 +871,9 @@ impl CurveWorkspace {
 
 fn lerp(a: MotionPoint, b: MotionPoint, t: f32) -> MotionPoint {
     MotionPoint {
-        time: a.time + (b.time - a.time) * t,
-        value: a.value + (b.value - a.value) * t,
+        time: (f64::from(a.time) + (f64::from(b.time) - f64::from(a.time)) * f64::from(t)) as f32,
+        value: (f64::from(a.value) + (f64::from(b.value) - f64::from(a.value)) * f64::from(t))
+            as f32,
     }
 }
 
@@ -552,21 +884,40 @@ fn split(
     restricted: bool,
 ) -> Result<(MotionSegment, MotionSegment), Status> {
     let end = segment.end().clone();
-    Ok(match segment {
-        MotionSegment::Linear { .. } => (
-            MotionSegment::Linear { end: key },
-            MotionSegment::Linear { end },
+    let mut result = match segment {
+        MotionSegment {
+            curve: MotionCurve::AutoSmooth {},
+            ..
+        } => (
+            MotionSegment::new(key, MotionCurve::AutoSmooth {}),
+            MotionSegment::new(end, MotionCurve::AutoSmooth {}),
         ),
-        MotionSegment::Stepped { .. } => (
-            MotionSegment::Stepped { end: key },
-            MotionSegment::Stepped { end },
+        MotionSegment {
+            curve: MotionCurve::Linear {},
+            ..
+        } => (
+            MotionSegment::new(key, MotionCurve::Linear {}),
+            MotionSegment::new(end, MotionCurve::Linear {}),
         ),
-        MotionSegment::InverseStepped { .. } => (
-            MotionSegment::InverseStepped { end: key },
-            MotionSegment::InverseStepped { end },
+        MotionSegment {
+            curve: MotionCurve::Stepped {},
+            ..
+        } => (
+            MotionSegment::new(key, MotionCurve::Stepped {}),
+            MotionSegment::new(end, MotionCurve::Stepped {}),
         ),
-        MotionSegment::Bezier {
-            control1, control2, ..
+        MotionSegment {
+            curve: MotionCurve::InverseStepped {},
+            ..
+        } => (
+            MotionSegment::new(key, MotionCurve::InverseStepped {}),
+            MotionSegment::new(end, MotionCurve::InverseStepped {}),
+        ),
+        MotionSegment {
+            curve: MotionCurve::Bezier {
+                control1, control2, ..
+            },
+            ..
         } => {
             if !restricted && !is_monotonic(start.time, segment) {
                 return Err(error(
@@ -595,21 +946,30 @@ fn split(
                 (e.time, c.time) = thirds(key.time, end.time);
             }
             let result = (
-                MotionSegment::Bezier {
-                    control1: a,
-                    control2: d,
-                    end: key,
-                },
-                MotionSegment::Bezier {
-                    control1: e,
-                    control2: c,
+                MotionSegment::new(
+                    key,
+                    MotionCurve::Bezier {
+                        control1: a,
+                        control2: d,
+                        preset: None,
+                    },
+                ),
+                MotionSegment::new(
                     end,
-                },
+                    MotionCurve::Bezier {
+                        control1: e,
+                        control2: c,
+                        preset: None,
+                    },
+                ),
             );
             verify_bezier_split(start, segment, &result, restricted)?;
             result
         }
-    })
+    };
+    result.0.frame_step = segment.frame_step;
+    result.1.frame_step = segment.frame_step;
+    Ok(result)
 }
 
 fn verify_bezier_split(
@@ -620,18 +980,14 @@ fn verify_bezier_split(
 ) -> Result<(), Status> {
     // Rounding split controls to f32 can lose shape on short segments at large
     // absolute times. Check the shared runtime sampler before accepting a split.
-    let original = CompiledCurve {
-        initial: start,
-        segments: Arc::new(vec![source.into()]),
-    };
-    let candidate = CompiledCurve {
-        initial: start,
-        segments: Arc::new(vec![(&split.0).into(), (&split.1).into()]),
-    };
-    let MotionSegment::Bezier {
-        control1,
-        control2,
+    let original = CompiledCurve::compile(start, std::slice::from_ref(source), 1.);
+    let candidate = CompiledCurve::compile(start, &[split.0.clone(), split.1.clone()], 1.);
+    let MotionSegment {
         end,
+        curve: MotionCurve::Bezier {
+            control1, control2, ..
+        },
+        ..
     } = source
     else {
         unreachable!()
@@ -645,8 +1001,8 @@ fn verify_bezier_split(
         .map(|i| (f64::from(start.time) + span * f64::from(i) / 128.0) as f32)
         .chain(std::iter::once(split.0.end().time));
     for time in times {
-        let a = sample_motion_curve(&original, time, restricted);
-        let b = sample_motion_curve(&candidate, time, restricted);
+        let a = sample_motion_curve_base(&original, time, restricted);
+        let b = sample_motion_curve_base(&candidate, time, restricted);
         if !a.is_finite() || !b.is_finite() || (f64::from(a) - f64::from(b)).abs() > tolerance {
             return Err(error(
                 "MOTION_BEZIER_SPLIT_PRECISION",

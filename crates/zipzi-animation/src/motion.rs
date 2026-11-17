@@ -1,4 +1,5 @@
 //! Stateless motion curve sampling. Queue state and fades are separate.
+use zipzi_core::document::MotionCurve;
 use zipzi_core::document::{MotionPoint, MotionSegment, MotionTrack};
 
 /// Local seeks for canonical replay of one clip scheduled at absolute zero.
@@ -61,56 +62,105 @@ impl CompiledSegment {
     }
 }
 
-impl From<&MotionSegment> for CompiledSegment {
-    fn from(segment: &MotionSegment) -> Self {
-        let end = segment.end().point();
-        match segment {
-            MotionSegment::Linear { .. } => Self::Linear { end },
-            MotionSegment::Bezier {
-                control1, control2, ..
-            } => Self::Bezier {
-                control1: *control1,
-                control2: *control2,
-                end,
-            },
-            MotionSegment::Stepped { .. } => Self::Stepped { end },
-            MotionSegment::InverseStepped { .. } => Self::InverseStepped { end },
-        }
-    }
-}
-
-/// Immutable runtime curve, independent of JSON representation and metadata.
+/// Immutable numeric curve, including the clip FPS needed by segment frame stepping.
 #[derive(Debug, Clone)]
 pub struct CompiledCurve {
-    /// Initial point, with time in seconds and an unweighted channel value.
+    /// Initial unweighted channel point in seconds.
     pub initial: MotionPoint,
-    /// Shared ordered curve segments; source tracks must satisfy document validation.
+    /// Compiled base curves, with automatic groups resolved to Beziers.
     pub segments: std::sync::Arc<Vec<CompiledSegment>>,
+    frame_steps: std::sync::Arc<Vec<zipzi_contract::motion_curve::MotionFrameStep>>,
+    fps: f32,
 }
 
 impl CompiledCurve {
-    /// Resolve the segment using the original, unquantized clip-local time.
-    /// Exact endpoints belong to the outgoing segment, including InverseStepped.
-    /// After the final endpoint, returns that endpoint and no segment.
-    pub fn segment_at(&self, time: f32) -> (MotionPoint, Option<&CompiledSegment>) {
-        let index = self
-            .segments
-            .partition_point(|segment| segment.end().time <= time);
+    /// Construct an unstepped numeric curve without authoring metadata.
+    pub fn new(initial: MotionPoint, segments: std::sync::Arc<Vec<CompiledSegment>>) -> Self {
+        Self {
+            initial,
+            segments,
+            frame_steps: Default::default(),
+            fps: 1.0,
+        }
+    }
+
+    /// Compile a validated track at its owning clip's FPS. FPS is part of cache
+    /// identity even when the underlying segment allocation is unchanged.
+    pub fn from_track(track: &MotionTrack, fps: f32) -> Self {
+        Self::compile(track.initial.point(), &track.segments, fps)
+    }
+
+    /// Compile validated adjacent authored intervals, preserving their order.
+    pub fn compile(initial: MotionPoint, source: &[MotionSegment], fps: f32) -> Self {
+        let mut segments = Vec::with_capacity(source.len());
+        let mut index = 0;
+        while index < source.len() {
+            if matches!(source[index].curve, MotionCurve::AutoSmooth {}) {
+                let mut points = vec![if index == 0 {
+                    initial
+                } else {
+                    source[index - 1].end.point()
+                }];
+                while index < source.len()
+                    && matches!(source[index].curve, MotionCurve::AutoSmooth {})
+                {
+                    points.push(source[index].end.point());
+                    index += 1;
+                }
+                let group =
+                    crate::compile_motion_auto_smooth(&points).expect("validated automatic group");
+                segments.extend(group.segments.iter().copied());
+            } else {
+                let end = source[index].end.point();
+                segments.push(match &source[index].curve {
+                    MotionCurve::Linear {} => CompiledSegment::Linear { end },
+                    MotionCurve::Bezier {
+                        control1, control2, ..
+                    } => CompiledSegment::Bezier {
+                        control1: *control1,
+                        control2: *control2,
+                        end,
+                    },
+                    MotionCurve::Stepped {} => CompiledSegment::Stepped { end },
+                    MotionCurve::InverseStepped {} => CompiledSegment::InverseStepped { end },
+                    MotionCurve::AutoSmooth {} => unreachable!(),
+                });
+                index += 1;
+            }
+        }
+        Self {
+            initial,
+            segments: std::sync::Arc::new(segments),
+            frame_steps: std::sync::Arc::new(source.iter().map(|s| s.frame_step).collect()),
+            fps,
+        }
+    }
+
+    pub fn fps(&self) -> f32 {
+        self.fps
+    }
+
+    pub fn frame_step(&self, index: usize) -> zipzi_contract::motion_curve::MotionFrameStep {
+        self.frame_steps.get(index).copied().unwrap_or_default()
+    }
+
+    /// Locate using unquantized time. Exact keys belong to the outgoing segment.
+    pub fn segment_index(&self, time: f32) -> usize {
+        self.segments
+            .partition_point(|segment| segment.end().time <= time)
+    }
+
+    fn segment_at_index(&self, index: usize) -> (MotionPoint, Option<&CompiledSegment>) {
         let start = index
             .checked_sub(1)
             .map_or(self.initial, |i| self.segments[i].end());
         (start, self.segments.get(index))
     }
-}
 
-impl From<&MotionTrack> for CompiledCurve {
-    fn from(track: &MotionTrack) -> Self {
-        Self {
-            initial: track.initial.point(),
-            segments: std::sync::Arc::new(
-                track.segments.iter().map(CompiledSegment::from).collect(),
-            ),
-        }
+    /// Resolve using the original, unquantized clip-local time. After the last
+    /// key, returns that endpoint and no segment.
+    pub fn segment_at(&self, time: f32) -> (MotionPoint, Option<&CompiledSegment>) {
+        self.segment_at_index(self.segment_index(time))
     }
 }
 
@@ -119,6 +169,19 @@ impl From<&MotionTrack> for CompiledCurve {
 /// `time` is a finite clip-local time in seconds. This low-level sampler assumes
 /// validated points; it does not apply looping, fades, parameter clamping or events.
 pub fn sample_motion_curve(curve: &CompiledCurve, time: f32, restricted_beziers: bool) -> f32 {
+    let index = curve.segment_index(time);
+    let (start, segment) = curve.segment_at_index(index);
+    segment.map_or(start.value, |segment| {
+        let time =
+            crate::motion_frame_step_time(start.time, time, curve.fps, curve.frame_step(index))
+                .expect("validated frame-step context");
+        sample_motion_segment(start, segment, time, restricted_beziers)
+    })
+}
+
+/// Sample the continuous underlying curve, for structure edits and optional
+/// graph overlays. Endpoint ownership is identical to stepped sampling.
+pub fn sample_motion_curve_base(curve: &CompiledCurve, time: f32, restricted_beziers: bool) -> f32 {
     let (start, segment) = curve.segment_at(time);
     segment.map_or(start.value, |segment| {
         sample_motion_segment(start, segment, time, restricted_beziers)
@@ -139,7 +202,9 @@ pub fn sample_motion_segment(
     let end = segment.end();
     match segment {
         CompiledSegment::Linear { .. } => {
-            let t = ((time - start.time) / (end.time - start.time)).max(0.0);
+            let t = ((f64::from(time) - f64::from(start.time))
+                / (f64::from(end.time) - f64::from(start.time)))
+            .max(0.0) as f32;
             lerp(start.value, end.value, t)
         }
         CompiledSegment::Bezier {
@@ -167,7 +232,8 @@ pub fn motion_bezier_parameter(
     restricted_beziers: bool,
 ) -> f32 {
     if restricted_beziers {
-        ((time - start.time) / (end.time - start.time)).max(0.0)
+        ((f64::from(time) - f64::from(start.time)) / (f64::from(end.time) - f64::from(start.time)))
+            .max(0.0) as f32
     } else if motion_bezier_time_is_monotonic(start.time, control1.time, control2.time, end.time) {
         monotonic_bezier_parameter(start.time, control1.time, control2.time, end.time, time)
     } else {
@@ -240,7 +306,7 @@ pub fn motion_bezier_time_is_monotonic(start: f32, first: f32, second: f32, end:
 }
 
 fn lerp(start: f32, end: f32, t: f32) -> f32 {
-    start + (end - start) * t
+    (f64::from(start) + (f64::from(end) - f64::from(start)) * f64::from(t)) as f32
 }
 
 fn bezier_value(

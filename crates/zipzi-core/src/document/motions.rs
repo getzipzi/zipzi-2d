@@ -1,5 +1,6 @@
+use crate::document::MotionCurve;
 use serde::Serialize;
-pub use zipzi_contract::document::{MotionSegment, MotionTrack};
+pub use zipzi_contract::document::MotionTrack;
 pub trait MotionTrackEditing {
     fn retain_keys(&mut self, retain: impl Fn(&str) -> bool, restricted: bool) -> bool;
 }
@@ -25,45 +26,34 @@ impl MotionTrackEditing for MotionTrack {
                 segments.push(original.segments[left].clone());
                 continue;
             }
-            let span = &original.segments[left..right];
-            let end = all[right].clone();
-            let merged = if span
-                .iter()
-                .all(|s| matches!(s, MotionSegment::Stepped { .. }))
+            // The outgoing settings belong to the left survivor. A deleted
+            // interior key must not select a different mode or frame count.
+            let mut merged = original.segments[left].clone();
+            merged.end = all[right].clone();
+            if let MotionCurve::Bezier {
+                control1,
+                control2,
+                preset,
+            } = &mut merged.curve
             {
-                MotionSegment::Stepped { end }
-            } else if span
-                .iter()
-                .all(|s| matches!(s, MotionSegment::InverseStepped { .. }))
-            {
-                MotionSegment::InverseStepped { end }
-            } else if span
-                .iter()
-                .all(|s| matches!(s, MotionSegment::Bezier { .. }))
-            {
-                let MotionSegment::Bezier { control1, .. } = span.first().unwrap() else {
-                    unreachable!()
-                };
-                let MotionSegment::Bezier { control2, .. } = span.last().unwrap() else {
-                    unreachable!()
-                };
-                let (mut first, mut second) = (*control1, *control2);
-                if restricted {
-                    let span = f64::from(end.time) - f64::from(all[left].time);
-                    first.time = (f64::from(all[left].time) + span / 3.) as f32;
-                    second.time = (f64::from(end.time) - span / 3.) as f32;
+                *preset = None;
+                if let MotionCurve::Bezier { control2: last, .. } =
+                    &original.segments[right - 1].curve
+                {
+                    *control2 = *last;
                 } else {
-                    first.time = first.time.clamp(all[left].time, end.time);
-                    second.time = second.time.clamp(first.time, end.time);
+                    control2.time += all[right].time - all[left + 1].time;
+                    control2.value += all[right].value - all[left + 1].value;
                 }
-                MotionSegment::Bezier {
-                    control1: first,
-                    control2: second,
-                    end,
+                if restricted {
+                    let width = f64::from(all[right].time) - f64::from(all[left].time);
+                    control1.time = (f64::from(all[left].time) + width / 3.) as f32;
+                    control2.time = (f64::from(all[right].time) - width / 3.) as f32;
+                } else {
+                    control1.time = control1.time.clamp(all[left].time, all[right].time);
+                    control2.time = control2.time.clamp(all[left].time, all[right].time);
                 }
-            } else {
-                MotionSegment::Linear { end }
-            };
+            }
             segments.push(merged);
         }
         self.segments = std::sync::Arc::new(segments);

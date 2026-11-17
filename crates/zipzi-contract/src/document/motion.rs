@@ -38,54 +38,60 @@ impl MotionKey {
     }
 }
 
+/// Persistent interpolation mode. Auto Smooth controls are derived from its
+/// uninterrupted group and are never a second persisted source of authority.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-/// Interpolation from a preceding key to a stable endpoint key.
-pub enum MotionSegment {
-    /// Interpolate linearly between the preceding and endpoint key.
-    Linear {
-        /// Persistent endpoint key of this segment.
-        end: MotionKey,
-    },
-    /// Interpolate using two time/value control points and the endpoint key.
+pub enum MotionCurve {
+    /// Linear interpolation in clip-local time.
+    Linear {},
+    /// Monotone cubic Hermite interpolation with automatic group tangents.
+    AutoSmooth {},
+    /// Explicit cubic Bezier controls, optionally carrying a validated preset source.
     Bezier {
-        /// First Bezier control point in seconds/channel-value coordinates; it has no key identity.
+        /// First control in seconds and channel-value units.
         control1: MotionPoint,
-        /// Second Bezier control point in seconds/channel-value coordinates; it has no key identity.
+        /// Second control in seconds and channel-value units.
         control2: MotionPoint,
-        /// Persistent endpoint key of this segment.
-        end: MotionKey,
+        /// None means Custom; hand edits and curve splits clear this source.
+        preset: Option<crate::motion_curve::MotionEasingPreset>,
     },
-    /// Hold the preceding value through the segment before its endpoint.
-    Stepped {
-        /// Persistent endpoint key of this segment.
-        end: MotionKey,
-    },
-    /// Use the endpoint value over the segment before its endpoint.
-    InverseStepped {
-        /// Persistent endpoint key of this segment.
-        end: MotionKey,
-    },
+    /// Hold the preceding key value until the endpoint.
+    Stepped {},
+    /// Use the endpoint value until the next outgoing segment takes over.
+    InverseStepped {},
+}
+
+/// An interval from the preceding key to its stable endpoint. Settings belong to
+/// the outgoing interval of the preceding key, not to the endpoint identity.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+pub struct MotionSegment {
+    /// Persistent endpoint key.
+    pub end: MotionKey,
+    /// Authored base interpolation, preserving automatic mode and preset source.
+    pub curve: MotionCurve,
+    /// Segment-local sample-and-hold at the owning clip's FPS.
+    pub frame_step: crate::motion_curve::MotionFrameStep,
 }
 
 impl MotionSegment {
-    pub fn end(&self) -> &MotionKey {
-        match self {
-            Self::Linear { end }
-            | Self::Bezier { end, .. }
-            | Self::Stepped { end }
-            | Self::InverseStepped { end } => end,
+    /// Construct a continuous interval. Imported formats retain their explicit
+    /// interpolation; new authored intervals choose Auto Smooth at their caller.
+    pub fn new(end: MotionKey, curve: MotionCurve) -> Self {
+        Self {
+            end,
+            curve,
+            frame_step: Default::default(),
         }
     }
-
+    pub fn end(&self) -> &MotionKey {
+        &self.end
+    }
     pub fn end_mut(&mut self) -> &mut MotionKey {
-        match self {
-            Self::Linear { end }
-            | Self::Bezier { end, .. }
-            | Self::Stepped { end }
-            | Self::InverseStepped { end } => end,
-        }
+        &mut self.end
     }
 }
 

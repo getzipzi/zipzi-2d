@@ -122,7 +122,8 @@ def create_linear_motion(session: zipzi.Session, parameter_id: str) -> str:
         target=v.MotionTrackTargetParameter(parameter_id=parameter_id),
         initial=v.MotionKey(id=first_key, time=0, value=-20),
         segments=(
-            v.MotionSegmentLinear(end=v.MotionKey(id=last_key, time=1, value=20)),
+            v.MotionSegment(end=v.MotionKey(id=last_key, time=1, value=20),
+                            curve=v.MotionCurveLinear(), frame_step=v.MotionFrameStepOff()),
         ),
         fade_in=0,
         fade_out=0,

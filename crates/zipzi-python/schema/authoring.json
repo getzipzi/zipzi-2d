@@ -7592,6 +7592,85 @@
         }
       ]
     },
+    "MotionCurve": {
+      "content": null,
+      "doc": "Persistent interpolation mode. Auto Smooth controls are derived from its\nuninterrupted group and are never a second persisted source of authority.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::MotionCurve",
+      "tag": "kind",
+      "variants": [
+        {
+          "doc": "Linear interpolation in clip-local time.",
+          "fields": [],
+          "form": "record",
+          "name": "linear",
+          "rust_name": "Linear"
+        },
+        {
+          "doc": "Monotone cubic Hermite interpolation with automatic group tangents.",
+          "fields": [],
+          "form": "record",
+          "name": "auto_smooth",
+          "rust_name": "AutoSmooth"
+        },
+        {
+          "doc": "Explicit cubic Bezier controls, optionally carrying a validated preset source.",
+          "fields": [
+            {
+              "doc": "First control in seconds and channel-value units.",
+              "name": "control1",
+              "rust_name": "control1",
+              "shape": {
+                "kind": "ref",
+                "name": "MotionPoint"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Second control in seconds and channel-value units.",
+              "name": "control2",
+              "rust_name": "control2",
+              "shape": {
+                "kind": "ref",
+                "name": "MotionPoint"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "None means Custom; hand edits and curve splits clear this source.",
+              "name": "preset",
+              "rust_name": "preset",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "MotionEasingPreset"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "bezier",
+          "rust_name": "Bezier"
+        },
+        {
+          "doc": "Hold the preceding key value until the endpoint.",
+          "fields": [],
+          "form": "record",
+          "name": "stepped",
+          "rust_name": "Stepped"
+        },
+        {
+          "doc": "Use the endpoint value until the next outgoing segment takes over.",
+          "fields": [],
+          "form": "record",
+          "name": "inverse_stepped",
+          "rust_name": "InverseStepped"
+        }
+      ]
+    },
     "MotionCurveEdit": {
       "content": "value",
       "doc": "Key time order and Bezier roles use dedicated curve operations, never row sorting.",
@@ -7620,6 +7699,7 @@
           "rust_name": "MoveKeys"
         },
         {
+          "doc": "Insert a stable key, splitting the base curve and inheriting its mode and\nframe count. Each new interval restarts stepping, so its rhythm can change.",
           "fields": [
             {
               "doc": "",
@@ -7717,6 +7797,68 @@
           "rust_name": "Interpolation"
         },
         {
+          "doc": "Apply a shared easing preset to selected outgoing intervals, retaining frame stepping.",
+          "fields": [
+            {
+              "doc": "",
+              "name": "keys",
+              "rust_name": "keys",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "MotionKeyRef"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "preset",
+              "rust_name": "preset",
+              "shape": {
+                "kind": "ref",
+                "name": "MotionEasingPreset"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "easing_preset",
+          "rust_name": "EasingPreset"
+        },
+        {
+          "doc": "Set selected outgoing intervals' sample-and-hold; one frame normalizes to Off.",
+          "fields": [
+            {
+              "doc": "",
+              "name": "keys",
+              "rust_name": "keys",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "MotionKeyRef"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "frame_step",
+              "rust_name": "frame_step",
+              "shape": {
+                "kind": "ref",
+                "name": "MotionFrameStep"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "frame_step",
+          "rust_name": "FrameStep"
+        },
+        {
           "fields": [
             {
               "doc": "",
@@ -7754,6 +7896,65 @@
           "rust_name": "BezierHandle"
         },
         {
+          "doc": "Move a handle and align the adjacent opposite handle, retaining its\nlength. Automatic intervals involved become explicit Beziers atomically.",
+          "fields": [
+            {
+              "doc": "",
+              "name": "end",
+              "rust_name": "end",
+              "shape": {
+                "kind": "ref",
+                "name": "MotionKeyRef"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "handle",
+              "rust_name": "handle",
+              "shape": {
+                "kind": "ref",
+                "name": "MotionBezierHandle"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "point",
+              "rust_name": "point",
+              "shape": {
+                "kind": "ref",
+                "name": "MotionPoint"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "bezier_handle_aligned",
+          "rust_name": "BezierHandleAligned"
+        },
+        {
+          "doc": "Restore selected outgoing Bezier controls to straight thirds and Custom.",
+          "fields": [
+            {
+              "doc": "",
+              "name": "keys",
+              "rust_name": "keys",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "MotionKeyRef"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "tidy_handles",
+          "rust_name": "TidyHandles"
+        },
+        {
           "fields": [
             {
               "doc": "",
@@ -7768,6 +7969,190 @@
           "form": "record",
           "name": "scale_time",
           "rust_name": "ScaleTime"
+        }
+      ]
+    },
+    "MotionEasingPreset": {
+      "content": null,
+      "doc": "Source of explicit Bezier controls. Absence of a source means Custom; imported\nor manually edited controls must not be matched back to a preset by tolerance.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::motion_curve::MotionEasingPreset",
+      "tag": null,
+      "variants": [
+        {
+          "doc": "CSS-style ease, defined directly by its Bezier controls.",
+          "fields": [],
+          "form": "unit",
+          "name": "ease",
+          "rust_name": "Ease"
+        },
+        {
+          "doc": "CSS-style ease in, defined directly by its Bezier controls.",
+          "fields": [],
+          "form": "unit",
+          "name": "ease_in",
+          "rust_name": "EaseIn"
+        },
+        {
+          "doc": "CSS-style ease out, defined directly by its Bezier controls.",
+          "fields": [],
+          "form": "unit",
+          "name": "ease_out",
+          "rust_name": "EaseOut"
+        },
+        {
+          "doc": "CSS-style ease in out, defined directly by its Bezier controls.",
+          "fields": [],
+          "form": "unit",
+          "name": "ease_in_out",
+          "rust_name": "EaseInOut"
+        },
+        {
+          "doc": "Cubic acceleration, exact apart from floating-point rounding.",
+          "fields": [],
+          "form": "unit",
+          "name": "cubic_in",
+          "rust_name": "CubicIn"
+        },
+        {
+          "doc": "Cubic deceleration, exact apart from floating-point rounding.",
+          "fields": [],
+          "form": "unit",
+          "name": "cubic_out",
+          "rust_name": "CubicOut"
+        },
+        {
+          "doc": "Single-Bezier approximation of piecewise cubic easing.",
+          "fields": [],
+          "form": "unit",
+          "name": "cubic_in_out",
+          "rust_name": "CubicInOut"
+        },
+        {
+          "doc": "Single-Bezier approximation of sine acceleration.",
+          "fields": [],
+          "form": "unit",
+          "name": "sine_in",
+          "rust_name": "SineIn"
+        },
+        {
+          "doc": "Single-Bezier approximation of sine deceleration.",
+          "fields": [],
+          "form": "unit",
+          "name": "sine_out",
+          "rust_name": "SineOut"
+        },
+        {
+          "doc": "Single-Bezier approximation of sine easing at both ends.",
+          "fields": [],
+          "form": "unit",
+          "name": "sine_in_out",
+          "rust_name": "SineInOut"
+        },
+        {
+          "doc": "Quadratic acceleration, exact apart from floating-point rounding.",
+          "fields": [],
+          "form": "unit",
+          "name": "quad_in",
+          "rust_name": "QuadIn"
+        },
+        {
+          "doc": "Quadratic deceleration, exact apart from floating-point rounding.",
+          "fields": [],
+          "form": "unit",
+          "name": "quad_out",
+          "rust_name": "QuadOut"
+        },
+        {
+          "doc": "Single-Bezier approximation of piecewise quadratic easing.",
+          "fields": [],
+          "form": "unit",
+          "name": "quad_in_out",
+          "rust_name": "QuadInOut"
+        },
+        {
+          "doc": "Single-Bezier approximation of quartic acceleration.",
+          "fields": [],
+          "form": "unit",
+          "name": "quart_in",
+          "rust_name": "QuartIn"
+        },
+        {
+          "doc": "Single-Bezier approximation of quartic deceleration.",
+          "fields": [],
+          "form": "unit",
+          "name": "quart_out",
+          "rust_name": "QuartOut"
+        },
+        {
+          "doc": "Single-Bezier approximation of piecewise quartic easing.",
+          "fields": [],
+          "form": "unit",
+          "name": "quart_in_out",
+          "rust_name": "QuartInOut"
+        },
+        {
+          "doc": "Single-Bezier approximation of quintic acceleration.",
+          "fields": [],
+          "form": "unit",
+          "name": "quint_in",
+          "rust_name": "QuintIn"
+        },
+        {
+          "doc": "Single-Bezier approximation of quintic deceleration.",
+          "fields": [],
+          "form": "unit",
+          "name": "quint_out",
+          "rust_name": "QuintOut"
+        },
+        {
+          "doc": "Single-Bezier approximation of piecewise quintic easing.",
+          "fields": [],
+          "form": "unit",
+          "name": "quint_in_out",
+          "rust_name": "QuintInOut"
+        },
+        {
+          "doc": "Single-Bezier approximation of exponential acceleration.",
+          "fields": [],
+          "form": "unit",
+          "name": "expo_in",
+          "rust_name": "ExpoIn"
+        },
+        {
+          "doc": "Single-Bezier approximation of exponential deceleration.",
+          "fields": [],
+          "form": "unit",
+          "name": "expo_out",
+          "rust_name": "ExpoOut"
+        },
+        {
+          "doc": "Single-Bezier approximation of piecewise exponential easing.",
+          "fields": [],
+          "form": "unit",
+          "name": "expo_in_out",
+          "rust_name": "ExpoInOut"
+        },
+        {
+          "doc": "Single-Bezier approximation of circular acceleration.",
+          "fields": [],
+          "form": "unit",
+          "name": "circ_in",
+          "rust_name": "CircIn"
+        },
+        {
+          "doc": "Single-Bezier approximation of circular deceleration.",
+          "fields": [],
+          "form": "unit",
+          "name": "circ_out",
+          "rust_name": "CircOut"
+        },
+        {
+          "doc": "Single-Bezier approximation of piecewise circular easing.",
+          "fields": [],
+          "form": "unit",
+          "name": "circ_in_out",
+          "rust_name": "CircInOut"
         }
       ]
     },
@@ -8581,6 +8966,39 @@
       "transparent": false,
       "tuple": false
     },
+    "MotionFrameStep": {
+      "content": null,
+      "doc": "Segment-local sample-and-hold, independent of the base interpolation.\nOne frame means continuous sampling and is canonicalized to Off.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::motion_curve::MotionFrameStep",
+      "tag": "kind",
+      "variants": [
+        {
+          "doc": "Evaluate continuously, including at subframe times.",
+          "fields": [],
+          "form": "record",
+          "name": "off",
+          "rust_name": "Off"
+        },
+        {
+          "doc": "Hold each base-curve sample for this many frames at the clip's FPS.",
+          "fields": [
+            {
+              "doc": "Positive frame count. Zero is invalid; one normalizes to Off.",
+              "name": "frames",
+              "rust_name": "frames",
+              "shape": {
+                "kind": "u32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "every_frames",
+          "rust_name": "EveryFrames"
+        }
+      ]
+    },
     "MotionInterpolation": {
       "content": null,
       "kind": "serde_enum",
@@ -8588,24 +9006,35 @@
       "tag": null,
       "variants": [
         {
+          "doc": "Interpolate linearly between keys before optional frame stepping.",
           "fields": [],
           "form": "unit",
           "name": "linear",
           "rust_name": "Linear"
         },
         {
+          "doc": "Derive monotone smooth handles from adjacent automatic intervals.",
+          "fields": [],
+          "form": "unit",
+          "name": "auto_smooth",
+          "rust_name": "AutoSmooth"
+        },
+        {
+          "doc": "Interpolate using explicitly editable cubic controls.",
           "fields": [],
           "form": "unit",
           "name": "bezier",
           "rust_name": "Bezier"
         },
         {
+          "doc": "Hold the interval's starting value.",
           "fields": [],
           "form": "unit",
           "name": "stepped",
           "rust_name": "Stepped"
         },
         {
+          "doc": "Use the interval's endpoint value, including at the outgoing start key.",
           "fields": [],
           "form": "unit",
           "name": "inverse_stepped",
@@ -8810,105 +9239,43 @@
       "tuple": false
     },
     "MotionSegment": {
-      "content": null,
-      "doc": "Interpolation from a preceding key to a stable endpoint key.",
-      "kind": "serde_enum",
-      "name": "zipzi_contract::document::MotionSegment",
-      "tag": "kind",
-      "variants": [
+      "doc": "An interval from the preceding key to its stable endpoint. Settings belong to\nthe outgoing interval of the preceding key, not to the endpoint identity.",
+      "fields": [
         {
-          "doc": "Interpolate linearly between the preceding and endpoint key.",
-          "fields": [
-            {
-              "doc": "Persistent endpoint key of this segment.",
-              "name": "end",
-              "rust_name": "end",
-              "shape": {
-                "kind": "ref",
-                "name": "MotionKey"
-              },
-              "skip": false
-            }
-          ],
-          "form": "record",
-          "name": "linear",
-          "rust_name": "Linear"
+          "doc": "Persistent endpoint key.",
+          "name": "end",
+          "rust_name": "end",
+          "shape": {
+            "kind": "ref",
+            "name": "MotionKey"
+          },
+          "skip": false
         },
         {
-          "doc": "Interpolate using two time/value control points and the endpoint key.",
-          "fields": [
-            {
-              "doc": "First Bezier control point in seconds/channel-value coordinates; it has no key identity.",
-              "name": "control1",
-              "rust_name": "control1",
-              "shape": {
-                "kind": "ref",
-                "name": "MotionPoint"
-              },
-              "skip": false
-            },
-            {
-              "doc": "Second Bezier control point in seconds/channel-value coordinates; it has no key identity.",
-              "name": "control2",
-              "rust_name": "control2",
-              "shape": {
-                "kind": "ref",
-                "name": "MotionPoint"
-              },
-              "skip": false
-            },
-            {
-              "doc": "Persistent endpoint key of this segment.",
-              "name": "end",
-              "rust_name": "end",
-              "shape": {
-                "kind": "ref",
-                "name": "MotionKey"
-              },
-              "skip": false
-            }
-          ],
-          "form": "record",
-          "name": "bezier",
-          "rust_name": "Bezier"
+          "doc": "Authored base interpolation, preserving automatic mode and preset source.",
+          "name": "curve",
+          "rust_name": "curve",
+          "shape": {
+            "kind": "ref",
+            "name": "MotionCurve"
+          },
+          "skip": false
         },
         {
-          "doc": "Hold the preceding value through the segment before its endpoint.",
-          "fields": [
-            {
-              "doc": "Persistent endpoint key of this segment.",
-              "name": "end",
-              "rust_name": "end",
-              "shape": {
-                "kind": "ref",
-                "name": "MotionKey"
-              },
-              "skip": false
-            }
-          ],
-          "form": "record",
-          "name": "stepped",
-          "rust_name": "Stepped"
-        },
-        {
-          "doc": "Use the endpoint value over the segment before its endpoint.",
-          "fields": [
-            {
-              "doc": "Persistent endpoint key of this segment.",
-              "name": "end",
-              "rust_name": "end",
-              "shape": {
-                "kind": "ref",
-                "name": "MotionKey"
-              },
-              "skip": false
-            }
-          ],
-          "form": "record",
-          "name": "inverse_stepped",
-          "rust_name": "InverseStepped"
+          "doc": "Segment-local sample-and-hold at the owning clip's FPS.",
+          "name": "frame_step",
+          "rust_name": "frame_step",
+          "shape": {
+            "kind": "ref",
+            "name": "MotionFrameStep"
+          },
+          "skip": false
         }
-      ]
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::MotionSegment",
+      "transparent": false,
+      "tuple": false
     },
     "MotionTrack": {
       "doc": "Ordered motion curve targeting one channel, with persistent key identities.",

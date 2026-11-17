@@ -1,4 +1,5 @@
 use super::*;
+use crate::document::MotionCurve;
 use serde_json::json;
 
 fn id(n: u32) -> String {
@@ -49,13 +50,14 @@ fn clip() -> MotionClip {
                 time: 0.,
                 value: 0.,
             },
-            segments: Arc::new(vec![MotionSegment::Linear {
-                end: MotionKey {
+            segments: Arc::new(vec![MotionSegment::new(
+                MotionKey {
                     id: id(33),
                     time: 1.,
                     value: 1.,
                 },
-            }]),
+                MotionCurve::Linear {},
+            )]),
             fade_in: None,
             fade_out: None,
             extensions: Default::default(),
@@ -598,12 +600,15 @@ fn motion_rename_estimate_excludes_shared_curve_payloads() {
         let track = &mut clip.tracks[0];
         track.segments = Arc::new(
             (0..segments)
-                .map(|n| MotionSegment::Linear {
-                    end: MotionKey {
-                        id: id(1000 + n as u32),
-                        time: (n + 1) as f32 / segments as f32,
-                        value: 0.,
-                    },
+                .map(|n| {
+                    MotionSegment::new(
+                        MotionKey {
+                            id: id(1000 + n as u32),
+                            time: (n + 1) as f32 / segments as f32,
+                            value: 0.,
+                        },
+                        MotionCurve::Linear {},
+                    )
                 })
                 .collect(),
         );

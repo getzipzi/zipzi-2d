@@ -20,6 +20,15 @@ resources, attachments, document fields and EditorState. Motion curve commands
 retain the existing interpolation, Bezier split/handle and time-scaling rules;
 command failures abort the entire Draft.
 
+Motion intervals persist Linear/Auto Smooth/Bezier/Step/Inverse Step, optional
+Bezier preset sources and independent Frame Step. Curve commands apply presets,
+frame counts, independent or aligned handles, and tidy controls in one Draft.
+Automatic-to-manual transitions materialize current compiled handles; applying
+an incompatible preset converts restricted Beziers equivalently in that same
+transaction. Splits inherit mode and frame count and restart stepping. Deletion
+inherits the left interval; common translations and time scaling retain valid
+preset sources. Editing a handle or changing normalized shape clears the source.
+
 Commands install affected records through Core Builder tracking. Typed patches
 check expected values; domain operations enforce owner/child locks, preserve or
 remap stable identities and remove orphan EditorState. Forward references may be

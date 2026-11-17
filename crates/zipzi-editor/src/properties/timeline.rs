@@ -82,6 +82,7 @@ fn interpolations(_: &Document) -> Vec<Choice> {
 fn interpolation(kind: MotionInterpolation) -> &'static str {
     match kind {
         MotionInterpolation::Linear => "linear",
+        MotionInterpolation::AutoSmooth => "auto_smooth",
         MotionInterpolation::Bezier => "bezier",
         MotionInterpolation::Stepped => "stepped",
         MotionInterpolation::InverseStepped => "inverse",

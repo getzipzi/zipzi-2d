@@ -2,6 +2,7 @@ use super::common::*;
 use std::sync::Arc;
 use zipzi_animation::{CompiledCurve, MotionPreview, sample_motion_curve};
 use zipzi_contract::kernel_commands::MotionInterpolation;
+use zipzi_core::document::MotionCurve;
 use zipzi_core::document::MotionSegment;
 use zipzi_editor_core::*;
 
@@ -305,11 +306,17 @@ fn clipboard_regenerates_ids_preserves_internal_segments_and_paste_is_one_atomic
     let pasted = clip.tracks.last().unwrap();
     assert_eq!(pasted.initial.time, 0.7);
     assert_ne!(pasted.initial.id, id(10));
-    assert!(matches!(pasted.segments[0], MotionSegment::Bezier { .. }));
+    assert!(matches!(
+        pasted.segments[0],
+        MotionSegment {
+            curve: MotionCurve::Bezier { .. },
+            ..
+        }
+    ));
     assert_eq!(e.timeline_view().unwrap().keys.len(), 2);
     assert_eq!(e.document().unwrap().history_lengths(), (1, 0));
-    let old = CompiledCurve::from(&clip.tracks[0]);
-    let new = CompiledCurve::from(pasted);
+    let old = CompiledCurve::from_track(&clip.tracks[0], clip.fps);
+    let new = CompiledCurve::from_track(pasted, 30.);
     for i in 0..=50 {
         let local = (0.6 - 0.1137) * i as f32 / 50.;
         assert!(

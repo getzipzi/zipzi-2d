@@ -130,8 +130,12 @@ impl MotionPreview {
         let curves = document
             .motion_order()
             .iter()
-            .flat_map(|id| &document.motion(id).expect("ordered motion").tracks)
-            .map(|track| (track.id.clone(), CompiledCurve::from(track)))
+            .flat_map(|id| {
+                let clip = document.motion(id).expect("ordered motion");
+                clip.tracks.iter().map(move |track| {
+                    (track.id.clone(), CompiledCurve::from_track(track, clip.fps))
+                })
+            })
             .collect();
         Self::from_shared(Arc::new(document.clone()), Arc::new(curves))
     }

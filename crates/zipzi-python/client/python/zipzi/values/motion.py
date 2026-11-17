@@ -73,6 +73,50 @@ class MotionContainerGroup(MotionContainer):
     _variant = 'group'
     value: str
 
+class MotionCurve(Value):
+    """Persistent interpolation mode. Auto Smooth controls are derived from its
+    uninterrupted group and are never a second persisted source of authority.
+    """
+    _type = 'MotionCurve'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionCurveLinear(MotionCurve):
+    """Linear interpolation in clip-local time.
+    """
+    _variant = 'linear'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionCurveAutoSmooth(MotionCurve):
+    """Monotone cubic Hermite interpolation with automatic group tangents.
+    """
+    _variant = 'auto_smooth'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionCurveBezier(MotionCurve):
+    """Explicit cubic Bezier controls, optionally carrying a validated preset source.
+
+    Fields:
+    control1: First control in seconds and channel-value units.
+    control2: Second control in seconds and channel-value units.
+    preset: None means Custom; hand edits and curve splits clear this source.
+    """
+    _variant = 'bezier'
+    control1: MotionPoint
+    control2: MotionPoint
+    preset: MotionEasingPreset | None = None
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionCurveStepped(MotionCurve):
+    """Hold the preceding key value until the endpoint.
+    """
+    _variant = 'stepped'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionCurveInverseStepped(MotionCurve):
+    """Use the endpoint value until the next outgoing segment takes over.
+    """
+    _variant = 'inverse_stepped'
+
 class MotionCurveEdit(Value):
     """Key time order and Bezier roles use dedicated curve operations, never row sorting.
     """
@@ -87,7 +131,8 @@ class MotionCurveEditMoveKeys(MotionCurveEdit):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionCurveEditInsertKey(MotionCurveEdit):
-    """InsertKey variant of MotionCurveEdit.
+    """Insert a stable key, splitting the base curve and inheriting its mode and
+    frame count. Each new interval restarts stepping, so its rhythm can change.
     """
     _variant = 'insert_key'
     track: str
@@ -111,6 +156,22 @@ class MotionCurveEditInterpolation(MotionCurveEdit):
     kind: MotionInterpolation
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class MotionCurveEditEasingPreset(MotionCurveEdit):
+    """Apply a shared easing preset to selected outgoing intervals, retaining frame stepping.
+    """
+    _variant = 'easing_preset'
+    keys: tuple[MotionKeyRef, ...]
+    preset: MotionEasingPreset
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionCurveEditFrameStep(MotionCurveEdit):
+    """Set selected outgoing intervals' sample-and-hold; one frame normalizes to Off.
+    """
+    _variant = 'frame_step'
+    keys: tuple[MotionKeyRef, ...]
+    frame_step: MotionFrameStep
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class MotionCurveEditBezierHandle(MotionCurveEdit):
     """BezierHandle variant of MotionCurveEdit.
     """
@@ -120,11 +181,58 @@ class MotionCurveEditBezierHandle(MotionCurveEdit):
     point: MotionPoint
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class MotionCurveEditBezierHandleAligned(MotionCurveEdit):
+    """Move a handle and align the adjacent opposite handle, retaining its
+    length. Automatic intervals involved become explicit Beziers atomically.
+    """
+    _variant = 'bezier_handle_aligned'
+    end: MotionKeyRef
+    handle: MotionBezierHandle
+    point: MotionPoint
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionCurveEditTidyHandles(MotionCurveEdit):
+    """Restore selected outgoing Bezier controls to straight thirds and Custom.
+    """
+    _variant = 'tidy_handles'
+    keys: tuple[MotionKeyRef, ...]
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class MotionCurveEditScaleTime(MotionCurveEdit):
     """ScaleTime variant of MotionCurveEdit.
     """
     _variant = 'scale_time'
     duration: float
+
+class MotionEasingPreset(StrEnum):
+    """Source of explicit Bezier controls. Absence of a source means Custom; imported
+    or manually edited controls must not be matched back to a preset by tolerance.
+    """
+    EASE = 'ease'
+    EASE_IN = 'ease_in'
+    EASE_OUT = 'ease_out'
+    EASE_IN_OUT = 'ease_in_out'
+    CUBIC_IN = 'cubic_in'
+    CUBIC_OUT = 'cubic_out'
+    CUBIC_IN_OUT = 'cubic_in_out'
+    SINE_IN = 'sine_in'
+    SINE_OUT = 'sine_out'
+    SINE_IN_OUT = 'sine_in_out'
+    QUAD_IN = 'quad_in'
+    QUAD_OUT = 'quad_out'
+    QUAD_IN_OUT = 'quad_in_out'
+    QUART_IN = 'quart_in'
+    QUART_OUT = 'quart_out'
+    QUART_IN_OUT = 'quart_in_out'
+    QUINT_IN = 'quint_in'
+    QUINT_OUT = 'quint_out'
+    QUINT_IN_OUT = 'quint_in_out'
+    EXPO_IN = 'expo_in'
+    EXPO_OUT = 'expo_out'
+    EXPO_IN_OUT = 'expo_in_out'
+    CIRC_IN = 'circ_in'
+    CIRC_OUT = 'circ_out'
+    CIRC_IN_OUT = 'circ_in_out'
 
 class MotionEdit(Value):
     """Edit motion clips, registrations, tracks, keys and events independently of playback.
@@ -445,10 +553,33 @@ class MotionEvent(Value):
     value: str
     extensions: Mapping[str, object]
 
+class MotionFrameStep(Value):
+    """Segment-local sample-and-hold, independent of the base interpolation.
+    One frame means continuous sampling and is canonicalized to Off.
+    """
+    _type = 'MotionFrameStep'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionFrameStepOff(MotionFrameStep):
+    """Evaluate continuously, including at subframe times.
+    """
+    _variant = 'off'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionFrameStepEveryFrames(MotionFrameStep):
+    """Hold each base-curve sample for this many frames at the clip's FPS.
+
+    Fields:
+    frames: Positive frame count. Zero is invalid; one normalizes to Off.
+    """
+    _variant = 'every_frames'
+    frames: int
+
 class MotionInterpolation(StrEnum):
     """MotionInterpolation choices.
     """
     LINEAR = 'linear'
+    AUTO_SMOOTH = 'auto_smooth'
     BEZIER = 'bezier'
     STEPPED = 'stepped'
     INVERSE_STEPPED = 'inverse_stepped'
@@ -518,54 +649,20 @@ class MotionRegistration(Value):
     sound: resources.AttachmentRef | None = None
     extensions: Mapping[str, object]
 
+@dataclass(frozen=True, kw_only=True, repr=False)
 class MotionSegment(Value):
-    """Interpolation from a preceding key to a stable endpoint key.
+    """An interval from the preceding key to its stable endpoint. Settings belong to
+    the outgoing interval of the preceding key, not to the endpoint identity.
+
+    Fields:
+    end: Persistent endpoint key.
+    curve: Authored base interpolation, preserving automatic mode and preset source.
+    frame_step: Segment-local sample-and-hold at the owning clip's FPS.
     """
     _type = 'MotionSegment'
-
-@dataclass(frozen=True, kw_only=True, repr=False)
-class MotionSegmentLinear(MotionSegment):
-    """Interpolate linearly between the preceding and endpoint key.
-
-    Fields:
-    end: Persistent endpoint key of this segment.
-    """
-    _variant = 'linear'
     end: MotionKey
-
-@dataclass(frozen=True, kw_only=True, repr=False)
-class MotionSegmentBezier(MotionSegment):
-    """Interpolate using two time/value control points and the endpoint key.
-
-    Fields:
-    control1: First Bezier control point in seconds/channel-value coordinates; it has no key identity.
-    control2: Second Bezier control point in seconds/channel-value coordinates; it has no key identity.
-    end: Persistent endpoint key of this segment.
-    """
-    _variant = 'bezier'
-    control1: MotionPoint
-    control2: MotionPoint
-    end: MotionKey
-
-@dataclass(frozen=True, kw_only=True, repr=False)
-class MotionSegmentStepped(MotionSegment):
-    """Hold the preceding value through the segment before its endpoint.
-
-    Fields:
-    end: Persistent endpoint key of this segment.
-    """
-    _variant = 'stepped'
-    end: MotionKey
-
-@dataclass(frozen=True, kw_only=True, repr=False)
-class MotionSegmentInverseStepped(MotionSegment):
-    """Use the endpoint value over the segment before its endpoint.
-
-    Fields:
-    end: Persistent endpoint key of this segment.
-    """
-    _variant = 'inverse_stepped'
-    end: MotionKey
+    curve: MotionCurve
+    frame_step: MotionFrameStep
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionTrack(Value):
@@ -644,17 +741,20 @@ class MotionTrackTargetUnresolved(MotionTrackTarget):
 
 __all__ = [
     'MotionBezierHandle', 'MotionClip', 'MotionContainer', 'MotionContainerRoot',
-    'MotionContainerGroup', 'MotionCurveEdit', 'MotionCurveEditMoveKeys', 'MotionCurveEditInsertKey',
-    'MotionCurveEditDeleteKeys', 'MotionCurveEditInterpolation', 'MotionCurveEditBezierHandle', 'MotionCurveEditScaleTime',
-    'MotionEdit', 'MotionEditCreate', 'MotionEditCreateGroup', 'MotionEditRenameGroup',
-    'MotionEditReorderGroups', 'MotionEditRegister', 'MotionEditPatchRegistration', 'MotionEditMoveRegistrations',
-    'MotionEditDuplicateRegistrations', 'MotionEditDeleteRegistrations', 'MotionEditDissolveGroup', 'MotionEditDeleteGroup',
-    'MotionEditDuplicateGroup', 'MotionEditDuplicateClip', 'MotionEditDeleteClip', 'MotionEditReorderTracks',
-    'MotionEditCreateTrack', 'MotionEditSetTrackTarget', 'MotionEditMoveTracks', 'MotionEditDeleteTracks',
-    'MotionEditTransferKeys', 'MotionEditSetEvent', 'MotionEditDeleteEvents', 'MotionEditMoveEvents',
-    'MotionEvent', 'MotionInterpolation', 'MotionKey', 'MotionKeyMove',
-    'MotionKeyRef', 'MotionPoint', 'MotionRegistration', 'MotionSegment',
-    'MotionSegmentLinear', 'MotionSegmentBezier', 'MotionSegmentStepped', 'MotionSegmentInverseStepped',
-    'MotionTrack', 'MotionTrackTarget', 'MotionTrackTargetUnspecified', 'MotionTrackTargetModel',
-    'MotionTrackTargetParameter', 'MotionTrackTargetPartOpacity', 'MotionTrackTargetUnresolved',
+    'MotionContainerGroup', 'MotionCurve', 'MotionCurveLinear', 'MotionCurveAutoSmooth',
+    'MotionCurveBezier', 'MotionCurveStepped', 'MotionCurveInverseStepped', 'MotionCurveEdit',
+    'MotionCurveEditMoveKeys', 'MotionCurveEditInsertKey', 'MotionCurveEditDeleteKeys', 'MotionCurveEditInterpolation',
+    'MotionCurveEditEasingPreset', 'MotionCurveEditFrameStep', 'MotionCurveEditBezierHandle', 'MotionCurveEditBezierHandleAligned',
+    'MotionCurveEditTidyHandles', 'MotionCurveEditScaleTime', 'MotionEasingPreset', 'MotionEdit',
+    'MotionEditCreate', 'MotionEditCreateGroup', 'MotionEditRenameGroup', 'MotionEditReorderGroups',
+    'MotionEditRegister', 'MotionEditPatchRegistration', 'MotionEditMoveRegistrations', 'MotionEditDuplicateRegistrations',
+    'MotionEditDeleteRegistrations', 'MotionEditDissolveGroup', 'MotionEditDeleteGroup', 'MotionEditDuplicateGroup',
+    'MotionEditDuplicateClip', 'MotionEditDeleteClip', 'MotionEditReorderTracks', 'MotionEditCreateTrack',
+    'MotionEditSetTrackTarget', 'MotionEditMoveTracks', 'MotionEditDeleteTracks', 'MotionEditTransferKeys',
+    'MotionEditSetEvent', 'MotionEditDeleteEvents', 'MotionEditMoveEvents', 'MotionEvent',
+    'MotionFrameStep', 'MotionFrameStepOff', 'MotionFrameStepEveryFrames', 'MotionInterpolation',
+    'MotionKey', 'MotionKeyMove', 'MotionKeyRef', 'MotionPoint',
+    'MotionRegistration', 'MotionSegment', 'MotionTrack', 'MotionTrackTarget',
+    'MotionTrackTargetUnspecified', 'MotionTrackTargetModel', 'MotionTrackTargetParameter', 'MotionTrackTargetPartOpacity',
+    'MotionTrackTargetUnresolved',
 ]

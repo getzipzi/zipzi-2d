@@ -56,7 +56,7 @@ fn beziers_match_official_framework_cpu_samples() {
         for (index, wanted) in expected.into_iter().enumerate() {
             let time = index as f32 * 0.125;
             let value = sample_motion_curve(
-                &CompiledCurve::from(&motion.tracks[0]),
+                &CompiledCurve::from_track(&motion.tracks[0], motion.fps),
                 time,
                 motion.restricted_beziers,
             );
@@ -72,7 +72,7 @@ fn beziers_match_official_framework_cpu_samples() {
 #[test]
 fn linear_stepped_and_inverse_stepped_use_framework_boundaries() {
     let motion = decode_motion3(TYPED).unwrap();
-    let compiled = CompiledCurve::from(&motion.tracks[0]);
+    let compiled = CompiledCurve::from_track(&motion.tracks[0], motion.fps);
     let curve = &compiled;
     assert!((sample_motion_curve(curve, 0.125, false) - 0.5).abs() < 0.00001);
     assert!((sample_motion_curve(curve, 0.6, false) - 0.5).abs() < 0.00001);
@@ -85,15 +85,15 @@ fn mixed_segment_boundaries_choose_the_outgoing_segment_and_hold_the_tail() {
     use zipzi_animation::CompiledSegment;
     use zipzi_core::document::MotionPoint;
     let point = |time, value| MotionPoint { time, value };
-    let curve = CompiledCurve {
-        initial: point(0., 0.),
-        segments: std::sync::Arc::new(vec![
+    let curve = CompiledCurve::new(
+        point(0., 0.),
+        std::sync::Arc::new(vec![
             CompiledSegment::Linear { end: point(1., 1.) },
             CompiledSegment::Stepped { end: point(2., 2.) },
             CompiledSegment::InverseStepped { end: point(3., 3.) },
             CompiledSegment::Linear { end: point(4., 4.) },
         ]),
-    };
+    );
     for restricted in [false, true] {
         for (time, expected) in [
             (-1., 0.),
@@ -115,10 +115,7 @@ fn mixed_segment_boundaries_choose_the_outgoing_segment_and_hold_the_tail() {
             );
         }
     }
-    let single = CompiledCurve {
-        initial: point(0.25, 0.75),
-        segments: Default::default(),
-    };
+    let single = CompiledCurve::new(point(0.25, 0.75), Default::default());
     assert_eq!(sample_motion_curve(&single, 0., false), 0.75);
     assert_eq!(sample_motion_curve(&single, 10., false), 0.75);
 }

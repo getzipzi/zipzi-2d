@@ -157,3 +157,46 @@ fn bulk_motion_validation_excludes_only_the_current_clips_nested_keys() {
     other.tracks[0].initial.time = f32::NAN;
     assert_eq!(d.validate_motion(&other).code, "INVALID_MOTION_POINT");
 }
+
+#[test]
+fn motion_curve_validation_checks_frame_counts_and_preset_provenance() {
+    use crate::document::{
+        MotionCurve, MotionEasingPreset, MotionFrameStep, MotionKey, MotionSegment,
+    };
+    let d = fixture();
+    let mut clip = clip();
+    let start = clip.tracks[0].initial.point();
+    let end = MotionKey {
+        id: id(110),
+        time: 1.,
+        value: 1.,
+    };
+    let [control1, control2] = MotionEasingPreset::EaseIn
+        .mapped_controls(start, end.point())
+        .unwrap();
+    clip.tracks[0].segments = Arc::new(vec![MotionSegment::new(
+        end,
+        MotionCurve::Bezier {
+            control1,
+            control2,
+            preset: Some(MotionEasingPreset::EaseIn),
+        },
+    )]);
+    assert!(d.validate_motion(&clip).is_ok());
+    let mut bad = clip.clone();
+    Arc::make_mut(&mut bad.tracks[0].segments)[0].frame_step =
+        MotionFrameStep::EveryFrames { frames: 0 };
+    assert_eq!(d.validate_motion(&bad).code, "INVALID_MOTION_FRAME_STEP");
+    let mut bad = clip.clone();
+    let MotionCurve::Bezier { control1, .. } =
+        &mut Arc::make_mut(&mut bad.tracks[0].segments)[0].curve
+    else {
+        panic!()
+    };
+    control1.value += 0.01;
+    assert_eq!(d.validate_motion(&bad).code, "INVALID_MOTION_EASING_PRESET");
+    clip.restricted_beziers = true;
+    assert_eq!(d.validate_motion(&clip).code, "RESTRICTED_BEZIER_PRESET");
+    Arc::make_mut(&mut clip.tracks[0].segments)[0].curve = MotionCurve::AutoSmooth {};
+    assert!(d.validate_motion(&clip).is_ok());
+}

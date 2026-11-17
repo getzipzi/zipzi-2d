@@ -178,7 +178,7 @@ fn unified_flags_are_atomic_sparse_metadata_with_history_and_cleanup() {
     let bytes =
         archive::native_bytes_with_resources(s.snapshot().document(), s.snapshot().resources());
     let wire = archive::project_json(&bytes);
-    assert_eq!(wire["format_version"], 22);
+    assert_eq!(wire["format_version"], 23);
     assert!(wire["document"].get("object_locks").is_none());
     assert!(wire["document"].get("deformer_display").is_none());
     let loaded = archive::load_native(&bytes).unwrap();

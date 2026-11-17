@@ -1,4 +1,5 @@
 use super::*;
+use crate::document::MotionCurve;
 use zipzi_contract::document::MotionSourceRange;
 impl Model<'_> {
     pub(crate) fn validate_motion(&self, clip: &MotionClip) -> Status {
@@ -153,6 +154,7 @@ impl Model<'_> {
             // editable Cubism sources explicitly preserve their wider key range.
             let end_tolerance = (0.5 / clip.fps).max(0.0001);
             let mut previous = track.initial.time;
+            let mut previous_value = track.initial.value;
             for (segment_index, segment) in track.segments.iter().enumerate() {
                 let end = segment.end();
                 if !end.time.is_finite()
@@ -165,8 +167,17 @@ impl Model<'_> {
                         format!("{}.tracks[{index}].segments[{segment_index}]", clip.id),
                     );
                 }
-                if let MotionSegment::Bezier {
-                    control1, control2, ..
+                if segment.frame_step.normalized().is_none() {
+                    return Status::error("INVALID_MOTION_FRAME_STEP", &end.id);
+                }
+                if let MotionSegment {
+                    curve:
+                        MotionCurve::Bezier {
+                            control1,
+                            control2,
+                            preset,
+                        },
+                    ..
                 } = segment
                 {
                     if ![control1.time, control1.value, control2.time, control2.value]
@@ -182,8 +193,23 @@ impl Model<'_> {
                             format!("{}.tracks[{index}].segments[{segment_index}]", clip.id),
                         );
                     }
+                    if let Some(preset) = preset {
+                        let start = MotionPoint {
+                            time: previous,
+                            value: previous_value,
+                        };
+                        if preset.mapped_controls(start, end.point())
+                            != Some([*control1, *control2])
+                        {
+                            return Status::error("INVALID_MOTION_EASING_PRESET", &end.id);
+                        }
+                        if clip.restricted_beziers && !preset.supports_restricted_time() {
+                            return Status::error("RESTRICTED_BEZIER_PRESET", &end.id);
+                        }
+                    }
                 }
                 previous = end.time;
+                previous_value = end.value;
             }
         }
         for (index, event) in clip.events.iter().enumerate() {

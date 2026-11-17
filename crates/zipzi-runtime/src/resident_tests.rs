@@ -1,5 +1,6 @@
 use super::*;
 use std::{sync::mpsc, time::Duration};
+use zipzi_core::document::MotionCurve;
 use zipzi_core::Parameter;
 use zipzi_sdk::{NameTarget, ResourceStore};
 
@@ -1151,13 +1152,14 @@ fn timeline_preview_resets_from_baseline_and_preserves_last_valid_curve() {
                 time: 0.,
                 value: 0.,
             },
-            segments: Arc::new(vec![MotionSegment::Linear {
-                end: MotionKey {
+            segments: Arc::new(vec![MotionSegment::new(
+                MotionKey {
                     id: id(33),
                     time: 1.,
                     value: 1.,
                 },
-            }]),
+                MotionCurve::Linear {},
+            )]),
             fade_in: None,
             fade_out: None,
             extensions: Default::default(),
@@ -1593,13 +1595,14 @@ fn sampled_animation_reports_requested_time_and_playback_curve_coordinate_withou
                         time: 0.,
                         value: -20.,
                     },
-                    segments: Arc::new(vec![MotionSegment::Linear {
-                        end: MotionKey {
+                    segments: Arc::new(vec![MotionSegment::new(
+                        MotionKey {
                             id: id(33),
                             time: 1.,
                             value: 20.,
                         },
-                    }]),
+                        MotionCurve::Linear {},
+                    )]),
                     fade_in: Some(0.),
                     fade_out: Some(0.),
                     extensions: Default::default(),

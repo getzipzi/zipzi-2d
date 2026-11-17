@@ -48,12 +48,9 @@ pub fn motion_easing_controls(
     if end.time <= start.time {
         return Err(MotionCurveError::UnorderedKeys);
     }
-    Ok(preset.definition().controls.map(|[x, y]| MotionPoint {
-        time: (f64::from(start.time) + f64::from(x) * (f64::from(end.time) - f64::from(start.time)))
-            as f32,
-        value: (f64::from(start.value)
-            + f64::from(y) * (f64::from(end.value) - f64::from(start.value))) as f32,
-    }))
+    Ok(preset
+        .mapped_controls(start, end)
+        .expect("validated preset endpoints"))
 }
 
 /// Compile one uninterrupted Auto Smooth group into explicit cubic Beziers.
@@ -109,10 +106,7 @@ pub fn compile_motion_auto_smooth(
         });
         slope = next_slope;
     }
-    Ok(CompiledCurve {
-        initial,
-        segments: Arc::new(segments),
-    })
+    Ok(CompiledCurve::new(initial, Arc::new(segments)))
 }
 
 /// Quantize a selected segment's sample time, anchored to that segment's start.

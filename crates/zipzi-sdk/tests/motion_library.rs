@@ -1,4 +1,5 @@
 use zipzi_core::document::AllocateModelMetadata;
+use zipzi_core::document::MotionCurve;
 use zipzi_core::document::{
     AttachmentEdit as A, AttachmentRef, MotionContainer as C, MotionEdit as E,
     MotionTrackTarget as T,
@@ -290,21 +291,24 @@ fn bezier_track_transfer_rejects_a_different_runtime_mode_atomically() {
         },
     );
     let mut clip = s.snapshot().document().motion(&id(10)).cloned().unwrap();
-    clip.tracks[0].segments = std::sync::Arc::new(vec![MotionSegment::Bezier {
-        control1: MotionPoint {
-            time: 0.1,
-            value: 0.8,
-        },
-        control2: MotionPoint {
-            time: 0.2,
-            value: 0.9,
-        },
-        end: MotionKey {
+    clip.tracks[0].segments = std::sync::Arc::new(vec![MotionSegment::new(
+        MotionKey {
             id: id(32),
             time: 1.,
             value: 1.,
         },
-    }]);
+        MotionCurve::Bezier {
+            control1: MotionPoint {
+                time: 0.1,
+                value: 0.8,
+            },
+            control2: MotionPoint {
+                time: 0.2,
+                value: 0.9,
+            },
+            preset: None,
+        },
+    )]);
     {
         let mut draft = s.begin_draft();
         draft
@@ -1304,12 +1308,15 @@ fn library_planning_shares_curves_in_a_large_library() {
                             },
                             segments: std::sync::Arc::new(
                                 (1..4)
-                                    .map(|k| MotionSegment::Linear {
-                                        end: MotionKey {
-                                            id: id(base + 1 + k),
-                                            time: k as f32 * 0.5,
-                                            value: 0.5,
-                                        },
+                                    .map(|k| {
+                                        MotionSegment::new(
+                                            MotionKey {
+                                                id: id(base + 1 + k),
+                                                time: k as f32 * 0.5,
+                                                value: 0.5,
+                                            },
+                                            MotionCurve::Linear {},
+                                        )
                                     })
                                     .collect(),
                             ),

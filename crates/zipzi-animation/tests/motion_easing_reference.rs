@@ -124,10 +124,7 @@ fn runtime_preset_samples_match_an_independent_inverse_time_reference() {
             control2,
             end,
         };
-        let curve = CompiledCurve {
-            initial: start,
-            segments: Arc::new(vec![segment]),
-        };
+        let curve = CompiledCurve::new(start, Arc::new(vec![segment]));
         let mut maximum = 0_f64;
         for i in 0..=8192 {
             let time = i as f32 / 8192.;

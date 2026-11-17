@@ -1,4 +1,5 @@
 use super::*;
+use zipzi_core::document::MotionCurve;
 use zipzi_core::document::MotionEvent;
 use zipzi_core::{state::DocumentState, Canvas, Parameter, Vec2};
 fn id(n: u32) -> String {
@@ -42,8 +43,11 @@ fn session() -> DocumentBuilder {
                 initial: key(100 + index * 10, 0., 0.),
                 segments: Arc::new(
                     (1..=4)
-                        .map(|i| MotionSegment::Linear {
-                            end: key(100 + index * 10 + i, i as f32 * 0.25, (i % 2) as f32),
+                        .map(|i| {
+                            MotionSegment::new(
+                                key(100 + index * 10 + i, i as f32 * 0.25, (i % 2) as f32),
+                                MotionCurve::Linear {},
+                            )
                         })
                         .collect(),
                 ),
@@ -89,23 +93,26 @@ fn bezier_session(restricted: bool) -> DocumentBuilder {
     let mut s = session();
     let mut clip = s.motion(&id(3)).unwrap().clone();
     clip.restricted_beziers = restricted;
-    clip.tracks[0].segments = Arc::new(vec![MotionSegment::Bezier {
-        control1: MotionPoint {
-            time: 0.2,
-            value: 1.8,
+    clip.tracks[0].segments = Arc::new(vec![MotionSegment::new(
+        key(104, 1., 1.),
+        MotionCurve::Bezier {
+            control1: MotionPoint {
+                time: 0.2,
+                value: 1.8,
+            },
+            control2: MotionPoint {
+                time: 0.9,
+                value: -1.2,
+            },
+            preset: None,
         },
-        control2: MotionPoint {
-            time: 0.9,
-            value: -1.2,
-        },
-        end: key(104, 1., 1.),
-    }]);
+    )]);
     s.replace_authored_motion(clip).unwrap();
     s
 }
 
 fn samples(clip: &MotionClip) -> Vec<f32> {
-    let curve = CompiledCurve::from(&clip.tracks[0]);
+    let curve = CompiledCurve::from_track(&clip.tracks[0], clip.fps);
     (0..=1000)
         .map(|i| sample_motion_curve(&curve, i as f32 / 1000., clip.restricted_beziers))
         .collect()
@@ -133,7 +140,7 @@ fn insertion_preserves_all_four_interpolations_including_step_boundaries() {
         assert_samples_equal(&before, &samples(c.clip()));
         assert_eq!(c.clip().tracks[0].segments[0].end().id, id(500));
         assert_eq!(c.clip().tracks[0].segments[1].end().id, id(101));
-        let curve = CompiledCurve::from(&c.clip().tracks[0]);
+        let curve = CompiledCurve::from_track(&c.clip().tracks[0], c.clip().fps);
         assert_eq!(sample_motion_curve(&curve, 0.25, false), before[250]);
     }
 }
@@ -151,10 +158,13 @@ fn de_casteljau_preserves_restricted_and_ordinary_bezier_samples() {
             if restricted {
                 let mut start = 0.;
                 for segment in c.clip().tracks[0].segments.iter() {
-                    let MotionSegment::Bezier {
-                        control1,
-                        control2,
+                    let MotionSegment {
                         end,
+                        curve:
+                            MotionCurve::Bezier {
+                                control1, control2, ..
+                            },
+                        ..
                     } = segment
                     else {
                         panic!()
@@ -179,25 +189,41 @@ fn insertion_value_change_moves_only_adjoining_handles() {
     written
         .insert_key(&s, &id(10), &id(500), 0.4, Some(0.8))
         .unwrap();
-    let [MotionSegment::Bezier {
-        control1: a1,
-        control2: a2,
+    let [MotionSegment {
+        curve:
+            MotionCurve::Bezier {
+                control1: a1,
+                control2: a2,
+                ..
+            },
         ..
-    }, MotionSegment::Bezier {
-        control1: b1,
-        control2: b2,
+    }, MotionSegment {
+        curve:
+            MotionCurve::Bezier {
+                control1: b1,
+                control2: b2,
+                ..
+            },
         ..
     }] = written.clip().tracks[0].segments.as_slice()
     else {
         panic!()
     };
-    let [MotionSegment::Bezier {
-        control1: x1,
-        control2: x2,
+    let [MotionSegment {
+        curve:
+            MotionCurve::Bezier {
+                control1: x1,
+                control2: x2,
+                ..
+            },
         ..
-    }, MotionSegment::Bezier {
-        control1: y1,
-        control2: y2,
+    }, MotionSegment {
+        curve:
+            MotionCurve::Bezier {
+                control1: y1,
+                control2: y2,
+                ..
+            },
         ..
     }] = split.clip().tracks[0].segments.as_slice()
     else {
@@ -249,8 +275,8 @@ fn multi_delete_uses_final_survivors_and_removes_empty_track() {
         assert_eq!(c, reverse);
         assert_eq!(c.clip().tracks[0].segments[0].end().id, id(103));
         assert_eq!(
-            std::mem::discriminant(&c.clip().tracks[0].segments[0]),
-            std::mem::discriminant(&c.clip().tracks[0].segments[1])
+            std::mem::discriminant(&c.clip().tracks[0].segments[0].curve),
+            std::mem::discriminant(&c.clip().tracks[0].segments[1].curve)
         );
         c.delete_keys(&s, &[reference(0, 0), reference(0, 3), reference(0, 4)])
             .unwrap();
@@ -260,7 +286,7 @@ fn multi_delete_uses_final_survivors_and_removes_empty_track() {
 }
 
 #[test]
-fn mixed_deletion_connects_linearly_and_keeps_outer_bezier_values_when_merging() {
+fn deletion_inherits_the_left_curve_and_keeps_outer_bezier_values_when_merging() {
     let s = session();
     let mut c = candidate(&s);
     c.set_interpolation(&s, &[reference(0, 0)], MotionInterpolation::Bezier)
@@ -268,7 +294,10 @@ fn mixed_deletion_connects_linearly_and_keeps_outer_bezier_values_when_merging()
     c.delete_keys(&s, &[reference(0, 1)]).unwrap();
     assert!(matches!(
         c.clip().tracks[0].segments[0],
-        MotionSegment::Linear { .. }
+        MotionSegment {
+            curve: MotionCurve::Bezier { .. },
+            ..
+        }
     ));
     let mut c = candidate(&s);
     c.set_interpolation(
@@ -277,16 +306,28 @@ fn mixed_deletion_connects_linearly_and_keeps_outer_bezier_values_when_merging()
         MotionInterpolation::Bezier,
     )
     .unwrap();
-    let MotionSegment::Bezier { control1, .. } = c.clip().tracks[0].segments[0] else {
+    let MotionSegment {
+        curve: MotionCurve::Bezier { control1, .. },
+        ..
+    } = c.clip().tracks[0].segments[0]
+    else {
         panic!()
     };
-    let MotionSegment::Bezier { control2, .. } = c.clip().tracks[0].segments[1] else {
+    let MotionSegment {
+        curve: MotionCurve::Bezier { control2, .. },
+        ..
+    } = c.clip().tracks[0].segments[1]
+    else {
         panic!()
     };
     c.delete_keys(&s, &[reference(0, 1)]).unwrap();
-    let MotionSegment::Bezier {
-        control1: first,
-        control2: second,
+    let MotionSegment {
+        curve:
+            MotionCurve::Bezier {
+                control1: first,
+                control2: second,
+                ..
+            },
         ..
     } = c.clip().tracks[0].segments[0]
     else {
@@ -328,8 +369,11 @@ fn restricted_handle_time_is_locked_and_endpoint_edits_normalize_only_touched_se
         },
     )
     .unwrap();
-    let MotionSegment::Bezier {
-        control1, control2, ..
+    let MotionSegment {
+        curve: MotionCurve::Bezier {
+            control1, control2, ..
+        },
+        ..
     } = c.clip().tracks[0].segments[0]
     else {
         panic!()
@@ -352,8 +396,11 @@ fn common_endpoint_translation_translates_entire_ordinary_curve() {
     let mut c = candidate(&s);
     c.move_keys(&s, &[movement(0, 0, 0.5, 0.2), movement(0, 4, 1.5, 1.2)])
         .unwrap();
-    let MotionSegment::Bezier {
-        control1, control2, ..
+    let MotionSegment {
+        curve: MotionCurve::Bezier {
+            control1, control2, ..
+        },
+        ..
     } = c.clip().tracks[0].segments[0]
     else {
         panic!()
@@ -368,8 +415,11 @@ fn common_endpoint_translation_translates_entire_ordinary_curve() {
 fn non_monotonic_bezier_supports_value_edits_and_rejects_splits_and_time_edits() {
     let mut s = bezier_session(false);
     let mut clip = s.motion(&id(3)).unwrap().clone();
-    let MotionSegment::Bezier {
-        control1, control2, ..
+    let MotionSegment {
+        curve: MotionCurve::Bezier {
+            control1, control2, ..
+        },
+        ..
     } = &mut Arc::make_mut(&mut clip.tracks[0].segments)[0]
     else {
         panic!()
@@ -393,8 +443,11 @@ fn non_monotonic_bezier_supports_value_edits_and_rejects_splits_and_time_edits()
         "NON_MONOTONIC_MOTION_BEZIER"
     );
     c.move_keys(&s, &[movement(0, 4, 1., 0.8)]).unwrap();
-    let MotionSegment::Bezier {
-        control1, control2, ..
+    let MotionSegment {
+        curve: MotionCurve::Bezier {
+            control1, control2, ..
+        },
+        ..
     } = c.clip().tracks[0].segments[0]
     else {
         panic!()
@@ -410,10 +463,12 @@ fn ill_conditioned_f32_bezier_splits_preserve_samples_or_reject_atomically() {
         let mut clip = s.motion(&id(3)).unwrap().clone();
         clip.duration = start + span + 1.;
         clip.tracks[0].initial.time = start;
-        let MotionSegment::Bezier {
-            control1,
-            control2,
+        let MotionSegment {
             end,
+            curve: MotionCurve::Bezier {
+                control1, control2, ..
+            },
+            ..
         } = &mut Arc::make_mut(&mut clip.tracks[0].segments)[0]
         else {
             panic!()
@@ -424,11 +479,11 @@ fn ill_conditioned_f32_bezier_splits_preserve_samples_or_reject_atomically() {
         s.replace_authored_motion(clip).unwrap();
         let mut c = candidate(&s);
         let original = c.clone();
-        let before = CompiledCurve::from(&original.clip().tracks[0]);
+        let before = CompiledCurve::from_track(&original.clip().tracks[0], original.clip().fps);
         let inserted = c.insert_key(&s, &id(10), &id(500), start + span * 0.4, None);
         match inserted {
             Ok(()) => {
-                let after = CompiledCurve::from(&c.clip().tracks[0]);
+                let after = CompiledCurve::from_track(&c.clip().tracks[0], c.clip().fps);
                 for i in 0..=200 {
                     let time = (f64::from(start) + f64::from(span) * f64::from(i) / 200.) as f32;
                     let (a, b) = (
@@ -557,4 +612,518 @@ fn curve_command_honors_owned_key_locks_and_deletion_cleans_editor_flags() {
                 .contains_key(&id(101)));
         }
     }
+}
+
+#[test]
+fn authoring_presets_map_per_interval_retain_steps_and_clear_on_manual_edits() {
+    let s = session();
+    for preset in MotionEasingPreset::ALL {
+        let mut c = candidate(&s);
+        let keys = [reference(0, 0), reference(0, 1), reference(1, 0)];
+        c.move_keys(&s, &[movement(1, 1, 0.25, 0.)]).unwrap();
+        c.set_frame_step(&s, &keys, MotionFrameStep::from_frames(3).unwrap())
+            .unwrap();
+        c.set_easing_preset(&s, &keys, preset).unwrap();
+        for (track, index) in [(0, 0), (0, 1), (1, 0)] {
+            let track = &c.clip().tracks[track];
+            let segment = &track.segments[index];
+            let MotionCurve::Bezier {
+                control1,
+                control2,
+                preset: Some(source),
+            } = segment.curve
+            else {
+                panic!()
+            };
+            assert_eq!(source, preset);
+            assert_eq!(
+                [control1, control2],
+                preset
+                    .mapped_controls(
+                        track.keys().nth(index).unwrap().point(),
+                        segment.end.point()
+                    )
+                    .unwrap()
+            );
+            assert_eq!(
+                segment.frame_step,
+                MotionFrameStep::EveryFrames { frames: 3 }
+            );
+        }
+        let MotionCurve::Bezier { control1, .. } = c.clip().tracks[0].segments[0].curve else {
+            panic!()
+        };
+        c.set_handle(&s, &reference(0, 1), MotionBezierHandle::Control1, control1)
+            .unwrap();
+        assert!(matches!(
+            c.clip().tracks[0].segments[0].curve,
+            MotionCurve::Bezier { preset: None, .. }
+        ));
+        c.set_interpolation(&s, &keys, MotionInterpolation::Stepped)
+            .unwrap();
+        c.set_interpolation(&s, &keys, MotionInterpolation::Bezier)
+            .unwrap();
+        assert!(matches!(
+            c.clip().tracks[0].segments[0].curve,
+            MotionCurve::Bezier { preset: None, .. }
+        ));
+        assert_eq!(
+            c.clip().tracks[0].segments[0].frame_step,
+            MotionFrameStep::EveryFrames { frames: 3 }
+        );
+    }
+}
+
+#[test]
+fn authoring_automatic_groups_recompute_and_materialize_the_original_handles() {
+    let s = session();
+    let mut c = candidate(&s);
+    let keys: Vec<_> = (0..=4).map(|i| reference(0, i)).collect();
+    c.move_keys(&s, &[movement(0, 1, 0.2, 0.8), movement(0, 2, 0.5, 0.9)])
+        .unwrap();
+    c.set_interpolation(&s, &keys, MotionInterpolation::AutoSmooth)
+        .unwrap();
+    let before = samples(c.clip());
+    let compiled = CompiledCurve::from_track(&c.clip().tracks[0], c.clip().fps);
+    c.set_interpolation(&s, &keys, MotionInterpolation::Bezier)
+        .unwrap();
+    assert_samples_equal(&before, &samples(c.clip()));
+    for (source, compiled) in c.clip().tracks[0]
+        .segments
+        .iter()
+        .zip(compiled.segments.iter())
+    {
+        let MotionCurve::Bezier {
+            control1,
+            control2,
+            preset: None,
+        } = source.curve
+        else {
+            panic!()
+        };
+        let CompiledSegment::Bezier {
+            control1: first,
+            control2: second,
+            ..
+        } = compiled
+        else {
+            panic!()
+        };
+        assert_eq!((control1, control2), (*first, *second));
+    }
+    c.set_interpolation(&s, &keys, MotionInterpolation::AutoSmooth)
+        .unwrap();
+    let compiled = CompiledCurve::from_track(&c.clip().tracks[0], c.clip().fps);
+    let CompiledSegment::Bezier { control1, .. } = compiled.segments[1] else {
+        panic!()
+    };
+    c.set_handle(&s, &reference(0, 2), MotionBezierHandle::Control1, control1)
+        .unwrap();
+    let after = CompiledCurve::from_track(&c.clip().tracks[0], c.clip().fps);
+    assert_eq!(after.segments[1], compiled.segments[1]);
+    assert!(matches!(
+        c.clip().tracks[0].segments[1].curve,
+        MotionCurve::Bezier { preset: None, .. }
+    ));
+    assert!(matches!(
+        c.clip().tracks[0].segments[2].curve,
+        MotionCurve::AutoSmooth {}
+    ));
+}
+
+#[test]
+fn authoring_frame_step_inherits_through_structure_edits_and_normalizes_one() {
+    let s = session();
+    let mut c = candidate(&s);
+    c.set_easing_preset(&s, &[reference(0, 0)], MotionEasingPreset::CubicOut)
+        .unwrap();
+    c.set_frame_step(
+        &s,
+        &[reference(0, 0)],
+        MotionFrameStep::from_frames(2).unwrap(),
+    )
+    .unwrap();
+    let before = CompiledCurve::from_track(&c.clip().tracks[0], c.clip().fps);
+    c.insert_key(&s, &id(10), &id(500), 0.1, None).unwrap();
+    let after = CompiledCurve::from_track(&c.clip().tracks[0], c.clip().fps);
+    for i in 0..=100 {
+        let t = i as f32 / 100.;
+        assert!(
+            (sample_motion_curve_base(&before, t, false)
+                - sample_motion_curve_base(&after, t, false))
+            .abs()
+                < 0.0003
+        );
+    }
+    assert_ne!(
+        sample_motion_curve(&before, 0.12, false),
+        sample_motion_curve(&after, 0.12, false)
+    );
+    for segment in &c.clip().tracks[0].segments[..2] {
+        assert_eq!(
+            segment.frame_step,
+            MotionFrameStep::EveryFrames { frames: 2 }
+        );
+        assert!(matches!(
+            segment.curve,
+            MotionCurve::Bezier { preset: None, .. }
+        ));
+    }
+    let inserted = MotionKeyRef {
+        track_id: id(10),
+        key_id: id(500),
+    };
+    c.set_frame_step(
+        &s,
+        &[reference(0, 0)],
+        MotionFrameStep::from_frames(7).unwrap(),
+    )
+    .unwrap();
+    c.set_interpolation(&s, &[reference(0, 0)], MotionInterpolation::AutoSmooth)
+        .unwrap();
+    c.delete_keys(&s, &[inserted]).unwrap();
+    assert!(matches!(
+        c.clip().tracks[0].segments[0].curve,
+        MotionCurve::AutoSmooth {}
+    ));
+    assert_eq!(
+        c.clip().tracks[0].segments[0].frame_step,
+        MotionFrameStep::EveryFrames { frames: 7 }
+    );
+    c.set_frame_step(
+        &s,
+        &[reference(0, 0), reference(0, 4)],
+        MotionFrameStep::EveryFrames { frames: 1 },
+    )
+    .unwrap();
+    assert_eq!(
+        c.clip().tracks[0].segments[0].frame_step,
+        MotionFrameStep::Off {}
+    );
+    let old = c.clone();
+    assert_eq!(
+        c.set_frame_step(
+            &s,
+            &[reference(0, 0)],
+            MotionFrameStep::EveryFrames { frames: 0 }
+        )
+        .unwrap_err()
+        .code,
+        "INVALID_MOTION_FRAME_STEP"
+    );
+    assert_eq!(c, old);
+    c.delete_keys(&s, &(1..=4).map(|i| reference(0, i)).collect::<Vec<_>>())
+        .unwrap();
+    c.insert_key(&s, &id(10), &id(501), 0.5, Some(1.)).unwrap();
+    assert!(matches!(
+        c.clip().tracks[0].segments[0].curve,
+        MotionCurve::AutoSmooth {}
+    ));
+}
+
+#[test]
+fn authoring_restricted_conversion_preserves_unrelated_track_samples() {
+    let s = bezier_session(true);
+    let mut c = candidate(&s);
+    c.set_frame_step(
+        &s,
+        &[reference(0, 0)],
+        MotionFrameStep::from_frames(7).unwrap(),
+    )
+    .unwrap();
+    let before = samples(c.clip());
+    c.set_easing_preset(&s, &[reference(1, 0)], MotionEasingPreset::CubicOut)
+        .unwrap();
+    assert!(c.clip().restricted_beziers);
+    c.set_easing_preset(&s, &[reference(1, 0)], MotionEasingPreset::CubicInOut)
+        .unwrap();
+    assert!(!c.clip().restricted_beziers);
+    assert_samples_equal(&before, &samples(c.clip()));
+    assert_eq!(
+        c.clip().tracks[0].segments[0].frame_step,
+        MotionFrameStep::EveryFrames { frames: 7 }
+    );
+    let MotionCurve::Bezier {
+        control1, control2, ..
+    } = c.clip().tracks[0].segments[0].curve
+    else {
+        panic!()
+    };
+    assert_eq!((control1.time, control2.time), thirds(0., 1.));
+}
+
+#[test]
+fn authoring_preset_translation_and_time_scaling_keep_source_but_single_key_moves_clear_it() {
+    let s = session();
+    let mut c = candidate(&s);
+    c.set_easing_preset(&s, &[reference(0, 0)], MotionEasingPreset::CubicInOut)
+        .unwrap();
+    c.move_keys(&s, &[movement(0, 0, 0.05, 0.1), movement(0, 1, 0.3, 1.1)])
+        .unwrap();
+    assert!(matches!(
+        c.clip().tracks[0].segments[0].curve,
+        MotionCurve::Bezier {
+            preset: Some(MotionEasingPreset::CubicInOut),
+            ..
+        }
+    ));
+    c.scale_time(&s, 2.).unwrap();
+    assert!(matches!(
+        c.clip().tracks[0].segments[0].curve,
+        MotionCurve::Bezier {
+            preset: Some(MotionEasingPreset::CubicInOut),
+            ..
+        }
+    ));
+    c.move_keys(&s, &[movement(0, 1, 0.65, 1.1)]).unwrap();
+    assert!(matches!(
+        c.clip().tracks[0].segments[0].curve,
+        MotionCurve::Bezier { preset: None, .. }
+    ));
+}
+
+#[test]
+fn authoring_aligned_handles_materialize_both_auto_intervals_and_tidy_clears_source() {
+    let s = session();
+    let mut c = candidate(&s);
+    c.set_interpolation(
+        &s,
+        &[reference(0, 0), reference(0, 1)],
+        MotionInterpolation::AutoSmooth,
+    )
+    .unwrap();
+    let before = CompiledCurve::from_track(&c.clip().tracks[0], c.clip().fps);
+    let CompiledSegment::Bezier { control2: old, .. } = before.segments[0] else {
+        panic!()
+    };
+    let point = MotionPoint {
+        time: 0.35,
+        value: 1.1,
+    };
+    c.set_handle_aligned(&s, &reference(0, 2), MotionBezierHandle::Control1, point)
+        .unwrap();
+    let MotionCurve::Bezier {
+        control2: linked,
+        preset: None,
+        ..
+    } = c.clip().tracks[0].segments[0].curve
+    else {
+        panic!()
+    };
+    assert!(matches!(
+        c.clip().tracks[0].segments[1].curve,
+        MotionCurve::Bezier { preset: None, .. }
+    ));
+    let anchor = c.clip().tracks[0].segments[0].end.point();
+    let cross = (linked.time - anchor.time) * (point.value - anchor.value)
+        - (linked.value - anchor.value) * (point.time - anchor.time);
+    assert!(cross.abs() < 0.000001);
+    let length = |p: MotionPoint| (p.time - anchor.time).hypot(p.value - anchor.value);
+    assert!((length(old) - length(linked)).abs() < 0.000001);
+    c.set_easing_preset(&s, &[reference(0, 0)], MotionEasingPreset::CircOut)
+        .unwrap();
+    c.tidy_handles(&s, &[reference(0, 0)]).unwrap();
+    let MotionCurve::Bezier {
+        control1,
+        control2,
+        preset: None,
+    } = c.clip().tracks[0].segments[0].curve
+    else {
+        panic!()
+    };
+    assert_eq!((control1.time, control2.time), thirds(0., 0.25));
+    assert!((control1.value - 1. / 3.).abs() < 0.000001);
+}
+
+#[test]
+fn authoring_curve_commands_have_atomic_locks_history_and_canonical_frame_steps() {
+    use crate::{AuthoringSession, ResourceView, Snapshot};
+    use zipzi_core::document::ObjectEditorState;
+    let mut b = session();
+    let mut editor = b.editor_state().clone();
+    editor.objects.insert(
+        id(104),
+        ObjectEditorState {
+            locked: true,
+            hidden_in_editor: false,
+        },
+    );
+    b.set_editor_state(editor).unwrap();
+    let mut s = AuthoringSession::new(
+        Snapshot::new(b.freeze().unwrap().state, ResourceView::default()).unwrap(),
+    );
+    let initial = s.snapshot().content_id();
+    let mut draft = s.begin_draft();
+    draft
+        .batch(draft.source(), |commands| {
+            commands.edit_motion_curve(
+                &id(3),
+                MotionCurveEdit::FrameStep {
+                    keys: vec![reference(0, 0)],
+                    frame_step: MotionFrameStep::from_frames(3).unwrap(),
+                },
+            )
+        })
+        .unwrap();
+    s.publish(draft.prepare("Step on threes").unwrap()).unwrap();
+    assert_eq!(
+        s.snapshot().document().motion(&id(3)).unwrap().tracks[0].segments[0].frame_step,
+        MotionFrameStep::EveryFrames { frames: 3 }
+    );
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), initial);
+    s.redo(s.version()).unwrap();
+    let before = s.snapshot().content_id();
+    let mut draft = s.begin_draft();
+    assert_eq!(
+        draft
+            .batch(draft.source(), |commands| commands.edit_motion_curve(
+                &id(3),
+                MotionCurveEdit::EasingPreset {
+                    keys: vec![reference(0, 0), reference(0, 3)],
+                    preset: MotionEasingPreset::CubicOut
+                }
+            ))
+            .unwrap_err()
+            .code,
+        "OBJECT_LOCKED"
+    );
+    assert_eq!(s.snapshot().content_id(), before);
+    let mut clip = s.snapshot().document().motion(&id(3)).unwrap().clone();
+    Arc::make_mut(&mut clip.tracks[1].segments)[0].frame_step =
+        MotionFrameStep::EveryFrames { frames: 1 };
+    let mut b = s.snapshot().document().builder();
+    b.replace_motion(clip).unwrap();
+    assert_eq!(
+        b.freeze().unwrap().state.motion(&id(3)).unwrap().tracks[1].segments[0].frame_step,
+        MotionFrameStep::Off {}
+    );
+}
+
+#[test]
+fn authoring_raw_preview_recompiles_on_fps_and_result_events_use_real_time() {
+    use zipzi_animation::{MotionEditingPreview, MotionPreview};
+    let mut b = session();
+    let mut clip = b.motion(&id(3)).unwrap().clone();
+    clip.tracks.truncate(1);
+    b.replace_authored_motion(clip).unwrap();
+    let mut c = candidate(&b);
+    c.set_easing_preset(&b, &[reference(0, 0)], MotionEasingPreset::CubicOut)
+        .unwrap();
+    c.set_frame_step(
+        &b,
+        &(0..4).map(|i| reference(0, i)).collect::<Vec<_>>(),
+        MotionFrameStep::from_frames(3).unwrap(),
+    )
+    .unwrap();
+    let mut clip = c.into_clip();
+    b.replace_authored_motion(clip.clone()).unwrap();
+    let state = b.freeze().unwrap().state;
+    let mut raw = MotionEditingPreview::new(&state);
+    assert_eq!(
+        raw.sample_clip(Some(&clip), 0.05).unwrap().parameters[&id(2)],
+        0.
+    );
+    // Keep the exact same segment Arc; FPS alone invalidates the compiled cache.
+    clip.fps = 60.;
+    let value = raw.sample_clip(Some(&clip), 0.05).unwrap().parameters[&id(2)];
+    assert!((value - 0.488).abs() < 0.00002);
+    let mut b = state.builder();
+    b.replace_authored_motion(clip).unwrap();
+    let state = b.freeze().unwrap().state;
+    let mut playback = MotionPreview::new(&state);
+    playback.schedule_motion(&id(3), 0.).unwrap();
+    playback.advance(0.).unwrap();
+    let sampled = playback.advance(0.55).unwrap();
+    assert!((sampled.time - 0.55).abs() < 0.000001);
+    assert_eq!(sampled.fired_events.len(), 1);
+    assert_eq!(sampled.fired_events[0].value, "cue");
+    assert!(playback.advance(0.05).unwrap().fired_events.is_empty());
+}
+
+#[test]
+fn authoring_time_scaling_preserves_source_range_and_does_not_scale_frame_count() {
+    let mut s = session();
+    let mut clip = s.motion(&id(3)).unwrap().clone();
+    clip.meta_extensions.insert(
+        "ZipziSourceKeyRange".into(),
+        serde_json::json!({"start":-1.,"end":2.}),
+    );
+    Arc::make_mut(&mut clip.tracks[0].segments)[0].frame_step =
+        MotionFrameStep::EveryFrames { frames: 3 };
+    s.replace_authored_motion(clip).unwrap();
+    let mut c = candidate(&s);
+    c.scale_time(&s, 2.).unwrap();
+    let range = c.clip().source_key_range().unwrap();
+    assert_eq!((range.start, range.end), (-2., 4.));
+    assert_eq!(
+        c.clip().tracks[0].segments[0].frame_step,
+        MotionFrameStep::EveryFrames { frames: 3 }
+    );
+}
+
+#[test]
+fn authoring_transfer_copies_complete_interval_settings_and_move_merges_the_source_left() {
+    use zipzi_core::document::MotionEdit;
+    let mut b = session();
+    let mut clip = b.motion(&id(3)).unwrap().clone();
+    clip.tracks[1].segments = Arc::new(vec![]);
+    clip.tracks[1].initial.time = 0.8;
+    b.replace_authored_motion(clip).unwrap();
+    let mut c = candidate(&b);
+    c.set_easing_preset(&b, &[reference(0, 0)], MotionEasingPreset::CubicOut)
+        .unwrap();
+    c.set_frame_step(
+        &b,
+        &[reference(0, 0)],
+        MotionFrameStep::EveryFrames { frames: 3 },
+    )
+    .unwrap();
+    b.replace_authored_motion(c.into_clip()).unwrap();
+    let original = b.motion(&id(3)).unwrap().tracks[0].clone();
+    let mut copied = b.clone();
+    copied
+        .edit_motion(MotionEdit::TransferKeys {
+            ids: vec![id(100), id(101)],
+            destination_track: id(11),
+            time_offset: 0.1,
+            copy: true,
+        })
+        .unwrap();
+    let clip = copied.motion(&id(3)).unwrap();
+    assert_eq!(clip.tracks[0], original);
+    let target = &clip.tracks[1];
+    assert_ne!(target.initial.id, original.initial.id);
+    assert_eq!(target.initial.time, 0.1);
+    assert_ne!(target.segments[0].end.id, original.segments[0].end.id);
+    assert!(matches!(
+        target.segments[0].curve,
+        MotionCurve::Bezier {
+            preset: Some(MotionEasingPreset::CubicOut),
+            ..
+        }
+    ));
+    assert_eq!(
+        target.segments[0].frame_step,
+        MotionFrameStep::EveryFrames { frames: 3 }
+    );
+    copied.validate_candidate().unwrap();
+    b.edit_motion(MotionEdit::TransferKeys {
+        ids: vec![id(101)],
+        destination_track: id(11),
+        time_offset: 0.4,
+        copy: false,
+    })
+    .unwrap();
+    let source = &b.motion(&id(3)).unwrap().tracks[0];
+    assert_eq!(source.segments[0].end.id, id(102));
+    assert!(matches!(
+        source.segments[0].curve,
+        MotionCurve::Bezier { preset: None, .. }
+    ));
+    assert_eq!(
+        source.segments[0].frame_step,
+        MotionFrameStep::EveryFrames { frames: 3 }
+    );
+    b.validate_candidate().unwrap();
 }

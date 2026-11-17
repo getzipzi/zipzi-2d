@@ -40,9 +40,19 @@ impl Commands<'_> {
                 E::Interpolation { keys, kind } => {
                     workspace.set_interpolation(document, &keys, kind)?
                 }
+                E::EasingPreset { keys, preset } => {
+                    workspace.set_easing_preset(document, &keys, preset)?
+                }
+                E::FrameStep { keys, frame_step } => {
+                    workspace.set_frame_step(document, &keys, frame_step)?
+                }
                 E::BezierHandle { end, handle, point } => {
                     workspace.set_handle(document, &end, handle, point)?
                 }
+                E::BezierHandleAligned { end, handle, point } => {
+                    workspace.set_handle_aligned(document, &end, handle, point)?
+                }
+                E::TidyHandles { keys } => workspace.tidy_handles(document, &keys)?,
                 E::ScaleTime { duration } => workspace.scale_time(document, duration)?,
             }
             this.builder.replace_authored_motion(workspace.into_clip())

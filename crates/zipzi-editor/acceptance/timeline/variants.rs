@@ -40,10 +40,7 @@ fn curve(v: &Value) -> CompiledCurve {
         });
         i += if kind == 1 { 7 } else { 3 };
     }
-    CompiledCurve {
-        initial: point_at(0),
-        segments: Arc::new(segments),
-    }
+    CompiledCurve::new(point_at(0), Arc::new(segments))
 }
 
 fn recount(motion: &mut Value) {

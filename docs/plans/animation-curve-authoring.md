@@ -1,6 +1,6 @@
 # 动画曲线配置与帧步进方案
 
-状态：实施中，第 1 阶段已完成；第 2–5 阶段待实施。设计日期：2026-11-09；更新日期：2026-11-17。
+状态：实施中，第 1、2 阶段已完成；第 3–5 阶段待实施。设计日期：2026-11-09；更新日期：2026-11-18。
 
 本方案补齐时间线中的曲线配置入口、Auto Smooth、Bezier 缓动预设和区间级 Frame Step。用户应能直接选择两个动画关键帧之间如何过渡，以及每隔多少帧更新一次姿态；同一套配置必须贯穿 Editor、SDK、原生工程保存与 motion3 导出。
 
@@ -14,9 +14,20 @@
 - 单调 Bezier 时间坐标使用归一化 f64、有界 Newton／二分求逆，修复原 f32 Cardano 在 Sine／Circ 样例中约 1.4%–1.6% 的额外误差；非单调时间坐标继续使用既有 MotionBehavior V2 分支。
 - `fixtures/animation_curves/` 固化不等时距、下降、峰谷、平坦区间的自动控制柄与采样，以及预设控制点和解析近似误差。整数与非整数 FPS、子帧起点、边界相邻浮点数、Inverse Step 和末尾保持有独立覆盖。
 
-本批为共享算法与契约词汇准备，尚未将新配置接入 `MotionSegment`、Draft 命令、Python 生成、原生工程或 Editor。新增算法测试通过不代表时间线入口、保存和导出已交付；后续继续执行第 2–5 阶段。
+第 1 阶段仅交付共享算法与契约词汇准备；后续接入情况见下面的阶段记录。各阶段的算法测试通过不代表时间线入口、保存和导出已经全部交付。
 
 本阶段验证通过：Contract 测试，Animation 的 `motion_authoring`、`motion_easing_reference`、`motion_sampling`、`motion_editing_preview`、`motion_preview` 目标，SDK 的 `motion_curve` 过滤回归，Python 契约生成测试及工作区 domain 检查。
+
+### 第 2 阶段（2026-11-18）
+
+- `MotionSegment` 已改为 `end`、`curve: MotionCurve`、`frame_step: MotionFrameStep`，持久保存五种模式、显式控制点、可校验的预设来源和 N；Auto Smooth 控制点仅在编译时生成。原生文档版本升为 23，不提供旧版本迁移。
+- `CompiledCurve::from_track(track, fps)` 编译完整自动区间组及各段帧步进。原始预览、结果播放与时间线投影复用同一采样器；FPS 独立参与编辑预览缓存失效，事件继续使用真实动画时间。
+- Draft 接入 `EasingPreset`、`FrameStep`、`BezierHandleAligned` 和 `TidyHandles`。类型切换保留 N；自动转手动保留当时编译控制点；连续手柄操作在一次事务中转换两侧自动段，共线时保留另一手柄长度；整理手柄将所选段恢复为直线三等分控制点和 Custom。
+- 首个新建区间默认 Auto Smooth。插入继承模式与 N、分段重新计步；删除继承左侧模式与 N；复制完整区间携带配置；平移和时间缩放保留有效预设，普通单键形变及手动编辑清除来源。受限 Bezier 应用不兼容预设时，对整个 clip 做三等分时间的等价转换。
+- Core 校验 N、预设与实际控制点及受限模式的一致性，并在所有 Motion 写入入口规范化 N=1。锁校验覆盖实际改变的区间端点，允许编辑同轨道中与锁定区间无关的区间，涉及锁定区间的批量修改整体失败。
+- Python 类型、编解码和离线参考已同步；Local／Connected 均覆盖 Cubic Out + 每三帧、Auto Smooth、查询和撤销重做。Editor 类型适配和现有时间线回归通过；常驻工具栏、属性分组、菜单和阶梯绘图仍属于第 4 阶段。
+
+验证包括 42 项 SDK `motion_curve` 回归、Core motion 校验、Contract 编解码、Animation 采样／原始预览／结果预览、50 项 EditorCore 时间线回归、Editor 编译、Python 门禁和独立生成漂移测试。第 3 阶段将补齐 Frame Step 导出烘焙、预算、摘要和原生保存重开对照；当前导出遇到 Frame Step 会显式拒绝，Auto Smooth 已通过共享编译输出 Bezier。
 
 ## 需求与范围
 

@@ -4,7 +4,7 @@
     {
       "path": "client/python/zipzi/_schema.json",
       "owner": "zipzi-python/tools/generate.py",
-      "sha256": "6961c0eb2b5efc292f90d1233111a06508ec62a61381fb6c7ec4b8800dbf1959"
+      "sha256": "81fa43c331fb1a5a39e7fa2e86d9f4f878d60f39e08466669df0221b7ab07614"
     },
     {
       "path": "client/python/zipzi/docs/reference/errors.md",
@@ -69,7 +69,7 @@
     {
       "path": "client/python/zipzi/docs/reference/values-motion.md",
       "owner": "zipzi-python/tools/generate.py",
-      "sha256": "f3b14cc2286d971b187b88029030a157cbb4bd7956149ddbb4d42452772a8be6"
+      "sha256": "8955a77b13047ccc0c62a9f8b6cc344410763b02ed4f49c23a44e6ac48a8abb1"
     },
     {
       "path": "client/python/zipzi/docs/reference/values-operations.md",
@@ -129,7 +129,7 @@
     {
       "path": "client/python/zipzi/values/__init__.py",
       "owner": "zipzi-python/tools/generate.py",
-      "sha256": "95cdb8f59a8827d920ace8d0610e6fffe42ebff5eaff123baab2ec619dff336e"
+      "sha256": "b678d55b8a328323ae68f4f81bce46916b93b9b0f5e7f533169ee9816269861f"
     },
     {
       "path": "client/python/zipzi/values/bindings.py",
@@ -169,7 +169,7 @@
     {
       "path": "client/python/zipzi/values/motion.py",
       "owner": "zipzi-python/tools/generate.py",
-      "sha256": "923bf410573dd1cc620f1d637910fecdb02639f83a09cf489855b7c4335dba08"
+      "sha256": "2ce531e4daa196407cc4800b35d8c2200e3ea1683d1d3d5cdf49d3bc159aeffa"
     },
     {
       "path": "client/python/zipzi/values/operations.py",
@@ -229,7 +229,7 @@
     {
       "path": "schema/authoring.json",
       "owner": "zipzi-python/tools/generate.py",
-      "sha256": "5e8f52f3f053d3b99ebf215f7b47c97f63c5e9030003eee99a341d1399a427d9"
+      "sha256": "f4e637c168bbc7e4e5b1bdd6502f4b02517d0c0732a50e5cfc525c706c54f814"
     }
   ]
 }

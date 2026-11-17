@@ -58,7 +58,7 @@ case-alias, lock and replacement tests always execute.
 ## Native project container
 
 `ProjectIo` reads and atomically publishes native ZIP files:
-container version 1, document identifier `zipzi-project`, document version 22.
+container version 1, document identifier `zipzi-project`, document version 23.
 An optional `preview.png` and `format.json.preview` descriptor carry a static
 RGBA8 image (maximum 1024 × 1024) and SHA-256. This does not change the container
 version or add a required feature. The image is advisory; the Editor ignores its

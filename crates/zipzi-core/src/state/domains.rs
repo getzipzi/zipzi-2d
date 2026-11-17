@@ -713,8 +713,11 @@ impl DocumentBuilder {
 // Cross-record references may be assembled in any order and are checked at freeze.
 macro_rules! record_writes {
     ($field:ident, $ty:ty, $domain:ident, $create:ident, $replace:ident, $remove:ident) => {
+        record_writes!(@impl pub, $field, $ty, $domain, $create, $replace, $remove);
+    };
+    (@impl $visibility:vis, $field:ident, $ty:ty, $domain:ident, $create:ident, $replace:ident, $remove:ident) => {
         impl DocumentBuilder {
-            pub fn $create(&mut self, value: $ty) -> Result<(), Status> {
+            $visibility fn $create(&mut self, value: $ty) -> Result<(), Status> {
                 self.write(|this| {
                     this.check_new_id(&value.id)?;
                     this.touched
@@ -725,7 +728,7 @@ macro_rules! record_writes {
                     Ok(())
                 })
             }
-            pub fn $replace(&mut self, value: $ty) -> Result<(), Status> {
+            $visibility fn $replace(&mut self, value: $ty) -> Result<(), Status> {
                 self.write(|this| {
                     if this.content.$field.get(&value.id).is_none() {
                         return Err(Status::error("MISSING_OBJECT", &value.id));
@@ -815,10 +818,11 @@ record_writes!(
 );
 
 record_writes!(
+    @impl pub(super),
     motions,
     MotionClip,
     Motion,
-    create_motion,
-    replace_motion,
+    create_motion_record,
+    replace_motion_record,
     remove_motion
 );

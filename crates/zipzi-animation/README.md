@@ -15,7 +15,10 @@ fixed easing controls, and quantize segment-local sample times for Frame Step.
 Resolve the outgoing segment with `CompiledCurve::segment_at` before quantizing;
 `sample_motion_segment` evaluates its base curve. Monotone Bezier time inversion
 uses a safeguarded f64 solve; non-monotone curves retain the MotionBehavior V2
-root choice. These primitives do not yet add persistent authoring modes to tracks.
+root choice. `CompiledCurve::from_track(track, fps)` resolves persistent automatic
+groups and frame stepping. Its FPS is part of preview cache identity;
+`sample_motion_curve_base` exposes the continuous curve for structural edits and
+optional graph overlays. Motion fades, mixing, events and physics keep real time.
 
 Motion tracks and events use copy-on-write storage. Edits validate the affected
 fields and dependencies; SDK publication validates the complete document.

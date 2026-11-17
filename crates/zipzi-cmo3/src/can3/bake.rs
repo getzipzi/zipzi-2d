@@ -2,6 +2,7 @@
 //! rather than throwing away keys that happen to round to the same frame.
 use super::*;
 use zipzi_animation::{sample_motion_curve, CompiledCurve};
+use zipzi_core::document::MotionCurve;
 
 pub(super) fn info(report: &mut Cmo3Report, id: &str, code: &str, message: &str) {
     report.diagnostics.push(Cmo3Diagnostic {
@@ -20,13 +21,18 @@ pub(super) fn needs_baking(track: &MotionTrack, fps: f32) -> bool {
         previous = Some(frame.round());
         collision || (frame - frame.round()).abs() > 0.0001
     }) || track.segments.iter().enumerate().any(|(index, segment)| {
-        matches!(segment, MotionSegment::InverseStepped { .. })
-            && segment.end().value
-                != if index == 0 {
-                    track.initial.value
-                } else {
-                    track.segments[index - 1].end().value
-                }
+        matches!(
+            segment,
+            MotionSegment {
+                curve: MotionCurve::InverseStepped {},
+                ..
+            }
+        ) && segment.end().value
+            != if index == 0 {
+                track.initial.value
+            } else {
+                track.segments[index - 1].end().value
+            }
     })
 }
 
@@ -50,7 +56,7 @@ pub(super) fn keys(
     *budget = budget.checked_sub(count).ok_or_else(|| {
         Cmo3Error::InvalidDocument("CAN3 animation baking exceeds ten million samples".into())
     })?;
-    let curve = CompiledCurve::from(track);
+    let curve = CompiledCurve::from_track(track, clip.fps);
     let mut result: Vec<Key> = Vec::new();
     for frame in start as i32..=end as i32 {
         let value = f64::from(sample_motion_curve(

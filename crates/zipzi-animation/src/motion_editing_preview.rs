@@ -105,13 +105,14 @@ impl MotionEditingPreview {
             for track in &clip.tracks {
                 active.insert(track.id.as_str());
                 let changed = self.curves.get(&track.id).is_none_or(|cached| {
-                    cached.0.initial != track.initial
+                    cached.1.fps() != clip.fps
+                        || cached.0.initial != track.initial
                         || !Arc::ptr_eq(&cached.0.segments, &track.segments)
                 });
                 if changed {
                     self.curves.insert(
                         track.id.clone(),
-                        (track.clone(), CompiledCurve::from(track)),
+                        (track.clone(), CompiledCurve::from_track(track, clip.fps)),
                     );
                     #[cfg(test)]
                     {

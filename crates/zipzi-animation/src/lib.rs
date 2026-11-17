@@ -12,7 +12,7 @@ mod replay;
 mod seek_cache;
 pub use motion::{
     motion_bezier_parameter, motion_bezier_time_is_monotonic, sample_motion_curve,
-    sample_motion_segment, CompiledCurve, CompiledSegment,
+    sample_motion_curve_base, sample_motion_segment, CompiledCurve, CompiledSegment,
 };
 pub use seek_cache::SeekCacheStats;
 mod motion_preview;

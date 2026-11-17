@@ -1,5 +1,6 @@
 //! Synthetic storage benchmark; the deep-copy baseline is explicitly simulated.
 use std::{hint::black_box, sync::Arc, time::Instant};
+use zipzi_core::document::MotionCurve;
 use zipzi_core::{
     document::{MotionKey, MotionSegment},
     state::DocumentState,
@@ -34,15 +35,18 @@ fn main() {
             track.initial.id = format!("00000000-0000-4000-8001-{:012x}", index * (KEYS + 1));
             track.segments = Arc::new(
                 (1..=KEYS)
-                    .map(|key| MotionSegment::Linear {
-                        end: MotionKey {
-                            id: format!(
-                                "00000000-0000-4000-8001-{:012x}",
-                                index * (KEYS + 1) + key
-                            ),
-                            time: key as f32,
-                            value: (key % 2) as f32,
-                        },
+                    .map(|key| {
+                        MotionSegment::new(
+                            MotionKey {
+                                id: format!(
+                                    "00000000-0000-4000-8001-{:012x}",
+                                    index * (KEYS + 1) + key
+                                ),
+                                time: key as f32,
+                                value: (key % 2) as f32,
+                            },
+                            MotionCurve::Linear {},
+                        )
                     })
                     .collect(),
             );
@@ -70,13 +74,14 @@ fn main() {
     for _ in 0..ITERATIONS {
         let mut clip = document.motion(id).unwrap().clone();
         let key_id = clip.tracks[0].segments[0].end().id.clone();
-        Arc::make_mut(&mut clip.tracks[0].segments)[0] = MotionSegment::Linear {
-            end: MotionKey {
+        Arc::make_mut(&mut clip.tracks[0].segments)[0] = MotionSegment::new(
+            MotionKey {
                 id: key_id,
                 time: 1.0,
                 value: 0.25,
             },
-        };
+            MotionCurve::Linear {},
+        );
         black_box(clip);
     }
     let edit = start.elapsed();

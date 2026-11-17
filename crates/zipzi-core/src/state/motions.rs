@@ -8,7 +8,36 @@ fn clip_ids(clip: &MotionClip) -> impl Iterator<Item = &str> {
         )
         .chain(clip.events.iter().map(|e| e.id.as_str()))
 }
+fn normalize_frame_steps(clip: &mut MotionClip) -> Result<(), Status> {
+    for track in &mut clip.tracks {
+        if track
+            .segments
+            .iter()
+            .any(|s| s.frame_step.normalized() != Some(s.frame_step))
+        {
+            for segment in Arc::make_mut(&mut track.segments) {
+                segment.frame_step = segment
+                    .frame_step
+                    .normalized()
+                    .ok_or_else(|| Status::error("INVALID_MOTION_FRAME_STEP", &segment.end.id))?;
+            }
+        }
+    }
+    Ok(())
+}
 impl DocumentBuilder {
+    pub fn create_motion(&mut self, mut clip: MotionClip) -> Result<(), Status> {
+        self.write(|this| {
+            normalize_frame_steps(&mut clip)?;
+            this.create_motion_record(clip)
+        })
+    }
+    pub fn replace_motion(&mut self, mut clip: MotionClip) -> Result<(), Status> {
+        self.write(|this| {
+            normalize_frame_steps(&mut clip)?;
+            this.replace_motion_record(clip)
+        })
+    }
     pub fn create_authored_motion(&mut self, clip: MotionClip) -> Result<(), Status> {
         self.write(|this| {
             this.content.model().validate_motion_unlocked(&clip)?;

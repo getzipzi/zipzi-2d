@@ -69,7 +69,14 @@ pub(crate) fn edges(h: &mut Harness) -> anyhow::Result<Value> {
         .enumerate()
         .flat_map(|(i, t)| {
             t.segments.iter().enumerate().filter_map(move |(s, seg)| {
-                matches!(seg, zipzi_core::document::MotionSegment::Bezier { .. }).then_some((i, s))
+                matches!(
+                    seg,
+                    zipzi_core::document::MotionSegment {
+                        curve: zipzi_core::document::MotionCurve::Bezier { .. },
+                        ..
+                    }
+                )
+                .then_some((i, s))
             })
         })
         .next()
@@ -78,7 +85,15 @@ pub(crate) fn edges(h: &mut Harness) -> anyhow::Result<Value> {
     let segment = t
         .segments
         .iter()
-        .position(|s| matches!(s, zipzi_core::document::MotionSegment::Bezier { .. }))
+        .position(|s| {
+            matches!(
+                s,
+                zipzi_core::document::MotionSegment {
+                    curve: zipzi_core::document::MotionCurve::Bezier { .. },
+                    ..
+                }
+            )
+        })
         .unwrap();
     let start = if segment == 0 {
         t.initial.time
@@ -100,8 +115,8 @@ pub(crate) fn edges(h: &mut Harness) -> anyhow::Result<Value> {
         },
     )?;
     let split = clip(h);
-    let a = CompiledCurve::from(t);
-    let b = CompiledCurve::from(&split.tracks[index]);
+    let a = CompiledCurve::from_track(t, 30.);
+    let b = CompiledCurve::from_track(&split.tracks[index], 30.);
     let error = (0..=512)
         .map(|i| {
             let time = original.duration * i as f32 / 512.;

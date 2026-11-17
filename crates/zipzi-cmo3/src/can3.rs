@@ -1,5 +1,6 @@
 //! Editable animation export. CAN3 references a sibling CMO3 rather than
 //! embedding a second model; both codecs use the same source object GUIDs.
+use zipzi_core::document::MotionCurve;
 mod attributes;
 mod bake;
 mod grid;
@@ -275,6 +276,17 @@ fn keys(
     inferred: bool,
     restricted: bool,
 ) -> Result<Vec<Key>, Cmo3Error> {
+    if track.segments.iter().any(|s| {
+        matches!(
+            s.frame_step,
+            zipzi_core::document::MotionFrameStep::EveryFrames { frames: 2.. }
+        )
+    }) {
+        return Err(Cmo3Error::InvalidDocument(
+            "CAN3 Frame Step requires explicit frame baking".into(),
+        ));
+    }
+    let compiled = zipzi_animation::CompiledCurve::from_track(track, fps);
     let mut keys: Vec<_> = track
         .keys()
         .map(|key| {
@@ -288,12 +300,12 @@ fn keys(
             })
         })
         .collect::<Result<_, Cmo3Error>>()?;
-    for (index, segment) in track.segments.iter().enumerate() {
+    for (index, segment) in compiled.segments.iter().enumerate() {
         keys[index].curve = match segment {
-            MotionSegment::Linear { .. } => "LINEAR",
-            MotionSegment::Stepped { .. } => "STEP",
-            MotionSegment::InverseStepped { .. } => "INVERSE_STEP",
-            MotionSegment::Bezier {
+            zipzi_animation::CompiledSegment::Linear { .. } => "LINEAR",
+            zipzi_animation::CompiledSegment::Stepped { .. } => "STEP",
+            zipzi_animation::CompiledSegment::InverseStepped { .. } => "INVERSE_STEP",
+            zipzi_animation::CompiledSegment::Bezier {
                 control1, control2, ..
             } => {
                 let start_time = if index == 0 {
@@ -587,13 +599,18 @@ fn prepare(
             }
             if !bake
                 && track.segments.iter().enumerate().any(|(index, segment)| {
-                    matches!(segment, MotionSegment::InverseStepped { .. })
-                        && segment.end().value
-                            != if index == 0 {
-                                track.initial.value
-                            } else {
-                                track.segments[index - 1].end().value
-                            }
+                    matches!(
+                        segment,
+                        MotionSegment {
+                            curve: MotionCurve::InverseStepped {},
+                            ..
+                        }
+                    ) && segment.end().value
+                        != if index == 0 {
+                            track.initial.value
+                        } else {
+                            track.segments[index - 1].end().value
+                        }
                 })
             {
                 loss(

@@ -83,9 +83,15 @@ pub struct MotionKeyMove {
 )]
 #[serde(rename_all = "snake_case")]
 pub enum MotionInterpolation {
+    /// Interpolate linearly between keys before optional frame stepping.
     Linear,
+    /// Derive monotone smooth handles from adjacent automatic intervals.
+    AutoSmooth,
+    /// Interpolate using explicitly editable cubic controls.
     Bezier,
+    /// Hold the interval's starting value.
     Stepped,
+    /// Use the interval's endpoint value, including at the outgoing start key.
     InverseStepped,
 }
 
@@ -115,6 +121,8 @@ pub enum MotionBezierHandle {
 )]
 pub enum MotionCurveEdit {
     MoveKeys(Vec<MotionKeyMove>),
+    /// Insert a stable key, splitting the base curve and inheriting its mode and
+    /// frame count. Each new interval restarts stepping, so its rhythm can change.
     InsertKey {
         track: String,
         id: String,
@@ -126,10 +134,31 @@ pub enum MotionCurveEdit {
         keys: Vec<MotionKeyRef>,
         kind: MotionInterpolation,
     },
+    /// Apply a shared easing preset to selected outgoing intervals, retaining frame stepping.
+    EasingPreset {
+        keys: Vec<MotionKeyRef>,
+        preset: crate::motion_curve::MotionEasingPreset,
+    },
+    /// Set selected outgoing intervals' sample-and-hold; one frame normalizes to Off.
+    FrameStep {
+        keys: Vec<MotionKeyRef>,
+        frame_step: crate::motion_curve::MotionFrameStep,
+    },
     BezierHandle {
         end: MotionKeyRef,
         handle: MotionBezierHandle,
         point: MotionPoint,
+    },
+    /// Move a handle and align the adjacent opposite handle, retaining its
+    /// length. Automatic intervals involved become explicit Beziers atomically.
+    BezierHandleAligned {
+        end: MotionKeyRef,
+        handle: MotionBezierHandle,
+        point: MotionPoint,
+    },
+    /// Restore selected outgoing Bezier controls to straight thirds and Custom.
+    TidyHandles {
+        keys: Vec<MotionKeyRef>,
     },
     ScaleTime {
         duration: f32,

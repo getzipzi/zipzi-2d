@@ -1,4 +1,5 @@
 use super::*;
+use zipzi_core::document::MotionCurve;
 use zipzi_project::OpaqueExportProblem;
 
 pub(super) fn tree() -> AuthoringSession {
@@ -87,13 +88,14 @@ fn clip() -> MotionClip {
                     time: 0.,
                     value: 1.,
                 },
-                segments: std::sync::Arc::new(vec![MotionSegment::Linear {
-                    end: MotionKey {
+                segments: std::sync::Arc::new(vec![MotionSegment::new(
+                    MotionKey {
                         id: id(106),
                         time: 1.,
                         value: 0.,
                     },
-                }]),
+                    MotionCurve::Linear {},
+                )]),
                 fade_in: None,
                 fade_out: None,
                 extensions: Default::default(),
