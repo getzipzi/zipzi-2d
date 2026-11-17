@@ -26,6 +26,102 @@ fn vertices(editor: &mut Editor, object: &ObjectRef) -> anyhow::Result<Vec<Model
         .map(|(_, p)| *p)
         .collect())
 }
+
+#[test]
+fn frame_edges_do_not_move_geometry_and_the_explicit_handle_does() -> anyhow::Result<()> {
+    for warp in [false, true] {
+        let (mut editor, _dir, object) = if warp {
+            deformer_editor(false)?
+        } else {
+            mesh_editor()?
+        };
+        let before = if warp {
+            control_points(&mut editor, &object)?
+        } else {
+            vertices(&mut editor, &object)?
+        };
+        let overlay = editor.overlay();
+        let a = overlay
+            .handles
+            .iter()
+            .find(|h| !h.tangent)
+            .unwrap()
+            .position;
+        let b = overlay
+            .handles
+            .iter()
+            .filter(|h| !h.tangent)
+            .nth(1)
+            .unwrap()
+            .position;
+        let edge = ViewportPoint {
+            x: (a.x + b.x) / 2.,
+            y: (a.y + b.y) / 2.,
+        };
+        let binding = editor.primary_viewport_binding().unwrap();
+        editor.hover_canvas(binding, Some(edge))?;
+        assert_ne!(editor.overlay().active_handle, Some(DeformerHandle::Move));
+        gesture(
+            &mut editor,
+            edge,
+            ViewportPoint {
+                x: edge.x + 12.,
+                y: edge.y + 8.,
+            },
+            false,
+            false,
+            false,
+        )?;
+        let after_edge = if warp {
+            control_points(&mut editor, &object)?
+        } else {
+            vertices(&mut editor, &object)?
+        };
+        assert_eq!(after_edge, before);
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+
+        editor.execute(EditorCommand::SelectObject(object.clone()))?;
+        shown(&mut editor)?;
+        let start = editor
+            .overlay()
+            .handles
+            .iter()
+            .find(|h| h.movement)
+            .unwrap()
+            .position;
+        editor.hover_canvas(binding, Some(start))?;
+        assert_eq!(editor.overlay().active_handle, Some(DeformerHandle::Move));
+        gesture(
+            &mut editor,
+            start,
+            ViewportPoint {
+                x: start.x + 12.,
+                y: start.y + 8.,
+            },
+            false,
+            false,
+            false,
+        )?;
+        let after_move = if warp {
+            control_points(&mut editor, &object)?
+        } else {
+            vertices(&mut editor, &object)?
+        };
+        for (a, b) in before.iter().zip(after_move) {
+            assert!((b.x - a.x - 12.).abs() < 0.002);
+            assert!((b.y - a.y + 8.).abs() < 0.002);
+        }
+        assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+        editor.execute(EditorCommand::Undo)?;
+        let restored = if warp {
+            control_points(&mut editor, &object)?
+        } else {
+            vertices(&mut editor, &object)?
+        };
+        assert_eq!(restored, before);
+    }
+    Ok(())
+}
 fn gesture(
     editor: &mut Editor,
     start: ViewportPoint,
@@ -231,10 +327,7 @@ fn frame_and_rotation_translation_release_and_reacquire_axis_and_fine_steps_live
             frame.transform.to_viewport(before[0])
         } else {
             let handles = editor.overlay().handles;
-            ViewportPoint {
-                x: (handles[0].position.x + handles[1].position.x) / 2.,
-                y: handles[0].position.y,
-            }
+            handles.iter().find(|h| h.movement).unwrap().position
         };
         let at = |x, y| ViewportPoint {
             x: start.x + x * frame.transform.scale,
@@ -389,12 +482,9 @@ fn mesh_frame_transforms_in_canvas_space_through_a_warp_parent_and_undoes_atomic
 -> anyhow::Result<()> {
     let (mut editor, _dir, object) = mesh_editor()?;
     let before = vertices(&mut editor, &object)?;
-    assert_eq!(editor.overlay().handles.len(), 9);
+    assert_eq!(editor.overlay().handles.len(), 10);
     let handles = editor.overlay().handles;
-    let start = ViewportPoint {
-        x: (handles[0].position.x + handles[1].position.x) / 2.,
-        y: handles[0].position.y,
-    };
+    let start = handles.iter().find(|h| h.movement).unwrap().position;
     gesture(
         &mut editor,
         start,
@@ -504,10 +594,7 @@ fn single_point_frame_transforms_whole_mesh_or_warp_and_preserves_point_selectio
                     y: (y0 + y1) / 2.,
                 };
                 let start = match operation {
-                    0 => ViewportPoint {
-                        x: (handles[0].position.x + handles[1].position.x) / 2.,
-                        y: handles[0].position.y,
-                    },
+                    0 => handles.iter().find(|h| h.movement).unwrap().position,
                     1 => handles.last().unwrap().position,
                     _ => handles[3].position,
                 };
@@ -596,10 +683,10 @@ fn point_selection_frame_and_nudges_preserve_unselected_vertices_and_locks() -> 
     let overlay = editor.overlay();
     click(&mut editor, overlay.vertices[0].position, false)?;
     assert!(!editor.overlay().warp_frame_lines.is_empty());
-    assert_eq!(editor.overlay().handles.len(), 9);
+    assert_eq!(editor.overlay().handles.len(), 10);
     click(&mut editor, overlay.vertices[1].position, true)?;
     assert!(!editor.overlay().warp_frame_lines.is_empty());
-    assert_eq!(editor.overlay().handles.len(), 9);
+    assert_eq!(editor.overlay().handles.len(), 10);
     let binding = editor.primary_viewport_binding().unwrap();
     editor.nudge_selection(binding, ModelVector { x: 0.1, y: 10. })?;
     let after = vertices(&mut editor, &object)?;
@@ -684,10 +771,7 @@ fn selection_transform_hidden_meshes_have_no_handles_or_writes() -> anyhow::Resu
         vertices(&mut editor, &objects[1])?,
     ];
     let handles = editor.overlay().handles;
-    let start = ViewportPoint {
-        x: (handles[0].position.x + handles[1].position.x) / 2.,
-        y: handles[0].position.y,
-    };
+    let start = handles.iter().find(|h| h.movement).unwrap().position;
     editor.execute(EditorCommand::SetObjectVisible {
         object: objects[0].clone(),
         visible: false,
@@ -754,7 +838,7 @@ fn selection_transform_container_frame_excludes_hidden_contents() -> anyhow::Res
     let part = ObjectRef::new(ObjectKind::Part, uuid::Uuid::from_u128(3).to_string());
     editor.execute(EditorCommand::SelectObject(part))?;
     shown(&mut editor)?;
-    assert_eq!(editor.overlay().handles.len(), 9);
+    assert_eq!(editor.overlay().handles.len(), 10);
     editor.execute(EditorCommand::SetObjectVisible {
         object: mesh.clone(),
         visible: false,
@@ -828,7 +912,7 @@ fn part_frame_moves_its_contents_and_parent_child_selection_moves_only_once() ->
     let part = ObjectRef::new(ObjectKind::Part, uuid::Uuid::from_u128(3).to_string());
     editor.execute(EditorCommand::SelectObjects(vec![part, object.clone()]))?;
     shown(&mut editor)?;
-    assert_eq!(editor.overlay().handles.len(), 9);
+    assert_eq!(editor.overlay().handles.len(), 10);
     editor.nudge_selection(
         editor.primary_viewport_binding().unwrap(),
         ModelVector { x: 10., y: 0. },
@@ -914,11 +998,7 @@ fn mixed_mesh_rotation_selection_frame_only_transforms_the_mesh() -> anyhow::Res
     shown(&mut editor)?;
     assert_eq!(editor.overlay().warp_frame_lines, frame_lines);
     let handles = editor.overlay().handles;
-    let frame = &handles[handles.len() - 9..];
-    let start = ViewportPoint {
-        x: (frame[0].position.x + frame[1].position.x) / 2.,
-        y: frame[0].position.y,
-    };
+    let start = handles.iter().find(|h| h.movement).unwrap().position;
     gesture(
         &mut editor,
         start,
@@ -1133,10 +1213,7 @@ fn object_frame_and_rotation_center_share_translation_constraints_and_frozen_axi
                 canvas.transform.to_viewport(before[0])
             } else {
                 let handles = editor.overlay().handles;
-                ViewportPoint {
-                    x: (handles[0].position.x + handles[1].position.x) / 2.,
-                    y: handles[0].position.y,
-                }
+                handles.iter().find(|h| h.movement).unwrap().position
             };
             pointer_input(
                 &mut editor,
@@ -1470,10 +1547,7 @@ fn parent_child_point_selection_keeps_point_edits_local_and_whole_frames_normali
                 .into_iter()
                 .filter(|h| !h.tangent)
                 .collect();
-            let start = ViewportPoint {
-                x: (handles[0].position.x + handles[1].position.x) / 2.,
-                y: handles[0].position.y,
-            };
+            let start = handles.iter().find(|h| h.movement).unwrap().position;
             gesture(
                 &mut editor,
                 start,
@@ -1596,14 +1670,13 @@ fn object_and_warp_frames_share_compact_padding() -> anyhow::Result<()> {
                 let group_corner = editor.overlay().handles[0].position;
                 assert_eq!(group_corner, corner);
                 editor.execute(EditorCommand::SelectObject(object.clone()))?;
-                let edge = ViewportPoint {
-                    x: (bounds[0] + bounds[2]) / 2.,
-                    y: bounds[1] - padding,
-                };
-                let start = ViewportPoint {
-                    x: (edge.x + bounds[0]) / 2.,
-                    y: edge.y,
-                };
+                let start = editor
+                    .overlay()
+                    .handles
+                    .iter()
+                    .find(|h| h.movement)
+                    .unwrap()
+                    .position;
                 pointer_input(
                     &mut editor,
                     CanvasInput::Down {

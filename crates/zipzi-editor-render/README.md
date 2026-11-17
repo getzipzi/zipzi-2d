@@ -79,7 +79,9 @@ Rotation bones, Glue, transform frames, reference/guide/image lines, origin axes
 marquee and even-odd lasso fills into lines, bordered round/square markers and
 triangles. The palette and painter order are shared with the GPUI fallback.
 Geometry and interaction remain in `zipzi-editor-core`; text and widgets remain
-in GPUI. The normal path composites one immutable surface with one instanced draw,
+in GPUI. Move handles use the Kit Move SVG above the native surface, with Core's
+positions and interaction state. The normal path composites one immutable surface
+with one instanced draw,
 using 4x MSAA plus analytic marker coverage. There is no normal-path GPUI geometry
 painting or CPU readback.
 

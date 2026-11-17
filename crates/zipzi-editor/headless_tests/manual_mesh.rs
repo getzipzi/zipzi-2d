@@ -73,6 +73,80 @@ fn enter(cx: &mut TestAppContext) -> Harness {
 }
 
 #[gpui_kit::test]
+fn double_click_mesh_enters_edit_without_adding_or_moving_points(cx: &mut TestAppContext) {
+    use gpui_kit::{InputEvent as _, MouseButton, MouseDownEvent, MouseUpEvent};
+    use zipzi_editor_core::ModelPoint;
+    let (doc, assets) = document_fixture::alpha_document().unwrap();
+    let h = setup_with_document(cx, doc, assets);
+    present(&h, cx);
+    let (click_point, original) = h.view.read_with(cx, |view, _| {
+        let frame = &view
+            .modeling_frame_for(view.viewport_slots[0])
+            .unwrap()
+            .canvas;
+        let point = (1..10)
+            .flat_map(|x| {
+                (1..10).map(move |y| ModelPoint {
+                    x: 24. + x as f32 * 20.,
+                    y: 24. + y as f32 * 20.,
+                })
+            })
+            .find(|&p| !frame.geometry.mesh_hits(p).is_empty())
+            .unwrap();
+        let target = view
+            .editor
+            .document()
+            .unwrap()
+            .manual_mesh_target()
+            .unwrap();
+        (frame.transform.to_viewport(point), target)
+    });
+    let press = |count, h: &Harness, cx: &mut TestAppContext| {
+        cx.update_window(h.window, |_, window, cx| {
+            let position = window.find("canvas-body").bounds().origin
+                + point(px(click_point.x), px(click_point.y));
+            window.dispatch_event(
+                MouseDownEvent {
+                    button: MouseButton::Left,
+                    position,
+                    modifiers: Default::default(),
+                    click_count: count,
+                    first_mouse: false,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.dispatch_event(
+                MouseUpEvent {
+                    button: MouseButton::Left,
+                    position,
+                    modifiers: Default::default(),
+                    click_count: count,
+                }
+                .to_platform_input(),
+                cx,
+            );
+        })
+        .unwrap();
+    };
+    press(1, &h, cx);
+    assert!(!h.view.read_with(cx, |view, _| view.editor.manual_active()));
+    present(&h, cx);
+    press(2, &h, cx);
+    assert!(h.view.read_with(cx, |view, _| view.editor.manual_active()));
+    present(&h, cx);
+    h.view.read_with(cx, |view, _| {
+        let overlay = view.editor.overlay();
+        assert_eq!(overlay.vertices.len(), 4);
+        assert!(overlay.vertices.iter().all(|v| !v.selected));
+        assert!(!view.editor.gesture_active());
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        assert_eq!(view.editor.manual_target().unwrap().object, original.object);
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+    });
+}
+
+#[gpui_kit::test]
 fn manual_mesh_v_exits_to_the_select_tool(cx: &mut TestAppContext) {
     let h = enter(cx);
     cx.update_window(h.window, |_, window, cx| {

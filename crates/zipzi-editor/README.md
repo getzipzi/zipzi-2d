@@ -335,12 +335,14 @@ overlapping bone appears in the canvas candidates, respecting visibility, locks
 and viewport isolation. Painting and picking share the same bone geometry.
 Selected bones show numeric feedback while dragging.
 Containers transform their drawable contents; selected deformation descendants
-are normalized so a parent and child are not moved twice. A point selection
-restricts the frame to those points. Drag frame edges to translate, square handles
-to scale and the round handle to rotate. A single selected grid point, Bezier
-anchor/tangent or mesh vertex is dragged directly and shows no transform frame;
-multi-point selections keep their shared frame. Shift constrains translation, preserves
-corner scaling proportions, and snaps rotation to 15-degree increments.
+are normalized so a parent and child are not moved twice. With two or more
+selected points the frame operates only on those points; zero or one uses the
+whole object. Drag the four-way arrow outside the right edge to translate, square
+handles to scale and the round handle to rotate. Frame
+edges only display the bounds and never capture translation. Direct point drags
+and keyboard nudges still operate on the selected points. Shift constrains
+translation, preserves corner scaling proportions, and snaps rotation to
+15-degree increments.
 Alt/Option scales around the frame center. Shift+Alt/Option enables fine steps:
 translation in one canvas-unit increments, rotation in one-degree increments,
 and scale ratios in one-percentage-point increments relative to the press shape.
@@ -467,14 +469,20 @@ Changing the document or workspace expires an open deletion menu or review.
 
 ## Mesh Edit
 
-Select one or more meshes before entering Mesh Edit. Box and lasso selection can
+Select one or more meshes before entering Mesh Edit. Double-click a mesh with
+the Select tool to enter directly; an existing all-mesh selection is retained
+when it contains that mesh. The second press only enters the mode and does not
+create or drag a point. Box and lasso selection can
 span them; selected points move and delete together in one undo step, while each
 mesh keeps its own topology. A rejected operation retains the last valid result
 for the whole group. Separate Box and Lasso buttons in the secondary toolbar choose
 the selection shape; point picking, dragging, creation and deletion work in both
 states. Clicking a mesh makes it current for point creation,
 generation and source-image padding; the secondary toolbar names that mesh.
-Source-image view is available when editing a single mesh.
+Source-image view is available when editing a single mesh. Multi-mesh sessions
+use distinct ownership colors for topology lines and point borders, with selected
+points filled in the same hue. Switching the current mesh or reordering selection
+retains its color for the open document. The current mesh name has a matching swatch.
 
 Mesh Edit retains the complete model and its current camera. The selected mesh's
 handles follow the evaluated pose, including ordinary parameters, BlendShapes,

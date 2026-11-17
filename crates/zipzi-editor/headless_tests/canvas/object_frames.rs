@@ -20,6 +20,70 @@ fn positions(h: &Harness, object: &ObjectRef, cx: &mut TestAppContext) -> Vec<Mo
 }
 
 #[gpui_kit::test]
+fn move_icon_keeps_frame_hover_drag_and_undo_working(cx: &mut TestAppContext) {
+    use zipzi_editor_core::DeformerHandle;
+    let h = setup(cx);
+    present_canvas(&h, cx);
+    h.view.update(cx, |view, cx| {
+        view.editor.set_zoom_at(view.editor.view().zoom * 0.8, None);
+        view.redraw(cx);
+    });
+    let object = h.view.read_with(cx, |view, _| {
+        view.editor
+            .document()
+            .unwrap()
+            .context()
+            .selection
+            .clone()
+            .unwrap()
+    });
+    let before = positions(&h, &object, cx);
+    let scale = h.view.read_with(cx, |view, _| {
+        view.modeling_frame().unwrap().canvas.transform.scale
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.activate_window();
+        window.render_frame(cx);
+        let icon = window.find(("canvas-move-handle", 0usize)).bounds();
+        assert_eq!(icon.size.width, px(16.));
+        assert_eq!(icon.size.height, px(16.));
+        let handle = h
+            .view
+            .read(cx)
+            .editor
+            .overlay()
+            .handles
+            .into_iter()
+            .find(|h| h.movement)
+            .unwrap()
+            .position;
+        let expected =
+            window.find("canvas-body").bounds().origin + point(px(handle.x), px(handle.y));
+        assert!((icon.center().x - expected.x).as_f32().abs() <= 0.5);
+        assert!((icon.center().y - expected.y).as_f32().abs() <= 0.5);
+        window.hover(("canvas-move-handle", 0usize), cx);
+        assert_eq!(
+            h.view.read(cx).editor.overlay().active_handle,
+            Some(DeformerHandle::Move)
+        );
+        window.drag(icon.center(), icon.center() + point(px(12.), px(-8.)), cx);
+    })
+    .unwrap();
+    let after = positions(&h, &object, cx);
+    for (a, b) in before.iter().zip(&after) {
+        assert!((b.x - a.x - 12. / scale).abs() < 0.002);
+        assert!((b.y - a.y - 8. / scale).abs() < 0.002);
+    }
+    h.view.update(cx, |view, cx| {
+        assert!(!view.editor.gesture_active());
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+        view.editor.execute(EditorCommand::Undo).unwrap();
+        view.redraw(cx);
+    });
+    assert_eq!(positions(&h, &object, cx), before);
+}
+
+#[gpui_kit::test]
 fn rotation_deformer_cursor_uses_bone_normal_during_hover_and_capture(cx: &mut TestAppContext) {
     use super::super::{document_fixture, setup_with_document};
     use crate::tool_cursors::ToolCursor;
@@ -320,7 +384,7 @@ fn arrows_nudge_canvas_objects_and_points_but_leave_text_carets_alone(cx: &mut T
         window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
         let overlay = h.view.read(cx).editor.overlay();
         assert!(!overlay.warp_frame_lines.is_empty());
-        assert_eq!(overlay.handles.len(), 9);
+        assert_eq!(overlay.handles.len(), 10);
         window.press("shift-right", cx);
         window.render_frame(cx);
     })

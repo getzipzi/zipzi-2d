@@ -43,6 +43,7 @@ fn render_mesh_edit_bar(
     let targets = state.editor.manual_targets();
     if targets.len() > 1 {
         let active = state.editor.manual_target().unwrap();
+        let index = state.editor.manual_color_index(&active.object).unwrap();
         let name = state
             .editor
             .layers()
@@ -50,11 +51,15 @@ fn render_mesh_edit_bar(
             .find(|mesh| mesh.id == active.object.id)
             .map_or(active.object.id, |mesh| mesh.name);
         let tooltip = t!("editor.manual_multi_target", name = name).into_owned();
+        let [r, g, b, a] = zipzi_editor_render::canvas_overlay::mesh_edit_color(index);
         tools = tools.content(
             div()
                 .id("mesh-edit-active-target")
                 .test_support()
                 .aria_label(name.clone())
+                .flex()
+                .items_center()
+                .gap(compact::rem(4.))
                 .text_size(compact::rem(11.))
                 .text_color(cx.theme().foreground)
                 .flex_shrink_0()
@@ -64,6 +69,13 @@ fn render_mesh_edit_bar(
                 .tooltip(move |window, cx| {
                     gpui_kit::component::tooltip::Tooltip::new(tooltip.clone()).build(window, cx)
                 })
+                .child(
+                    div()
+                        .size(compact::rem(6.))
+                        .flex_shrink_0()
+                        .rounded_full()
+                        .bg(gpui_kit::Rgba { r, g, b, a }),
+                )
                 .child(name),
         );
     }

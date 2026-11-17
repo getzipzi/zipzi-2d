@@ -4,6 +4,144 @@ use super::common::save;
 use gpui_kit::{point, px, test::TestWindowExt};
 use zipzi_editor_core::{Editor, ModelPoint};
 
+#[path = "../../../../fixtures/multi-mesh-edit.rs"]
+mod multi_fixture;
+
+pub(super) fn details(directory: &std::path::Path) -> anyhow::Result<()> {
+    use gpui_kit::{InputEvent as _, MouseButton, MouseDownEvent, MouseUpEvent};
+    use zipzi_editor_core::{Document, ObjectKind, ObjectRef, ViewportPoint};
+    let mut h = Harness::with_size(1200., 820.)?;
+    let mut session = multi_fixture::create(
+        h._assets.path(),
+        include_bytes!("../../../zipzi-editor-core/tests/fixtures/alpha-asymmetric.png"),
+    )?;
+    let path = h._assets.path().join("mesh-details.zipzi");
+    crate::test_fixture::save_fixture(&mut session, &path)?;
+    let mut document = Document::open(&path)?;
+    document.select_objects(
+        [2, 4]
+            .map(|n| ObjectRef::new(ObjectKind::Mesh, multi_fixture::id(n)))
+            .into(),
+    )?;
+    h.cx.update_window(h.window, |_, window, cx| {
+        window.activate_window();
+        h.view.update(cx, |view, cx| {
+            view.replace_editor(Editor::from_document(document), cx);
+            view.editor.reset_view();
+            view.editor.pan_by(ViewportPoint { x: -100., y: 120. });
+            view.refresh_document(window, cx);
+        });
+    })?;
+    h.capture()?;
+    h.view.update(&mut h.cx, |view, cx| {
+        view.editor.set_zoom_at(2.5, None);
+        view.redraw(cx);
+    });
+    save(
+        &h.capture()?,
+        directory,
+        "mesh-details-object-move-handle.png",
+    )?;
+    let at = h.view.read_with(&h.cx, |view, _| {
+        let frame = &view.modeling_frame().unwrap().canvas;
+        (1..8)
+            .flat_map(|x| {
+                (1..8).map(move |y| ModelPoint {
+                    x: 20. + x as f32 * 10.,
+                    y: 20. + y as f32 * 10.,
+                })
+            })
+            .find(|&p| {
+                frame
+                    .geometry
+                    .mesh_hits(p)
+                    .iter()
+                    .any(|id| *id == multi_fixture::id(2))
+            })
+            .unwrap()
+    });
+    click_model(&mut h, at)?;
+    h.capture()?;
+    h.cx.update_window(h.window, |_, window, cx| {
+        let frame = &h.view.read(cx).modeling_frame().unwrap().canvas;
+        let p = frame.transform.to_viewport(at);
+        let position = window.find("canvas-body").bounds().origin + point(px(p.x), px(p.y));
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position,
+                modifiers: Default::default(),
+                click_count: 2,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position,
+                modifiers: Default::default(),
+                click_count: 2,
+            }
+            .to_platform_input(),
+            cx,
+        );
+    })?;
+    h.capture()?;
+    h.view.read_with(&h.cx, |view, _| {
+        assert!(view.editor.manual_active());
+        assert_eq!(view.editor.manual_targets().len(), 2);
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+    });
+    click_model(&mut h, ModelPoint { x: 20., y: 20. })?;
+    h.capture()?;
+    gesture_model(
+        &mut h,
+        ModelPoint { x: 140., y: 140. },
+        ModelPoint { x: 140., y: 140. },
+        gpui_kit::Modifiers {
+            shift: true,
+            ..Default::default()
+        },
+    )?;
+    save(
+        &h.capture()?,
+        directory,
+        "mesh-details-multi-mesh-colors.png",
+    )?;
+    h.view.read_with(&h.cx, |view, _| {
+        let overlay = view.editor.overlay();
+        assert_eq!(overlay.mesh_styles.len(), 2);
+        assert_ne!(
+            overlay.mesh_styles[0].color_index,
+            overlay.mesh_styles[1].color_index
+        );
+        assert_eq!(overlay.vertices.iter().filter(|v| v.selected).count(), 2);
+    });
+    h.cx.update_window(h.window, |_, _, cx| {
+        crate::theme::change(gpui_kit::component::ThemeMode::Light, cx);
+        h.view.update(cx, |view, cx| view.redraw(cx));
+    })?;
+    save(
+        &h.capture()?,
+        directory,
+        "mesh-details-multi-mesh-colors-light.png",
+    )?;
+    h.cx.update_window(h.window, |_, _, cx| {
+        h.view.update(cx, |view, cx| {
+            view.editor.exit_manual_mesh();
+            view.redraw(cx);
+        });
+    })?;
+    save(
+        &h.capture()?,
+        directory,
+        "mesh-details-object-move-handle-light.png",
+    )?;
+    Ok(())
+}
+
 fn click_model(h: &mut Harness, p: ModelPoint) -> anyhow::Result<()> {
     h.cx.update_window(h.window, |_, window, cx| {
         let p = h

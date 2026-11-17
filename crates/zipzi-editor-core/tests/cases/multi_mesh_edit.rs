@@ -68,6 +68,85 @@ fn screen(editor: &mut Editor, x: f32, y: f32) -> anyhow::Result<ViewportPoint> 
         .transform
         .to_viewport(ModelPoint { x, y }))
 }
+
+#[test]
+fn mesh_edit_ownership_colors_survive_target_switches_and_reordered_selection() -> anyhow::Result<()>
+{
+    let (mut editor, _dir) = setup()?;
+    let colors = |editor: &Editor| {
+        let mut colors: Vec<_> = editor
+            .overlay()
+            .mesh_styles
+            .into_iter()
+            .map(|s| (s.object.id, s.color_index))
+            .collect();
+        colors.sort();
+        colors
+    };
+    let original = colors(&editor);
+    assert_eq!(original.len(), 2);
+    assert_ne!(original[0].1, original[1].1);
+    click(&mut editor, 20., 20., false)?;
+    click(&mut editor, 140., 140., true)?;
+    assert_eq!(colors(&editor), original);
+    let overlay = editor.overlay();
+    let frame = support::present_canvas(&mut editor)?;
+    for style in &overlay.mesh_styles {
+        let geometry = frame.geometry.mesh(&style.object.id).unwrap();
+        let vertices = &overlay.vertices[style.vertices.clone()];
+        assert_eq!(vertices.len(), geometry.vertices.len());
+        assert_eq!(vertices.iter().filter(|v| v.selected).count(), 1);
+        for v in vertices {
+            assert!(
+                geometry
+                    .vertices
+                    .iter()
+                    .any(|(id, p)| *id == v.id && frame.transform.to_viewport(*p) == v.position)
+            );
+        }
+    }
+    editor.exit_manual_mesh();
+    editor.execute(EditorCommand::SelectObjects(
+        objects().into_iter().rev().collect(),
+    ))?;
+    editor.enter_manual_mesh(editor.active_id().unwrap())?;
+    support::present_canvas(&mut editor)?;
+    assert_eq!(colors(&editor), original);
+    Ok(())
+}
+
+#[test]
+fn double_click_entry_retains_multi_selection_and_binds_the_clicked_viewport() -> anyhow::Result<()>
+{
+    let (mut editor, _dir) = setup()?;
+    let original = meshes(&editor);
+    editor.exit_manual_mesh();
+    let other = ViewportId::new();
+    editor.register_viewport(other, ViewportKind::Modeling)?;
+    editor.set_viewport_metrics(
+        other,
+        ViewportMetrics {
+            width: 512.,
+            height: 512.,
+            scale_factor: 1.,
+        },
+    );
+    let binding = editor.viewport_binding(other).unwrap();
+    let frame = editor.preview_for(binding)?.canvas.unwrap();
+    assert!(editor.present_frame(frame.clone()));
+    let point = frame.transform.to_viewport(ModelPoint { x: 140., y: 140. });
+    assert!(editor.try_enter_mesh_edit_at(binding, point)?);
+    assert_eq!(editor.manual_targets().len(), 2);
+    assert_eq!(editor.manual_target().unwrap().object, objects()[1]);
+    let frame = editor.preview_for(binding)?.canvas.unwrap();
+    assert!(editor.present_frame(frame.clone()));
+    assert!(!editor.overlay_for_viewport(binding).vertices.is_empty());
+    assert_eq!(meshes(&editor), original);
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    assert!(!editor.gesture_active());
+    assert!(!editor.try_enter_mesh_edit_at(binding, point)?);
+    Ok(())
+}
 fn click(editor: &mut Editor, x: f32, y: f32, shift: bool) -> anyhow::Result<()> {
     let point = screen(editor, x, y)?;
     support::pointer_input(

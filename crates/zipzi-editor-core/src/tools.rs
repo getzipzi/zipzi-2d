@@ -30,7 +30,7 @@ use zipzi_core::state::DocumentState;
 
 pub use overlay::{
     CanvasGestureKind, CanvasSelectionOperation, GluePointState, OverlayDeformer, OverlayGlue,
-    OverlayGluePoint, OverlayHandle, OverlayRotationBone, OverlaySelectionBrush,
+    OverlayGluePoint, OverlayHandle, OverlayMeshStyle, OverlayRotationBone, OverlaySelectionBrush,
     OverlaySelectionWeights, OverlaySnapshot, OverlayVertex, OverlayVertexKind,
 };
 
@@ -65,6 +65,7 @@ pub struct CanvasFrame {
 }
 #[derive(Default)]
 pub struct ToolController {
+    mesh_edit_colors: std::collections::HashMap<ObjectRef, usize>,
     pub(crate) hidden_deformer_viewports:
         std::collections::HashSet<(crate::ViewportId, crate::ControlKind)>,
     pub active: ToolId,
@@ -506,7 +507,22 @@ impl ToolController {
         self.components.clear();
         self.component_weights.clear();
         self.active = ToolId::Select;
-        self.manual = Some(manual_mesh::ManualMeshSession::new(targets, document));
+        let colors = targets
+            .iter()
+            .map(|target| {
+                let next = self.mesh_edit_colors.len();
+                *self
+                    .mesh_edit_colors
+                    .entry(target.object.clone())
+                    .or_insert(next)
+            })
+            .collect();
+        self.manual = Some(manual_mesh::ManualMeshSession::with_colors(
+            targets, document, colors,
+        ));
+    }
+    pub fn manual_color_index(&self, object: &ObjectRef) -> Option<usize> {
+        self.mesh_edit_colors.get(object).copied()
     }
     pub fn set_manual_tool(&mut self, tool: ManualTool, document: &mut Document) {
         self.cancel(document);

@@ -22,6 +22,56 @@ pub struct ViewportInputUpdate {
 }
 
 impl Editor {
+    /// A native double click enters topology editing without forwarding its second press.
+    pub fn try_enter_mesh_edit_at(
+        &mut self,
+        binding: ViewportBinding,
+        point: crate::ViewportPoint,
+    ) -> Result<bool> {
+        if binding.kind != ViewportKind::Modeling
+            || self.editing_context() != Some(crate::EditingContext::Modeling)
+            || self.active_tool() != crate::ToolId::Select
+            || self.manual_active()
+        {
+            return Ok(false);
+        }
+        self.sync_runtime()?;
+        self.validate_modeling_binding(binding)?;
+        self.validate_modeling_press(binding)?;
+        let frame = self.displayed_modeling_frame(binding).unwrap().clone();
+        let session = self.active_session().unwrap();
+        let Some(hit) = session
+            .modeling
+            .tools
+            .canvas_hit(&session.document, &frame, point)
+        else {
+            return Ok(false);
+        };
+        if hit.object().kind != crate::ObjectKind::Mesh
+            || matches!(hit, crate::HitTarget::DeformerHandle(_, _))
+        {
+            return Ok(false);
+        }
+        let object = hit.object().clone();
+        self.cancel_gesture();
+        let session = self.active_session_mut().unwrap();
+        session.document.manual_mesh_target_for(&object)?;
+        let selection = &session.document.context().selections;
+        if !selection.contains(&object)
+            || selection.iter().any(|o| o.kind != crate::ObjectKind::Mesh)
+        {
+            session.document.select_object(object.clone())?;
+        }
+        self.enter_manual_mesh_in_viewport(binding.document, Some(binding.viewport))?;
+        // Retain a multi-mesh selection, making the clicked mesh current.
+        let session = self.active_session_mut().unwrap();
+        session
+            .modeling
+            .tools
+            .activate_manual_target(&mut session.document, &frame, point);
+        Ok(true)
+    }
+
     pub fn canvas_idle_hints(&self) -> &'static [InteractionHint] {
         self.active_session()
             .map_or(&[], |s| s.modeling.tools.idle_hints())

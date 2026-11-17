@@ -1441,7 +1441,13 @@ fn selecting_deformer_shows_handles_without_secondary_toolbar(cx: &mut TestAppCo
         );
         harness.view.read_with(cx, |view, _| {
             assert_eq!(
-                view.editor.document().unwrap().selected_id(),
+                view.editor
+                    .document()
+                    .unwrap()
+                    .context()
+                    .selection
+                    .as_ref()
+                    .map(|r| r.id.as_str()),
                 Some(id.as_str())
             );
             assert_eq!(view.editor.active_tool(), ToolId::Select);
@@ -1451,7 +1457,7 @@ fn selecting_deformer_shows_handles_without_secondary_toolbar(cx: &mut TestAppCo
                     .overlay()
                     .handles
                     .iter()
-                    .filter(|h| !h.round)
+                    .filter(|h| !h.round && !h.movement)
                     .count(),
                 8
             );

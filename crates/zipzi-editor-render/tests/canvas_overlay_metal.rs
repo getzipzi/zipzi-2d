@@ -54,6 +54,75 @@ fn expected(c: Color) -> [u8; 4] {
         (c[3] * 255.).round() as u8,
     ]
 }
+
+#[test]
+fn mesh_ownership_colors_are_visible_on_gpu() -> anyhow::Result<()> {
+    use zipzi_editor_core::{ObjectKind, ObjectRef, OverlayMeshStyle};
+    let device = Device::system_default().expect("Metal GPU");
+    let queue = device.new_command_queue();
+    let mut renderer = MetalOverlayRenderer::new(device.clone())?;
+    let overlay = OverlaySnapshot {
+        vertices: (0..2)
+            .map(|i| OverlayVertex {
+                id: i,
+                kind: K::Mesh,
+                position: p(20. + i as f32 * 40., 20.),
+                selected: true,
+                hovered: false,
+                editable: true,
+            })
+            .collect(),
+        mesh_styles: (0..2)
+            .map(|i| OverlayMeshStyle {
+                object: ObjectRef::new(ObjectKind::Mesh, i.to_string()),
+                color_index: i,
+                vertices: i..i + 1,
+                lines: 0..0,
+                automatic_lines: 0..0,
+                accent_lines: 0..0,
+                hover_lines: 0..0,
+            })
+            .collect(),
+        ..Default::default()
+    };
+    for dark in [false, true] {
+        let list = Arc::new(CanvasDrawList::new(
+            &overlay,
+            [100.; 2],
+            CanvasPalette::new(dark),
+            CanvasOptions::default(),
+        )?);
+        for scale in [1., 2.] {
+            let width = (100. * scale) as u32;
+            let image = renderer
+                .draw_prepared(
+                    &queue,
+                    OverlayViewport {
+                        extent: [width; 2],
+                        scale,
+                        origin: [0.; 2],
+                    },
+                    list.clone(),
+                )?
+                .unwrap();
+            let bytes = pixels(&device, &queue, &image);
+            for i in 0..2 {
+                let actual = pixel(
+                    &bytes,
+                    width,
+                    ((20. + i as f32 * 40.) * scale) as u32,
+                    (20. * scale) as u32,
+                );
+                let wanted = expected(mesh_edit_color(i));
+                assert!(
+                    actual.iter().zip(wanted).all(|(a, b)| a.abs_diff(b) <= 1),
+                    "{actual:?} != {wanted:?}"
+                );
+            }
+        }
+    }
+    Ok(())
+}
 #[test]
 fn all_control_states_render_and_retained_surfaces_survive_updates() -> anyhow::Result<()> {
     let device = Device::system_default().expect("Metal GPU");

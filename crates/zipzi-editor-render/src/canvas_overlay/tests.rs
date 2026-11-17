@@ -4,6 +4,61 @@ use zipzi_editor_core::{OverlayGlue, OverlayGluePoint, OverlayRotationBone};
 fn p(x: f32, y: f32) -> ViewportPoint {
     ViewportPoint { x, y }
 }
+
+#[test]
+fn mesh_ownership_colors_distinguish_lines_and_selected_and_unselected_points() {
+    use zipzi_editor_core::{ObjectKind, ObjectRef, OverlayMeshStyle};
+    let snapshot = OverlaySnapshot {
+        lines: vec![(p(10., 20.), p(90., 20.)), (p(10., 40.), p(90., 40.))],
+        vertices: (0..4)
+            .map(|i| OverlayVertex {
+                id: i,
+                position: p(20. + (i % 2) as f32 * 40., 20. + (i / 2) as f32 * 20.),
+                selected: i % 2 == 1,
+                hovered: false,
+                editable: true,
+                kind: K::Mesh,
+            })
+            .collect(),
+        mesh_styles: (0..2)
+            .map(|i| OverlayMeshStyle {
+                object: ObjectRef::new(ObjectKind::Mesh, i.to_string()),
+                color_index: i,
+                lines: i..i + 1,
+                vertices: i * 2..i * 2 + 2,
+                automatic_lines: 0..0,
+                accent_lines: 0..0,
+                hover_lines: 0..0,
+            })
+            .collect(),
+        ..Default::default()
+    };
+    for dark in [false, true] {
+        let palette = CanvasPalette::new(dark);
+        let list =
+            CanvasDrawList::new(&snapshot, [100.; 2], palette, CanvasOptions::default()).unwrap();
+        assert_ne!(list.primitives[0].color, list.primitives[1].color);
+        for i in 0..2 {
+            let tint = mesh_edit_color(i);
+            let y = 20. + i as f32 * 20.;
+            let marker = |x| {
+                list.primitives
+                    .iter()
+                    .find(|p| {
+                        p.kind() == PrimitiveKind::Marker
+                            && p.geometry[0] == x
+                            && p.geometry[1] == y
+                    })
+                    .unwrap()
+            };
+            assert_eq!(marker(20.).border, tint);
+            assert_eq!(marker(20.).color, palette.hollow);
+            assert_eq!(marker(60.).color, tint);
+            assert_eq!(list.primitives[i].color, alpha(tint, 0.9));
+        }
+    }
+}
+
 #[test]
 fn selection_brush_outline_uses_its_logical_radius_and_erase_marker() {
     let mut snapshot = OverlaySnapshot {

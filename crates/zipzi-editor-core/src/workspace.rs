@@ -511,13 +511,25 @@ impl Editor {
         session.modeling.tools.manual_edge_at(frame, point)
     }
     pub fn enter_manual_mesh(&mut self, id: DocumentId) -> Result<()> {
+        self.enter_manual_mesh_in_viewport(id, self.primary_viewport_id())
+    }
+    pub fn manual_color_index(&self, object: &crate::ObjectRef) -> Option<usize> {
+        self.active_session()?
+            .modeling
+            .tools
+            .manual_color_index(object)
+    }
+    pub(crate) fn enter_manual_mesh_in_viewport(
+        &mut self,
+        id: DocumentId,
+        viewport: Option<crate::ViewportId>,
+    ) -> Result<()> {
         self.sync_runtime()?;
         ensure!(self.active == Some(id), "Manual mesh target changed");
         ensure!(
             self.entry(id)?.context == crate::EditingContext::Modeling,
             "Manual mesh editing requires the Modeling workspace"
         );
-        let viewport = self.primary_viewport_id();
         let session = self
             .active_session_mut()
             .ok_or_else(|| anyhow!("No document"))?;

@@ -322,3 +322,37 @@ impl ViewportSurface {
         .size_full()
     }
 }
+pub(super) fn move_handles(
+    overlay: &zipzi_editor_core::OverlaySnapshot,
+    palette: crate::canvas_overlay::Palette,
+) -> Vec<AnyElement> {
+    use gpui_kit::{assets::IconName, component::Icon};
+    if !benchmark::parameter_overlay::paint_any() || !benchmark::parameter_overlay::paint_vertices()
+    {
+        return Vec::new();
+    }
+    overlay
+        .handles
+        .iter()
+        .filter(|h| h.movement && h.position.x.is_finite() && h.position.y.is_finite())
+        .enumerate()
+        .map(|(index, h)| {
+            let color = if !h.editable {
+                palette.restricted
+            } else if h.hovered || h.selected {
+                palette.deformer
+            } else {
+                palette.deformer_frame
+            };
+            div()
+                .id(("canvas-move-handle", index))
+                .test_support()
+                .absolute()
+                .left(px(h.position.x - 8.))
+                .top(px(h.position.y - 8.))
+                .size(px(16.))
+                .child(Icon::new(IconName::Move).size(px(16.)).text_color(color))
+                .into_any_element()
+        })
+        .collect()
+}

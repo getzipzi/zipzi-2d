@@ -16,7 +16,7 @@ fn same(a: &[ModelPoint], b: &[ModelPoint]) {
         assert!((a.x - b.x).hypot(a.y - b.y) < 0.001, "{a:?} != {b:?}");
     }
 }
-fn edge(editor: &mut Editor, object: &ObjectRef) -> anyhow::Result<ViewportPoint> {
+fn move_handle(editor: &mut Editor, object: &ObjectRef) -> anyhow::Result<ViewportPoint> {
     let frame = shown(editor)?;
     let c = frame
         .geometry
@@ -25,11 +25,11 @@ fn edge(editor: &mut Editor, object: &ObjectRef) -> anyhow::Result<ViewportPoint
         .find(|c| c.object == *object)
         .unwrap();
     let g = frame.geometry.deformer_gizmo(c, frame.transform).unwrap();
-    let (a, b) = g.outline[0];
-    Ok(ViewportPoint {
-        x: (a.x + b.x) * 0.5,
-        y: (a.y + b.y) * 0.5,
-    })
+    Ok(g.handles
+        .iter()
+        .find(|(h, _)| *h == DeformerHandle::Move)
+        .unwrap()
+        .1)
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn command_drag_freezes_policy_preserves_children_and_returns_exactly_to_the_pre
     let initial = control_points(&mut editor, &object)?;
     let children = mesh_points(&mut editor)?;
     for finish in [0, 1, 2] {
-        let start = edge(&mut editor, &object)?;
+        let start = move_handle(&mut editor, &object)?;
         pointer_input(
             &mut editor,
             CanvasInput::Down {
@@ -83,7 +83,7 @@ fn command_drag_freezes_policy_preserves_children_and_returns_exactly_to_the_pre
     editor.execute(EditorCommand::Redo)?;
     same(&children, &mesh_points(&mut editor)?);
     assert!(!editor.overlay().deformer_keep_children);
-    let start = edge(&mut editor, &object)?;
+    let start = move_handle(&mut editor, &object)?;
     drag(
         &mut editor,
         start,

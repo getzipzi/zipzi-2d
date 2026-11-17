@@ -184,7 +184,7 @@ fn single_grid_anchor_or_tangent_keeps_whole_frame_and_remains_directly_draggabl
         shown(&mut editor)?;
         let overlay = editor.overlay();
         assert!(!overlay.warp_frame_lines.is_empty());
-        assert_eq!(overlay.handles.iter().filter(|h| !h.tangent).count(), 9);
+        assert_eq!(overlay.handles.iter().filter(|h| !h.tangent).count(), 10);
         let selected = if kind == 2 {
             overlay
                 .handles
@@ -264,7 +264,7 @@ fn single_grid_anchor_or_tangent_keeps_whole_frame_and_remains_directly_draggabl
                 .iter()
                 .filter(|h| !h.tangent)
                 .count(),
-            9
+            10
         );
     }
     Ok(())

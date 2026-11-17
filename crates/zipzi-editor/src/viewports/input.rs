@@ -237,6 +237,48 @@ impl ViewportSurface {
             self.sync_status_bar(cx);
             cx.notify();
         } else {
+            if event.button == MouseButton::Left
+                && event.click_count == 2
+                && event.modifiers == gpui_kit::Modifiers::default()
+                && self.kind == zipzi_editor_core::ViewportKind::Modeling
+            {
+                let point = self.local(event.position);
+                let owner = self.owner.clone();
+                let handled = owner
+                    .update(cx, |owner, cx| {
+                        if owner.mesh_generation.is_some() {
+                            return false;
+                        }
+                        if !owner.editor.has_presented_frame(
+                            owner
+                                .modeling_frame_for(self.viewport)
+                                .map(|f| f.canvas.version),
+                        ) {
+                            return false;
+                        }
+                        let Some(binding) = self.binding(&owner.editor) else {
+                            return false;
+                        };
+                        match owner.editor.try_enter_mesh_edit_at(binding, point) {
+                            Ok(false) => false,
+                            Ok(true) => {
+                                self.cancel_pointer();
+                                owner.clear_edit_error(cx);
+                                owner.redraw(cx);
+                                true
+                            }
+                            Err(error) => {
+                                owner.set_edit_error(error.to_string(), cx);
+                                owner.redraw(cx);
+                                true
+                            }
+                        }
+                    })
+                    .unwrap_or(false);
+                if handled {
+                    return;
+                }
+            }
             let resize_brush = self.owner.upgrade().is_some_and(|owner| {
                 let state = owner.read(cx);
                 state.editor.active_tool() == ToolId::BrushSelect

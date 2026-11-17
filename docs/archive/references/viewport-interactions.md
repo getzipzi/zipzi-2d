@@ -85,7 +85,10 @@ This applies in both Bezier and lattice-point modes. Option on a Warp scale
 handle instead scales around the frozen frame center, including uniform corner
 scaling with Shift. Option point/region subtraction remains unchanged.
 
-Warp frames have a separate rotation handle. Rotation accumulates successive
+Mesh, container and Warp frames translate only through the four-way arrow
+handle outside their right edge. Frame lines are display-only. The move handle
+uses the same frozen targets, live modifiers and cancellation as other frame
+operations. Warp frames have a separate rotation handle. Rotation accumulates successive
 angle deltas across the ±180° boundary; returning through full turns leaves no
 history entry. With zero or one selected point, Mesh and Warp frames operate on
 whole objects; two or more selected points use a local selection frame. Direct
@@ -276,6 +279,11 @@ a GPUI window. Input-routing headless regressions also cover Properties target
 rebinding and stale/window-local Timeline hint snapshots.
 
 ## Mesh Edit direct gestures
+
+Double-clicking a mesh with Select enters Mesh Edit in the clicked viewport.
+The entry consumes the second press, retains an existing all-mesh selection
+containing that mesh, and makes the clicked mesh current. Handles, blank space,
+locked objects, modified clicks and other tools do not acquire this shortcut.
 
 Mesh Edit accepts one or more selected meshes, each with its own source image,
 vertex selection, allocator and topology. Region selection spans the group;

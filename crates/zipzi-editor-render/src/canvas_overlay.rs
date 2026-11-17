@@ -8,6 +8,34 @@ use zipzi_editor_core::{
 
 pub type Color = [f32; 4];
 pub type Point = [f32; 2];
+
+/// Ownership hues stay independent of selection, hover and the current mesh.
+pub fn mesh_edit_color(index: usize) -> Color {
+    const COLORS: [u32; 8] = [
+        0xff4040, 0x00c8f0, 0xffd900, 0xff40d0, 0x66e638, 0xff8500, 0x5b78ff, 0xba55ff,
+    ];
+    if let Some(&rgb) = COLORS.get(index) {
+        return [
+            ((rgb >> 16) & 255) as f32 / 255.,
+            ((rgb >> 8) & 255) as f32 / 255.,
+            (rgb & 255) as f32 / 255.,
+            1.,
+        ];
+    }
+    // Continue around the hue wheel rather than immediately repeating eight colors.
+    let hue = (index as f64 * 0.618_033_988_75).fract() as f32 * 6.;
+    let chroma = 0.85;
+    let x = chroma * (1. - (hue % 2. - 1.).abs());
+    let [r, g, b] = match hue as u8 {
+        0 => [chroma, x, 0.],
+        1 => [x, chroma, 0.],
+        2 => [0., chroma, x],
+        3 => [0., x, chroma],
+        4 => [x, 0., chroma],
+        _ => [chroma, 0., x],
+    };
+    [r + 0.08, g + 0.08, b + 0.08, 1.]
+}
 const MAX_PRIMITIVES: usize = 128 * 1024 * 1024 / size_of::<CanvasPrimitive>();
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -200,7 +228,15 @@ impl CanvasDrawList {
             }
         }
         if options.lines {
-            b.lines(&overlay.lines, 1., alpha(p.mesh, 0.45));
+            b.mesh_lines(
+                &overlay.lines,
+                &overlay.mesh_styles,
+                |s| &s.lines,
+                1.,
+                alpha(p.mesh, 0.45),
+                0.9,
+                false,
+            );
             b.lines(
                 &overlay.reference_lines,
                 style::IDLE_LINE_WIDTH,
@@ -211,10 +247,14 @@ impl CanvasDrawList {
                 style::IDLE_LINE_WIDTH,
                 alpha(p.image_bounds, 0.55),
             );
-            b.dashes(
+            b.mesh_lines(
                 &overlay.automatic_lines,
+                &overlay.mesh_styles,
+                |s| &s.automatic_lines,
                 style::IDLE_LINE_WIDTH,
                 alpha(p.mesh, 0.55),
+                0.65,
+                true,
             );
             if let Some(o) = overlay.origin_crosshair {
                 b.line(
@@ -231,8 +271,24 @@ impl CanvasDrawList {
                 );
             }
             b.lines(&overlay.guide_lines, 0.5, alpha(p.mesh, 0.18));
-            b.lines(&overlay.accent_lines, 1., alpha(p.mesh, 0.8));
-            b.lines(&overlay.hover_lines, 1., p.mesh);
+            b.mesh_lines(
+                &overlay.accent_lines,
+                &overlay.mesh_styles,
+                |s| &s.accent_lines,
+                1.,
+                alpha(p.mesh, 0.8),
+                1.,
+                false,
+            );
+            b.mesh_lines(
+                &overlay.hover_lines,
+                &overlay.mesh_styles,
+                |s| &s.hover_lines,
+                1.,
+                p.mesh,
+                1.,
+                false,
+            );
             for d in &overlay.deformers {
                 let opacity = if d.outline_only {
                     if d.hovered {
@@ -302,52 +358,93 @@ impl CanvasDrawList {
             }
         }
         if options.markers {
-            let mesh_markers = std::array::from_fn::<_, 8, _>(|flags| {
-                let (color, border) = control_colors(
-                    flags & 1 != 0,
-                    flags & 2 != 0,
-                    flags & 4 != 0,
-                    p.mesh_selected,
-                    p,
-                );
-                let r = style::POINT_RADIUS;
-                color
+            let markers = |ownership: Option<Color>| {
+                std::array::from_fn::<_, 8, _>(|flags| {
+                    let (color, mut border) = control_colors(
+                        flags & 1 != 0,
+                        flags & 2 != 0,
+                        flags & 4 != 0,
+                        ownership.unwrap_or(p.mesh_selected),
+                        p,
+                    );
+                    if let Some(tint) = ownership
+                        && flags & 4 != 0
+                    {
+                        border = if flags & 2 != 0 {
+                            [
+                                tint[0] * 0.5 + 0.5,
+                                tint[1] * 0.5 + 0.5,
+                                tint[2] * 0.5 + 0.5,
+                                1.,
+                            ]
+                        } else if flags & 1 != 0 {
+                            [0.08, 0.08, 0.08, 1.]
+                        } else {
+                            tint
+                        };
+                    }
+                    let r = style::POINT_RADIUS;
+                    color
+                        .iter()
+                        .chain(&border)
+                        .all(|v| v.is_finite())
+                        .then_some(CanvasPrimitive {
+                            geometry: [0., 0., r, r],
+                            parameters: [1., r, 1., 0.],
+                            color,
+                            border,
+                        })
+                })
+            };
+            let mesh_markers: Vec<_> = if overlay.mesh_styles.is_empty() {
+                vec![(0..overlay.vertices.len(), markers(None))]
+            } else {
+                overlay
+                    .mesh_styles
                     .iter()
-                    .chain(&border)
-                    .all(|v| v.is_finite())
-                    .then_some(CanvasPrimitive {
-                        geometry: [0., 0., r, r],
-                        parameters: [1., r, 1., 0.],
-                        color,
-                        border,
+                    .map(|s| {
+                        (
+                            s.vertices.clone(),
+                            markers(Some(mesh_edit_color(s.color_index))),
+                        )
                     })
-            });
+                    .collect()
+            };
             for grid in [true, false] {
                 for emphasized in [false, true] {
-                    for v in overlay.vertices.iter().filter(|v| {
-                        (v.kind == K::WarpGrid) == grid && (v.selected || v.hovered) == emphasized
-                    }) {
-                        if v.kind == K::Mesh {
-                            let flags = usize::from(v.selected)
-                                | (usize::from(v.hovered) << 1)
-                                | (usize::from(v.editable) << 2);
-                            if let Some(mut marker) = mesh_markers[flags] {
-                                let [x, y] = pt(v.position);
-                                let r = style::POINT_RADIUS;
-                                if x.is_finite()
-                                    && y.is_finite()
-                                    && x + r + 1. >= 0.
-                                    && y + r + 1. >= 0.
-                                    && x - r - 1. <= extent[0]
-                                    && y - r - 1. <= extent[1]
-                                {
-                                    marker.geometry[0] = x;
-                                    marker.geometry[1] = y;
-                                    b.push_visible(marker);
+                    for (range, markers) in &mesh_markers {
+                        for v in overlay
+                            .vertices
+                            .get(range.clone())
+                            .unwrap_or_default()
+                            .iter()
+                            .filter(|v| {
+                                (v.kind == K::WarpGrid) == grid
+                                    && (v.selected || v.hovered) == emphasized
+                            })
+                        {
+                            if v.kind == K::Mesh {
+                                let flags = usize::from(v.selected)
+                                    | (usize::from(v.hovered) << 1)
+                                    | (usize::from(v.editable) << 2);
+                                if let Some(mut marker) = markers[flags] {
+                                    let [x, y] = pt(v.position);
+                                    let r = style::POINT_RADIUS;
+                                    if x.is_finite()
+                                        && y.is_finite()
+                                        && x + r + 1. >= 0.
+                                        && y + r + 1. >= 0.
+                                        && x - r - 1. <= extent[0]
+                                        && y - r - 1. <= extent[1]
+                                    {
+                                        marker.geometry[0] = x;
+                                        marker.geometry[1] = y;
+                                        b.push_visible(marker);
+                                    }
                                 }
+                            } else {
+                                b.vertex(v, p);
                             }
-                        } else {
-                            b.vertex(v, p);
                         }
                     }
                 }
@@ -375,6 +472,10 @@ impl CanvasDrawList {
                 }
             }
             for h in &overlay.handles {
+                if h.movement {
+                    // The application paints Kit's standard Move SVG above this surface.
+                    continue;
+                }
                 b.control(
                     [h.position.x, h.position.y],
                     style::POINT_RADIUS,
@@ -573,6 +674,34 @@ struct Builder {
     overflow: bool,
 }
 impl Builder {
+    fn mesh_lines(
+        &mut self,
+        lines: &[(ViewportPoint, ViewportPoint)],
+        styles: &[zipzi_editor_core::OverlayMeshStyle],
+        range: impl Fn(&zipzi_editor_core::OverlayMeshStyle) -> &std::ops::Range<usize>,
+        width: f32,
+        fallback: Color,
+        opacity: f32,
+        dashed: bool,
+    ) {
+        let mut paint = |lines: &[_], color| {
+            if dashed {
+                self.dashes(lines, width, color);
+            } else {
+                self.lines(lines, width, color);
+            }
+        };
+        if styles.is_empty() {
+            paint(lines, fallback);
+        } else {
+            for style in styles {
+                if let Some(lines) = lines.get(range(style).clone()) {
+                    paint(lines, alpha(mesh_edit_color(style.color_index), opacity));
+                }
+            }
+        }
+    }
+
     fn push(&mut self, p: CanvasPrimitive) {
         if !p
             .geometry

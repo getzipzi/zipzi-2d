@@ -117,7 +117,7 @@ fn warp_grid_and_bezier_cursor_controls_share_one_surface_without_mode_switches(
         window.render_frame(cx);
         let overlay = h.view.read(cx).editor.overlay();
         assert!(!overlay.warp_frame_lines.is_empty());
-        assert_eq!(overlay.handles.iter().filter(|h| !h.tangent).count(), 9);
+        assert_eq!(overlay.handles.iter().filter(|h| !h.tangent).count(), 10);
         assert!(
             overlay
                 .vertices

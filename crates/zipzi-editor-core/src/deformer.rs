@@ -5,7 +5,7 @@ use crate::{CanvasScene, ControlGeometry, ControlKind, ViewportPoint, ViewportTr
 pub(crate) const ROTATION_BONE_LENGTH: f32 = zipzi_core::document::DEFAULT_ROTATION_BONE_LENGTH;
 // Fixed logical-pixel gap between editable geometry and its transform frame.
 use crate::canvas_style::FRAME_PADDING;
-const WARP_ROTATE_OFFSET: f32 = 24.;
+const FRAME_HANDLE_OFFSET: f32 = 24.;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DeformerHandle {
@@ -235,10 +235,13 @@ impl DeformerGizmo {
             .enumerate()
             .map(|(i, p)| (DeformerHandle::Scale(i as u8), p))
             .collect();
-        let rotate = p(center.x, y0 - WARP_ROTATE_OFFSET);
+        let rotate = p(center.x, y0 - FRAME_HANDLE_OFFSET);
         outline.push((p(center.x, y0), rotate));
         outline.push((p(center.x - 5., center.y), p(center.x + 5., center.y)));
         outline.push((p(center.x, center.y - 5.), p(center.x, center.y + 5.)));
+        let move_handle = p(x1 + FRAME_HANDLE_OFFSET, center.y);
+        outline.push((p(x1, center.y), p(move_handle.x - 8., center.y)));
+        handles.push((DeformerHandle::Move, move_handle));
         handles.push((DeformerHandle::Rotate, rotate));
         let rotate_point = |p: ViewportPoint| {
             let (s, c) = frame_angle.sin_cos();

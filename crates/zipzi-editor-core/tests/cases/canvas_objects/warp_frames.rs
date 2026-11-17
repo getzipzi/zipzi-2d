@@ -68,21 +68,18 @@ fn single_point_frame_commands_use_whole_warp_without_changing_numeric_point_edi
     let point = editor.overlay().vertices[0].position;
     click(&mut editor, point, false)?;
     assert_eq!(frame(&editor, &object).frame, whole);
-    assert_eq!(frame_handles(&editor).len(), 9);
+    assert_eq!(frame_handles(&editor).len(), 10);
     for command in [WarpFrameAction::Align, WarpFrameAction::Reset] {
         action(&mut editor, &object, command)?;
         assert_eq!(frame(&editor, &object).frame, whole);
-        assert_eq!(frame_handles(&editor).len(), 9);
+        assert_eq!(frame_handles(&editor).len(), 10);
     }
     action(&mut editor, &object, WarpFrameAction::ToggleVisible)?;
     assert!(frame_handles(&editor).is_empty());
     assert!(editor.overlay().warp_frame_lines.is_empty());
     action(&mut editor, &object, WarpFrameAction::ToggleAdjust)?;
     let handles = frame_handles(&editor);
-    let start = ViewportPoint {
-        x: (handles[0].position.x + handles[1].position.x) / 2.,
-        y: handles[0].position.y,
-    };
+    let start = handles.iter().find(|h| h.movement).unwrap().position;
     native_drag(
         &mut editor,
         start,
@@ -132,7 +129,7 @@ fn single_point_frame_commands_use_whole_warp_without_changing_numeric_point_edi
             .iter()
             .all(|size| *size > 0.)
     );
-    assert_eq!(frame_handles(&editor).len(), 9);
+    assert_eq!(frame_handles(&editor).len(), 10);
     Ok(())
 }
 
@@ -155,10 +152,7 @@ fn frame_adjustment_handles_remain_draggable_when_overlapping_disabled_controls(
         })
         .unwrap()
         .position;
-    let edge = ViewportPoint {
-        x: (handles[1].position.x + handles[2].position.x) / 2.,
-        y: handles[1].position.y,
-    };
+    let edge = handles.iter().find(|h| h.movement).unwrap().position;
     native_drag(
         &mut editor,
         edge,
@@ -202,10 +196,7 @@ fn warp_frame_adjustment_move_rotation_scale_and_cancel_leave_the_model_unchange
     let original = frame(&editor, &object);
     for cancel in [true, false] {
         let handles = frame_handles(&editor);
-        let start = ViewportPoint {
-            x: (handles[1].position.x + handles[2].position.x) / 2.,
-            y: handles[1].position.y,
-        };
+        let start = handles.iter().find(|h| h.movement).unwrap().position;
         let end = ViewportPoint {
             x: start.x + 20.,
             y: start.y + 10.,
@@ -340,7 +331,7 @@ fn frame_visibility_is_per_viewport_hidden_handles_do_not_hit_and_points_remain_
             .iter()
             .filter(|h| !h.tangent)
             .count(),
-        9
+        10
     );
     editor.hover_canvas(first.version.binding, Some(rotate))?;
     assert!(editor.overlay().active_handle.is_none());
@@ -527,10 +518,7 @@ fn selected_points_across_warps_share_frame_state_and_numeric_pivot() -> anyhow:
             .all(|point| !point.editable)
     );
     let handles = frame_handles(&editor);
-    let start = ViewportPoint {
-        x: (handles[1].position.x + handles[2].position.x) / 2.,
-        y: handles[1].position.y,
-    };
+    let start = handles.iter().find(|h| h.movement).unwrap().position;
     native_drag(
         &mut editor,
         start,

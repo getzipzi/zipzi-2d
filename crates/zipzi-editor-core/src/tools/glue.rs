@@ -12,7 +12,7 @@ use crate::{CanvasFrame, ComponentRef, Document, HitTarget, ObjectKind, ObjectRe
 impl super::ToolController {
     /// A single visible handle must hit the editable selected source at an
     /// overlapping seam. It never redirects writes into an unselected mesh.
-    pub(super) fn canvas_hit(
+    pub(crate) fn canvas_hit(
         &self,
         document: &Document,
         frame: &CanvasFrame,

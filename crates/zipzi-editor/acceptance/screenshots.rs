@@ -40,6 +40,10 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("mesh-edit-details") {
+        manual_mesh_scene::details(&directory)?;
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("brush-selection") {
         brush_scene::run(&directory)?;
         println!("Weighted brush selection screenshots passed.");

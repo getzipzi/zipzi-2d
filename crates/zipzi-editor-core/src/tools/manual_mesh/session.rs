@@ -20,6 +20,7 @@ impl SharedGesture {
 
 pub(in crate::tools) struct ManualMeshSession {
     modes: Vec<ManualMeshMode>,
+    colors: Vec<usize>,
     active: usize,
     hovered: Option<usize>,
     shared: Option<SharedGesture>,
@@ -38,12 +39,21 @@ impl DerefMut for ManualMeshSession {
 
 impl ManualMeshSession {
     pub fn new(targets: Vec<ManualMeshTarget>, document: &Document) -> Self {
+        let colors = (0..targets.len()).collect();
+        Self::with_colors(targets, document, colors)
+    }
+    pub fn with_colors(
+        targets: Vec<ManualMeshTarget>,
+        document: &Document,
+        colors: Vec<usize>,
+    ) -> Self {
         Self {
             modes: targets
                 .into_iter()
                 .map(|t| ManualMeshMode::new(t, document))
                 .collect(),
             active: 0,
+            colors,
             hovered: None,
             shared: None,
         }
@@ -527,6 +537,24 @@ impl ManualMeshSession {
     }
     pub fn overlay(&self, frame: &CanvasFrame, shift: bool, alt: bool) -> OverlaySnapshot {
         let mut out = self.modes[self.active].overlay(frame, shift, alt);
+        let style = |index: usize, mesh: &OverlaySnapshot, merged: &OverlaySnapshot| {
+            crate::OverlayMeshStyle {
+                object: self.modes[index].target.object.clone(),
+                color_index: self.colors[index],
+                vertices: merged.vertices.len()..merged.vertices.len() + mesh.vertices.len(),
+                lines: merged.lines.len()..merged.lines.len() + mesh.lines.len(),
+                automatic_lines: merged.automatic_lines.len()
+                    ..merged.automatic_lines.len() + mesh.automatic_lines.len(),
+                accent_lines: merged.accent_lines.len()
+                    ..merged.accent_lines.len() + mesh.accent_lines.len(),
+                hover_lines: merged.hover_lines.len()
+                    ..merged.hover_lines.len() + mesh.hover_lines.len(),
+            }
+        };
+        if self.modes.len() > 1 {
+            out.mesh_styles
+                .push(style(self.active, &out, &OverlaySnapshot::default()));
+        }
         out.hovered_object_label = self
             .hovered
             .filter(|&index| {
@@ -548,6 +576,7 @@ impl ManualMeshSession {
                 continue;
             }
             let other = mode.overlay(frame, shift, alt);
+            out.mesh_styles.push(style(index, &other, &out));
             out.vertices.extend(other.vertices);
             out.lines.extend(other.lines);
             out.automatic_lines.extend(other.automatic_lines);

@@ -404,6 +404,7 @@ impl Render for ViewportSurface {
         let menu_owner = owner.downgrade();
         let menu_canvas = cx.weak_entity();
         let hover_name = overlay.hovered_object_label.clone();
+        let move_handles = painting::move_handles(&overlay, palette);
         let body = div()
             .id("canvas-body")
             .test_support()
@@ -459,6 +460,7 @@ impl Render for ViewportSurface {
             })
             .children(error.map(|e| div().absolute().p_4().child(e)))
             .child(self.overlay_element(overlay, palette, capture, cx))
+            .children(move_handles)
             .children(hover_name.map(|name| {
                 div()
                     .id("hovered-object-name")

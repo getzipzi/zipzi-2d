@@ -76,6 +76,8 @@ pub struct OverlaySnapshot {
     /// Referenced Glue endpoints can move and connect, but cannot be deleted.
     pub manual_mesh_delete_unavailable: bool,
     pub vertices: Vec<OverlayVertex>,
+    /// Per-mesh ownership colors in a multi-mesh topology editing session.
+    pub mesh_styles: Vec<OverlayMeshStyle>,
     /// Mesh topology; controls retain their own semantic line groups below.
     pub lines: Vec<(ViewportPoint, ViewportPoint)>,
     pub automatic_lines: Vec<(ViewportPoint, ViewportPoint)>,
@@ -175,6 +177,7 @@ pub struct OverlaySelectionWeights {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct OverlayHandle {
+    pub movement: bool,
     /// A Bezier tangent endpoint, distinct from transform-frame handles.
     pub tangent: bool,
     pub rotation: bool,
@@ -183,6 +186,17 @@ pub struct OverlayHandle {
     pub hovered: bool,
     pub selected: bool,
     pub editable: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct OverlayMeshStyle {
+    pub object: ObjectRef,
+    pub color_index: usize,
+    pub vertices: std::ops::Range<usize>,
+    pub lines: std::ops::Range<usize>,
+    pub automatic_lines: std::ops::Range<usize>,
+    pub accent_lines: std::ops::Range<usize>,
+    pub hover_lines: std::ops::Range<usize>,
 }
 impl ToolController {
     fn overlay_selection<'a>(
@@ -679,6 +693,7 @@ impl ToolController {
                     out.bezier_tangents
                         .push((t.to_viewport(*a), t.to_viewport(*b)));
                     out.handles.push(OverlayHandle {
+                        movement: false,
                         tangent: true,
                         rotation: false,
                         position: t.to_viewport(*b),
@@ -790,6 +805,7 @@ impl ToolController {
                                 .handles
                                 .into_iter()
                                 .map(|(kind, position)| OverlayHandle {
+                                    movement: kind == crate::DeformerHandle::Move,
                                     tangent: false,
                                     rotation: control.kind == ControlKind::Rotation,
                                     position,
@@ -827,6 +843,7 @@ impl ToolController {
                 out.warp_frame_lines.extend(gizmo.outline.iter().copied());
                 out.handles
                     .extend(gizmo.handles.iter().map(|(kind, position)| OverlayHandle {
+                        movement: *kind == crate::DeformerHandle::Move,
                         tangent: false,
                         rotation: false,
                         position: *position,

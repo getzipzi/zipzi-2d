@@ -964,6 +964,7 @@ mod tests {
                             editable,
                         }],
                         handles: vec![OverlayHandle {
+                            movement: false,
                             tangent: false,
                             rotation: true,
                             position: tip,

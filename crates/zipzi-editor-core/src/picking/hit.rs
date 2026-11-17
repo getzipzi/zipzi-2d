@@ -120,13 +120,6 @@ impl CanvasScene {
                         distance2(point, *p),
                     );
                 }
-                for &(a, b) in gizmo.outline.iter().take(8) {
-                    add(
-                        1,
-                        HitTarget::DeformerHandle(object.clone(), crate::DeformerHandle::Move),
-                        segment_distance2(point, a, b),
-                    );
-                }
             }
         }
         for c in self.controls.iter().filter(|c| {
@@ -175,6 +168,16 @@ impl CanvasScene {
                     && selection
                         .iter()
                         .any(|r| self.ancestors(r).contains(&c.object));
+            // The idle Warp outline selects its object; transform-frame edges do not move it.
+            if c.kind == ControlKind::Warp && !detail {
+                for (a, b) in self.warp_outline(c, t) {
+                    add(
+                        1,
+                        HitTarget::Object(c.object.clone()),
+                        segment_distance2(point, a, b),
+                    );
+                }
+            }
             if c.kind == ControlKind::Glue || detail {
                 let points = self.control_points(c, t);
                 if !adjusting && (selected || c.kind == ControlKind::Glue) {
@@ -247,16 +250,6 @@ impl CanvasScene {
                                 0,
                                 HitTarget::DeformerHandle(c.object.clone(), handle),
                                 distance2(point, p),
-                            );
-                        }
-                        for (a, b) in gizmo.outline {
-                            add(
-                                1,
-                                HitTarget::DeformerHandle(
-                                    c.object.clone(),
-                                    crate::DeformerHandle::Move,
-                                ),
-                                segment_distance2(point, a, b),
                             );
                         }
                     }

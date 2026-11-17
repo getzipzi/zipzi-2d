@@ -427,7 +427,7 @@ fn warp_shift_click_defers_toggle_and_shift_drag_locks_the_first_canvas_axis() -
     Ok(())
 }
 #[test]
-fn warp_outer_edge_moves_without_selecting_descendant_mesh() -> anyhow::Result<()> {
+fn warp_move_handle_moves_without_selecting_descendant_mesh() -> anyhow::Result<()> {
     let (mut editor, _dir, object) = deformer_editor(false)?;
     let before = control_points(&mut editor, &object)?;
     let frame = shown(&mut editor)?;
@@ -438,11 +438,12 @@ fn warp_outer_edge_moves_without_selecting_descendant_mesh() -> anyhow::Result<(
         .find(|c| c.object == object)
         .unwrap();
     let gizmo = frame.geometry.deformer_gizmo(c, frame.transform).unwrap();
-    let (a, b) = gizmo.outline[0];
-    let start = ViewportPoint {
-        x: (a.x + b.x) / 2.,
-        y: a.y,
-    };
+    let start = gizmo
+        .handles
+        .iter()
+        .find(|(h, _)| *h == DeformerHandle::Move)
+        .unwrap()
+        .1;
     drag(
         &mut editor,
         start,
@@ -844,7 +845,13 @@ fn warp_selected_frame_rotates_and_scales_only_selected_points() -> anyhow::Resu
         let start = if rotate {
             overlay.handles.last().unwrap().position
         } else {
-            overlay.handles[overlay.handles.len() - 1 - 5].position
+            overlay
+                .handles
+                .iter()
+                .filter(|h| !h.tangent)
+                .nth(3)
+                .unwrap()
+                .position
         };
         let source = frame.transform.to_model(start);
         let end = if rotate {

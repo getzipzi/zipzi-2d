@@ -367,6 +367,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                     hovered: false,
                 }],
                 handles: std::iter::once(zipzi_editor_core::OverlayHandle {
+                    movement: false,
                     tangent: true,
                     rotation: false,
                     editable: true,
@@ -376,6 +377,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                     selected: true,
                 })
                 .chain(std::iter::once(zipzi_editor_core::OverlayHandle {
+                    movement: false,
                     tangent: false,
                     rotation: false,
                     editable: false,
@@ -388,6 +390,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                     [false, true].into_iter().flat_map(move |selected| {
                         [false, true].into_iter().map(move |hovered| {
                             zipzi_editor_core::OverlayHandle {
+                                movement: false,
                                 tangent: false,
                                 rotation: false,
                                 editable: true,
@@ -718,6 +721,7 @@ fn full_canvas_native_matches_shared_fallback_and_legacy_deformer_styles() -> an
             hovered: false,
         }];
         overlay.handles = vec![OverlayHandle {
+            movement: false,
             position: pt(140., 20.),
             tangent: true,
             rotation: false,
