@@ -1,6 +1,6 @@
 # 动画曲线配置与帧步进方案
 
-状态：实施中，第 1–4 阶段已完成；第 5 阶段待实施。设计日期：2026-11-09；更新日期：2026-11-18。
+状态：已完成，五个阶段均已实现并验证。设计日期：2026-11-09；完成日期：2026-11-18。
 
 本方案补齐时间线中的曲线配置入口、Auto Smooth、Bezier 缓动预设和区间级 Frame Step。用户应能直接选择两个动画关键帧之间如何过渡，以及每隔多少帧更新一次姿态；同一套配置必须贯穿 Editor、SDK、原生工程保存与 motion3 导出。
 
@@ -27,7 +27,7 @@
 - Core 校验 N、预设与实际控制点及受限模式的一致性，并在所有 Motion 写入入口规范化 N=1。锁校验覆盖实际改变的区间端点，允许编辑同轨道中与锁定区间无关的区间，涉及锁定区间的批量修改整体失败。
 - Python 类型、编解码和离线参考已同步；Local／Connected 均覆盖 Cubic Out + 每三帧、Auto Smooth、查询和撤销重做。Editor 类型适配和现有时间线回归通过；常驻工具栏、属性分组、菜单和阶梯绘图仍属于第 4 阶段。
 
-验证包括 42 项 SDK `motion_curve` 回归、Core motion 校验、Contract 编解码、Animation 采样／原始预览／结果预览、50 项 EditorCore 时间线回归、Editor 编译、Python 门禁和独立生成漂移测试。第 3 阶段将补齐 Frame Step 导出烘焙、预算、摘要和原生保存重开对照；当前导出遇到 Frame Step 会显式拒绝，Auto Smooth 已通过共享编译输出 Bezier。
+验证包括 42 项 SDK `motion_curve` 回归、Core motion 校验、Contract 编解码、Animation 采样／原始预览／结果预览、50 项 EditorCore 时间线回归、Editor 编译、Python 门禁和独立生成漂移测试。第 2 阶段结束时，Frame Step 导出仍显式拒绝，Auto Smooth 已通过共享编译输出 Bezier；这些导出缺口已在第 3 阶段补齐。
 
 ### 第 3 阶段（2026-11-18）
 
@@ -46,6 +46,16 @@
 - N 的输入、拖动、取消、焦点和一次撤销复用现有 Draft 生命周期，接受完整 u32 正整数范围。曲线图按可见范围查找统一帧网格，密集台阶按像素合并，不产生持久键或可选虚拟键。
 
 验证通过：54 项 EditorCore 时间线集成测试、61 项时间线／属性 UI 测试及 Editor 编译。生产 Editor 组件的原生 Metal 截图场景 `curve-authoring` 在英、中、日三种语言中实际点击关键帧、Cubic Out 和每三帧，验证历史步数及保存重开，并检查宽面板、阶梯、分组菜单和窄面板。第 5 阶段继续完成跨层采样及实际桌面进程验收。
+
+### 第 5 阶段（2026-11-18）
+
+- 新增同一工程的端到端对照：Editor 命令配置 Cubic Out + 每三帧及 Auto Smooth，倒序查询步进边界前／当时／之后的原始预览；结果预览与 SDK MotionPreview 快照相同，原生保存重开配置相同，motion3 重导入数值相同，作者关键帧及历史不因采样或导出改变。
+- Python 的 Local／Connected 门禁增加原生保存重开、Runtime 导出、烘焙报告和回执 notices 验证。使用说明已更新至 Editor README、Project README、SDK README 及随 Python 客户端安装的 guide。
+- 构建并实际启动 `target/debug/zipzi-editor`，使用独立 `curve-authoring` Runtime profile、配置和缓存加载原生测试工程；确认 OS 窗口存在，并从 Connected 客户端读取 Cubic Out／N=3、完成六点采样且源版本不变。该测试进程已关闭，未操作原有 Editor 进程。当前桌面有 Window Server Display Shield，OS 截图无法用于视觉检查；面板输入、焦点、菜单和窄面板的可发现性由生产组件的原生 Metal 场景完成，不能将本次结果描述为已验证 OS 层鼠标投递或合成器呈现。
+
+最终 focused gates 通过：42 项 SDK 曲线回归；Animation 的 12 项 authoring、2 项预设基准、4 项编辑预览、27 项预览和 5 项采样；Contract 全套；Project 的 14 项 motion 与 11 项 authoring formats；Runtime 的 2 项导出测试及 CAN3 显式拒绝测试；EditorCore 的既有 50 项时间线与 5 项曲线验收、61 项时间线／属性 UI；Python 的 54 项主门禁、native publication、14 项生成测试和 installed Connected 门禁。独立代码生成及工作区 domain 检查亦通过。
+
+原生截图复现使用上面的 `curve-authoring` 场景；本次产物位于 `target/curve-authoring-native/`，实际桌面宿主探针记录在 `target/curve-authoring-desktop/connected-probe.json`。这些是可重新生成的本地产物，不进入工程数据或 Git。motion3 保留播放效果，CAN3 对区间 Frame Step 的明确拒绝属于已记录的目标格式限制。
 
 ## 需求与范围
 
@@ -66,7 +76,7 @@ Cubism Graph Editor 列出 Auto Smooth、Linear、Step、Inverse Step、Bezier �
 
 Cubism 另有 Frame Step，提供单帧、双帧、三帧及数值输入，可通过关键帧改变设置，也可为参数组设置；导出时可转换成 Step。Zipzi 首批采用区间级设置，不照搬独立的 Frame Step 属性轨道。[官方 Frame Step 手册](https://docs.live2d.com/en/cubism-editor-manual/limited-animation/)
 
-## 当前实现与缺口
+## 实施前实现与缺口
 
 | 位置 | 当前行为 | 本次改动 |
 | --- | --- | --- |
@@ -79,7 +89,7 @@ Cubism 另有 Frame Step，提供单帧、双帧、三帧及数值输入，可�
 | `crates/zipzi-editor/src/panels/timeline/controls.rs` | 无直接的插值、预设、帧步进工具栏入口 | 新增常驻入口和窄面板菜单 |
 | `crates/zipzi-project/src/motion.rs` | 原生段与 motion3 段转换 | 自动平滑烘焙、帧步进展开和导出校验 |
 
-这些结论来自代码检查；属性字段的存在不代表当前运行面板已经可用。实施时需要用真实选择流程验证入口和焦点路由。
+此表记录设计时的基线；实际交付及验证见上面的五阶段记录。工具栏、属性和菜单均已通过真实组件选择流程与焦点路由验证，不能仅凭枚举或属性字段存在认定交付。
 
 ## 面板与选择行为
 

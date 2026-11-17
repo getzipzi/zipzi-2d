@@ -3,6 +3,100 @@ use zipzi_core::document::{MotionCurve, MotionEasingPreset, MotionFrameStep};
 use zipzi_editor_core::*;
 
 #[test]
+fn same_authored_clip_matches_editor_sdk_native_reopen_and_motion3_reimport() -> anyhow::Result<()>
+{
+    use zipzi_animation::{
+        CompiledCurve, MotionPreview, motion_frame_step_boundary, sample_motion_curve,
+    };
+    let (mut editor, assets) = fixture(false, false)?;
+    let d = editor.active_id().unwrap();
+    editor.execute_timeline(
+        d,
+        TimelineCommand::EasingPreset {
+            keys: vec![key(10)],
+            preset: MotionEasingPreset::CubicOut,
+        },
+    )?;
+    editor.execute_timeline(
+        d,
+        TimelineCommand::FrameStep {
+            keys: vec![key(10)],
+            frame_step: MotionFrameStep::EveryFrames { frames: 3 },
+        },
+    )?;
+    editor.execute_timeline(
+        d,
+        TimelineCommand::Interpolation {
+            keys: vec![key(11)],
+            kind: zipzi_sdk::MotionInterpolation::AutoSmooth,
+        },
+    )?;
+    let original = editor
+        .document()
+        .unwrap()
+        .motion_definition(&id(4))
+        .unwrap();
+    let mut times = vec![0., 0.1137, 0.3, 0.6, 1.49, 1.5, 1.9];
+    for q in 1..5 {
+        let tick = motion_frame_step_boundary(original.tracks[0].initial.time, original.fps, 3, q)?;
+        times.extend([tick.next_down(), tick, tick.next_up()]);
+    }
+    times.reverse(); // Seek order must not change interval-local stepping.
+    let mut evaluator = AnimationEvaluator::default();
+    for &time in &times {
+        editor.set_animation_preview_mode(d, AnimationPreviewMode::Editing)?;
+        editor.seek_timeline(d, time.into())?;
+        let request = editor.animation_request().unwrap();
+        let frame = evaluator.evaluate(&request, |_, _| true)?;
+        let track = CompiledCurve::from_track(&original.tracks[0], original.fps);
+        assert_eq!(
+            frame.snapshot.parameters[&id(2)],
+            sample_motion_curve(&track, time, original.restricted_beziers)
+        );
+        editor.set_animation_preview_mode(d, AnimationPreviewMode::Result)?;
+        let request = editor.animation_request().unwrap();
+        let frame = evaluator.evaluate(&request, |_, _| true)?;
+        let mut sdk = MotionPreview::new(request.source.evaluation_snapshot().document());
+        sdk.schedule_motion(&id(4), 0.)?;
+        assert_eq!(frame.snapshot.as_ref(), sdk.seek(request.identity.time)?);
+    }
+    let path = assets.path().join("curve-workflow.zipzi");
+    let save = editor.prepare_save(d, &path, false)?;
+    let mut completion = save.run();
+    editor.finish_save(&mut completion)?;
+    let reopened = Document::open(&path)?;
+    assert_eq!(
+        reopened.motion_definition(&id(4)).as_deref(),
+        Some(original.as_ref())
+    );
+    let request = editor.animation_request().unwrap();
+    let snapshot = request.source.evaluation_snapshot();
+    let wire = zipzi_project::export_motion3(snapshot.document(), &id(4))?;
+    let imported = zipzi_project::import_motion3(snapshot.document(), &id(4), "Reimported", &wire)?;
+    let baked = imported.candidate.motion(&id(4)).unwrap();
+    let a = CompiledCurve::from_track(&original.tracks[0], original.fps);
+    let b = CompiledCurve::from_track(&baked.tracks[0], baked.fps);
+    for time in times {
+        assert!(
+            (sample_motion_curve(&a, time, original.restricted_beziers)
+                - sample_motion_curve(&b, time, baked.restricted_beziers))
+            .abs()
+                < 0.00003
+        );
+    }
+    assert_eq!(
+        editor
+            .document()
+            .unwrap()
+            .motion_definition(&id(4))
+            .as_deref(),
+        Some(original.as_ref())
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (3, 0));
+    Ok(())
+}
+
+#[test]
 fn settings_explain_selection_and_exclude_terminal_keys_without_partial_locked_edits()
 -> anyhow::Result<()> {
     let (mut editor, _assets) = fixture(true, false)?;

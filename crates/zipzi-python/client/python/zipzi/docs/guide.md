@@ -243,6 +243,40 @@ for frame in report['frames']:
 For this -20..20 linear sweep, the expected value is `-20 + 40 * local_time`.
 Keep the authored parameter default unchanged when sampling a motion.
 
+To configure the interval starting at a key, use its track and key identities.
+Presets map to each selected interval's own time/value range; Frame Step is an
+independent setting:
+
+```python
+clip, = session.query(v.QueryObjects(addresses=(
+    v.ObjectAddress(kind=v.ObjectKind.MOTION, id=clip_id),
+))).records(v.MotionClip)
+key = v.MotionKeyRef(track_id=clip.tracks[0].id, key_id=clip.tracks[0].initial.id)
+with session.draft("Cubic Out on threes") as draft:
+    draft.apply(v.CommandMotionCurve(clip=clip_id, edit=v.MotionCurveEditEasingPreset(
+        keys=(key,), preset=v.MotionEasingPreset.CUBIC_OUT)))
+    draft.apply(v.CommandMotionCurve(clip=clip_id, edit=v.MotionCurveEditFrameStep(
+        keys=(key,), frame_step=v.MotionFrameStepEveryFrames(frames=3))))
+```
+
+`MotionInterpolation.AUTO_SMOOTH` persists automatic smoothing; editing its
+handles materializes Bezier controls. The 25 preset identities share the Editor's
+fixed control table. Some are single-Bezier approximations of an analytic easing
+function. Manual handle edits clear the preset source.
+
+N must be a positive u32 integer. N=1 normalizes to Off and preserves continuous
+subframe evaluation. For N≥2, each interval samples every N/FPS seconds starting
+at its own key, including subframe origins, then holds the value. Inserting a key
+restarts that interval's phase. Fades, blending and physics follow raw sampling;
+events retain their timestamps. Sampling compares using clip-local time as above.
+
+Native `.zipzi` save/open preserves modes, handles, presets and N. Runtime export
+bakes Auto Smooth/Frame Step into motion3 Bezier/Step segments without editing
+the source. The export receipt's `notices` and `export-report.json`'s
+`motion_baking` contain the conversion summary. Oversized expansion is rejected
+before publication. Reimported motion3 retains numeric playback, while exact
+editing roundtrips use native files. CAN3 currently rejects interval Frame Step.
+
 A host with `gpu_observation` supports `session.observe(input, view)`. Its Blob is
 a sequence of packets: four-byte big-endian JSON-header length, that header,
 then `png_bytes` bytes of PNG. The first header includes the shared texture report.

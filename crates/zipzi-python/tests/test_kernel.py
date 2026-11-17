@@ -414,6 +414,28 @@ class Lifecycle:
             automatic = read_clip().tracks[0].segments[0]
             self.assertIsInstance(automatic.curve, v.MotionCurveAutoSmooth)
             self.assertEqual(automatic.frame_step.frames, 3)
+            with tempfile.TemporaryDirectory(prefix='zipzi-curves-') as directory:
+                path = Path(directory) / 'curves.zipzi'
+                definition = read_clip()
+                with session.save(path) as job:
+                    self.assertTrue(job.wait(timeout=10)['published'])
+                with session.open(path) as job:
+                    job.wait(timeout=10)
+                self.assertEqual(read_clip(), definition)
+                before = session.version
+                destination = Path(directory) / 'runtime'
+                with session.export(destination, v.ExportFormat.RUNTIME) as job:
+                    receipt = job.wait(timeout=30)['receipt']
+                self.assertTrue(receipt['published'])
+                self.assertTrue(any('Frame Step' in note for note in receipt['notices']))
+                self.assertEqual(session.version, before)
+                self.assertEqual(read_clip(), definition)
+                import json
+                report = json.loads((destination / 'export-report.json').read_text())
+                summary = report['motion_baking'][clip_id]
+                self.assertEqual(summary['auto_smooth_segments'], 1)
+                self.assertEqual(summary['frame_step_intervals'], 1)
+                self.assertGreater(summary['output_segments'], 1)
 
     def test_installed_recipes_complete_authoring_pagination_sampling_and_save(self):
         from zipzi.docs import recipes
