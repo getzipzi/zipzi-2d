@@ -618,9 +618,8 @@ fn verify_bezier_split(
     split: &(MotionSegment, MotionSegment),
     restricted: bool,
 ) -> Result<(), Status> {
-    // Large absolute times and short segments can make the existing f32 Cardano
-    // branch ill-conditioned even though the mathematical curve is monotone.
-    // Reject precision loss rather than silently changing that runtime curve.
+    // Rounding split controls to f32 can lose shape on short segments at large
+    // absolute times. Check the shared runtime sampler before accepting a split.
     let original = CompiledCurve {
         initial: start,
         segments: Arc::new(vec![source.into()]),

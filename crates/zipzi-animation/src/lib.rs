@@ -3,12 +3,16 @@
 
 mod eye_blink;
 mod motion;
+mod motion_authoring;
 pub use motion::canonical_motion_seek_time;
+pub use motion_authoring::{
+    compile_motion_auto_smooth, motion_easing_controls, motion_frame_step_time, MotionCurveError,
+};
 mod replay;
 mod seek_cache;
 pub use motion::{
-    motion_bezier_parameter, motion_bezier_time_is_monotonic, sample_motion_curve, CompiledCurve,
-    CompiledSegment,
+    motion_bezier_parameter, motion_bezier_time_is_monotonic, sample_motion_curve,
+    sample_motion_segment, CompiledCurve, CompiledSegment,
 };
 pub use seek_cache::SeekCacheStats;
 mod motion_preview;

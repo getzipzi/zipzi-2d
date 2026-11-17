@@ -11,6 +11,7 @@ pub mod kernel;
 pub mod kernel_commands;
 pub mod kernel_wire;
 pub mod model;
+pub mod motion_curve;
 pub mod observation;
 pub mod physics;
 pub mod physics_document;

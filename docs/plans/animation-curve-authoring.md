@@ -1,8 +1,22 @@
 # 动画曲线配置与帧步进方案
 
-状态：设计方案，尚未实施。日期：2026-11-09。
+状态：实施中，第 1 阶段已完成；第 2–5 阶段待实施。设计日期：2026-11-09；更新日期：2026-11-17。
 
 本方案补齐时间线中的曲线配置入口、Auto Smooth、Bezier 缓动预设和区间级 Frame Step。用户应能直接选择两个动画关键帧之间如何过渡，以及每隔多少帧更新一次姿态；同一套配置必须贯穿 Editor、SDK、原生工程保存与 motion3 导出。
+
+## 实施进度
+
+2026-11-17，首批改动固化第 1 阶段的数值语义：
+
+- `zipzi-contract::motion_curve` 定义 `MotionEasingPreset`、25 项固定控制点表与近似标记，以及 `MotionFrameStep`、正整数校验和 N=1 规范化。
+- `zipzi-animation` 提供连续自动区间组的 `compile_motion_auto_smooth`、预设映射 `motion_easing_controls` 和区间计步 `motion_frame_step_time`。自动组的边界由调用方按相邻非自动段划分；编译结果不保存编辑模式。
+- `CompiledCurve::segment_at` 与 `sample_motion_segment` 拆出共用的区间定位和基础采样，原有 `sample_motion_curve` 复用它们。步进必须先用原始时间定位，再量化该段的采样时间。
+- 单调 Bezier 时间坐标使用归一化 f64、有界 Newton／二分求逆，修复原 f32 Cardano 在 Sine／Circ 样例中约 1.4%–1.6% 的额外误差；非单调时间坐标继续使用既有 MotionBehavior V2 分支。
+- `fixtures/animation_curves/` 固化不等时距、下降、峰谷、平坦区间的自动控制柄与采样，以及预设控制点和解析近似误差。整数与非整数 FPS、子帧起点、边界相邻浮点数、Inverse Step 和末尾保持有独立覆盖。
+
+本批为共享算法与契约词汇准备，尚未将新配置接入 `MotionSegment`、Draft 命令、Python 生成、原生工程或 Editor。新增算法测试通过不代表时间线入口、保存和导出已交付；后续继续执行第 2–5 阶段。
+
+本阶段验证通过：Contract 测试，Animation 的 `motion_authoring`、`motion_easing_reference`、`motion_sampling`、`motion_editing_preview`、`motion_preview` 目标，SDK 的 `motion_curve` 过滤回归，Python 契约生成测试及工作区 domain 检查。
 
 ## 需求与范围
 
@@ -83,6 +97,8 @@ Auto Smooth 必须是持久化的编辑模式，不能只是一次性生成 Bezi
 
 上述算法为建议基线。实施首阶段应固化不等时距、峰谷、平坦和混合插值的样例；官方手册未定义 Auto Smooth 的数学公式，验收不宣称与 Cubism 自动曲线逐点相同。
 
+第 1 阶段已采用上述算法。内部斜率为 `(w1+w2)/(w1/d_left+w2/d_right)`，其中 `w1=2*h_right+h_left`、`w2=h_right+2*h_left`；时间差、斜率和控制柄映射均在 f64 中计算，再存为现有 f32 坐标。确定样例见 `fixtures/animation_curves/auto_smooth.json`。
+
 ## Bezier 预设与手柄
 
 ### 预设集合
@@ -97,6 +113,20 @@ Auto Smooth 必须是持久化的编辑模式，不能只是一次性生成 Bezi
 菜单按分组展示缩略曲线，Cubic 首批必须可用。完整列表在本方案交付前补齐。所有预设使用固定、可版本管理的归一化控制点表，不在 UI 中临时计算另一套曲线。In 表示缓入，Out 表示缓出，In Out 表示两端缓、中间快，下降区间沿同一规则映射。
 
 预设是 Bezier 形状的快捷配置；其中部分形状只是对应解析缓动函数的近似。不能把单段 Bezier 预设宣称为精确的全部解析缓动函数。控制点表与近似误差基准在实现首阶段确定，纳入源代码和测试；界面详情标注近似属性。Bounce／Elastic 需要多段表达，不进入首批单段预设。
+
+第 1 阶段将完整的 25 项表固化在 `zipzi-contract/src/motion_curve.rs`，身份、名称与坐标快照见 `fixtures/animation_curves/presets.json`。基础四项按其 Bezier 控制点直接定义；Quad In／Out、Cubic In／Out 使用三等分时间控制点，除浮点舍入外精确表示对应多项式。其余为单段近似，测试采样集上的最大归一化绝对值误差如下：
+
+| 函数族 | In | Out | In Out |
+| --- | --- | --- | --- |
+| Sine | 0.007555962 | 0.007555961 | 0.001971746 |
+| Quad | < 0.000001 | < 0.000001 | 0.005255623 |
+| Cubic | < 0.000001 | < 0.000001 | 0.009541931 |
+| Quart | 0.005619439 | 0.005619439 | 0.021749364 |
+| Quint | 0.011349193 | 0.011349167 | 0.032159447 |
+| Expo | 0.012012850 | 0.012012816 | 0.037466884 |
+| Circ | 0.001799312 | 0.001799312 | 0.038668902 |
+
+参考解析函数使用标准的幂函数、三角函数、指数函数和圆函数，Out 为 In 的镜像，In Out 为两半区间的镜像组合；Expo 的精确端点按 0／1 定义。误差取 8193 个等距时间及两端 `2^-k`（k=1…48）样本，以独立 f64 二分求逆计算，并在 fixture 中记录测量值和回归预算。这是固定采样集的误差基准，不是解析证明的全区间上界；映射到实际值域后按 `abs(v1-v0)` 缩放。运行时求逆误差单独测试，25 项预设在 8193 个等距时间的归一化绝对值误差均小于 `0.000001`。
 
 设起终点为 `(t0, v0)`、`(t1, v1)`，归一化控制点为 `(x1, y1)`、`(x2, y2)`，按以下方式应用：
 
@@ -138,6 +168,8 @@ value = evaluate_base_segment(tq)
 
 计算使用足够精度并统一浮点边界处理，不能通过随意增加 epsilon 将边界前的时间提前到下一格。区间起点作为计步原点，允许其处于子帧；首批不做全局拍点对齐。
 
+第 1 阶段固定边界约定：`t0 + q*N/F` 在 f64 中计算后只舍入一次到现有 f32 时间域；采样时比较相邻的已表示边界。因而恰好处于某边界的 f32 时间取新样本，其 `next_down()` 仍取前一样本，包括理想分数边界向下舍入的情形。N=1 与关闭直接保留原始子帧时间。
+
 到达 `t1` 后立即转入后续区间，尾段不足 N 帧不延迟切换。最后关键帧之后保持尾值。现有采样器在精确关键帧时刻选择 outgoing 段，因此该段是 Inverse Step 时会直接使用它的终点值；帧步进保留此边界语义，不强制插入一个起点姿态。连续插值或 Step 的普通边界会取该关键帧值。
 
 示例：第 0 到第 12 帧，原曲线为 Cubic Out，每 3 帧更新，终点后无 Inverse Step 覆盖：
@@ -171,6 +203,8 @@ MotionSegment
          | Stepped | InverseStepped
   frame_step: Off | EveryFrames(N)
 ```
+
+第 1 阶段确定后续契约命名：曲线描述为 `MotionCurve`，预设来源为 `Option<MotionEasingPreset>`（`None` 表示 Custom），帧步进为 `MotionFrameStep`。其 JSON 使用 `{"kind":"off"}` 或 `{"kind":"every_frames","frames":N}`，N 的契约范围为 u32 正整数。契约解码不替代 Core 的文档校验；写入前须调用规范化，0 无效，1 转为 Off。第 2 阶段将 `MotionSegment` 改为上述组合结构，给 `MotionInterpolation` 增加 `AutoSmooth`，并为 `MotionCurveEdit` 增加 `EasingPreset { keys, preset }` 和 `FrameStep { keys, frame_step }`，均按所选起始键定位 outgoing 区间，复用 Draft 的原子提交与锁校验。
 
 不向用户关键帧列表插入大量虚拟键，不用不透明 extensions 存放正式语义，也不将播放必需配置只存于 EditorState。Auto Smooth 控制柄作为编译结果，避免持久化两套可互相矛盾的权威数据。稳定身份仍属于关键帧，区间通过相邻键关系定位。
 
@@ -240,6 +274,7 @@ MotionSegment
 从仓库根目录按实际改动选择 focused gate；新增用例必须确认被过滤器选中：
 
 ```sh
+cargo test --locked -p zipzi-animation --test motion_authoring --test motion_easing_reference
 cargo test --locked -p zipzi-animation --test motion_sampling
 ./tools/test-sdk.sh fast motion_curve
 ./tools/test-editor.sh fast timeline::

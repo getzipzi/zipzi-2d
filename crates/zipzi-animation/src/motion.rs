@@ -87,6 +87,22 @@ pub struct CompiledCurve {
     /// Shared ordered curve segments; source tracks must satisfy document validation.
     pub segments: std::sync::Arc<Vec<CompiledSegment>>,
 }
+
+impl CompiledCurve {
+    /// Resolve the segment using the original, unquantized clip-local time.
+    /// Exact endpoints belong to the outgoing segment, including InverseStepped.
+    /// After the final endpoint, returns that endpoint and no segment.
+    pub fn segment_at(&self, time: f32) -> (MotionPoint, Option<&CompiledSegment>) {
+        let index = self
+            .segments
+            .partition_point(|segment| segment.end().time <= time);
+        let start = index
+            .checked_sub(1)
+            .map_or(self.initial, |i| self.segments[i].end());
+        (start, self.segments.get(index))
+    }
+}
+
 impl From<&MotionTrack> for CompiledCurve {
     fn from(track: &MotionTrack) -> Self {
         Self {
@@ -99,47 +115,48 @@ impl From<&MotionTrack> for CompiledCurve {
 }
 
 /// Sample the same four segment kinds used by Cubism MotionBehavior V2.
-/// `restricted_beziers` selects the file's time-linear or Cardano path.
+/// `restricted_beziers` selects the file's time-linear or inverse-time path.
 /// `time` is a finite clip-local time in seconds. This low-level sampler assumes
 /// validated points; it does not apply looping, fades, parameter clamping or events.
 pub fn sample_motion_curve(curve: &CompiledCurve, time: f32, restricted_beziers: bool) -> f32 {
-    // End times are strictly increasing. Exact endpoints belong to the next
-    // segment, which matters for an outgoing InverseStepped segment.
-    let index = curve
-        .segments
-        .partition_point(|segment| segment.end().time <= time);
-    let start = index
-        .checked_sub(1)
-        .map_or(curve.initial, |i| curve.segments[i].end());
-    if let Some(segment) = curve.segments.get(index) {
-        let end = segment.end();
-        match segment {
-            CompiledSegment::Linear { .. } => {
-                let t = ((time - start.time) / (end.time - start.time)).max(0.0);
-                lerp(start.value, end.value, t)
-            }
-            CompiledSegment::Bezier {
-                control1, control2, ..
-            } => {
-                let t = motion_bezier_parameter(
-                    start,
-                    *control1,
-                    *control2,
-                    end,
-                    time,
-                    restricted_beziers,
-                );
-                bezier_value(start, *control1, *control2, end, t)
-            }
-            CompiledSegment::Stepped { .. } => start.value,
-            CompiledSegment::InverseStepped { .. } => end.value,
+    let (start, segment) = curve.segment_at(time);
+    segment.map_or(start.value, |segment| {
+        sample_motion_segment(start, segment, time, restricted_beziers)
+    })
+}
+
+/// Evaluate one already selected base segment. Use `CompiledCurve::segment_at`
+/// with the original time first; frame stepping may then map the sample time
+/// without changing endpoint ownership. Time must precede this segment's end;
+/// exact endpoints are resolved by `segment_at`, not the inverse-time solver.
+/// Inputs must satisfy curve validation.
+pub fn sample_motion_segment(
+    start: MotionPoint,
+    segment: &CompiledSegment,
+    time: f32,
+    restricted_beziers: bool,
+) -> f32 {
+    let end = segment.end();
+    match segment {
+        CompiledSegment::Linear { .. } => {
+            let t = ((time - start.time) / (end.time - start.time)).max(0.0);
+            lerp(start.value, end.value, t)
         }
-    } else {
-        start.value
+        CompiledSegment::Bezier {
+            control1, control2, ..
+        } => {
+            let t =
+                motion_bezier_parameter(start, *control1, *control2, end, time, restricted_beziers);
+            bezier_value(start, *control1, *control2, end, t)
+        }
+        CompiledSegment::Stepped { .. } => start.value,
+        CompiledSegment::InverseStepped { .. } => end.value,
     }
 }
 
-/// The exact runtime inverse-time branch, shared by sampling and authoring splits.
+/// Runtime inverse-time evaluation, shared by sampling and authoring splits.
+/// Monotone time coordinates have one root and use a safeguarded f64 solver.
+/// Non-monotone curves retain the imported MotionBehavior V2 Cardano branch.
 /// Inputs must be finite and the endpoint times strictly increasing.
 pub fn motion_bezier_parameter(
     start: MotionPoint,
@@ -151,12 +168,54 @@ pub fn motion_bezier_parameter(
 ) -> f32 {
     if restricted_beziers {
         ((time - start.time) / (end.time - start.time)).max(0.0)
+    } else if motion_bezier_time_is_monotonic(start.time, control1.time, control2.time, end.time) {
+        monotonic_bezier_parameter(start.time, control1.time, control2.time, end.time, time)
     } else {
         let a = end.time - 3.0 * control2.time + 3.0 * control1.time - start.time;
         let b = 3.0 * control2.time - 6.0 * control1.time + 3.0 * start.time;
         let c = 3.0 * control1.time - 3.0 * start.time;
         cardano_bezier(a, b, c, start.time - time)
     }
+}
+
+fn monotonic_bezier_parameter(start: f32, first: f32, second: f32, end: f32, time: f32) -> f32 {
+    if time <= start {
+        return 0.0;
+    }
+    if time >= end {
+        return 1.0;
+    }
+    let span = f64::from(end) - f64::from(start);
+    let first = (f64::from(first) - f64::from(start)) / span;
+    let second = (f64::from(second) - f64::from(start)) / span;
+    let target = (f64::from(time) - f64::from(start)) / span;
+    let (mut low, mut high) = (0.0, 1.0);
+    let mut t = target;
+    for _ in 0..48 {
+        let u = 1.0 - t;
+        let x = 3.0 * u * u * t * first + 3.0 * u * t * t * second + t * t * t;
+        if x == target {
+            return t as f32;
+        }
+        if x < target {
+            low = t;
+        } else {
+            high = t;
+        }
+        let derivative =
+            3.0 * u * u * first + 6.0 * u * t * (second - first) + 3.0 * t * t * (1.0 - second);
+        let newton = t - (x - target) / derivative;
+        let next = if newton > low && newton < high {
+            newton
+        } else {
+            (low + high) / 2.0
+        };
+        if next as f32 == t as f32 {
+            return next as f32;
+        }
+        t = next;
+    }
+    t as f32
 }
 
 /// Whether the cubic time coordinate is monotone over its whole parameter range.

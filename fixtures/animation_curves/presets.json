@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "error_sampling": "8193 uniform times plus powers of two near both endpoints; normalized absolute value error",
+  "presets": [
+    {"id":"ease", "name":"Ease", "controls":[[0.25,0.1],[0.25,1]], "approximate":false},
+    {"id":"ease_in", "name":"Ease In", "controls":[[0.42,0],[1,1]], "approximate":false},
+    {"id":"ease_out", "name":"Ease Out", "controls":[[0,0],[0.58,1]], "approximate":false},
+    {"id":"ease_in_out", "name":"Ease In Out", "controls":[[0.42,0],[0.58,1]], "approximate":false},
+    {"id":"cubic_in", "name":"Cubic In", "controls":[[0.3333333333333333,0],[0.6666666666666666,0]], "approximate":false, "measured_max_error":1.7e-08, "reference":"cubic_in", "max_error":0.000001},
+    {"id":"cubic_out", "name":"Cubic Out", "controls":[[0.3333333333333333,1],[0.6666666666666666,1]], "approximate":false, "measured_max_error":1.2e-08, "reference":"cubic_out", "max_error":0.000001},
+    {"id":"cubic_in_out", "name":"Cubic In Out", "controls":[[0.65,0],[0.35,1]], "approximate":true, "measured_max_error":0.009541931, "reference":"cubic_in_out", "max_error":0.0096},
+    {"id":"sine_in", "name":"Sine In", "controls":[[0.12,0],[0.39,0]], "approximate":true, "measured_max_error":0.007555962, "reference":"sine_in", "max_error":0.0076},
+    {"id":"sine_out", "name":"Sine Out", "controls":[[0.61,1],[0.88,1]], "approximate":true, "measured_max_error":0.007555961, "reference":"sine_out", "max_error":0.0076},
+    {"id":"sine_in_out", "name":"Sine In Out", "controls":[[0.37,0],[0.63,1]], "approximate":true, "measured_max_error":0.001971746, "reference":"sine_in_out", "max_error":0.002},
+    {"id":"quad_in", "name":"Quad In", "controls":[[0.3333333333333333,0],[0.6666666666666666,0.3333333333333333]], "approximate":false, "measured_max_error":1.1e-08, "reference":"quad_in", "max_error":0.000001},
+    {"id":"quad_out", "name":"Quad Out", "controls":[[0.3333333333333333,0.6666666666666666],[0.6666666666666666,1]], "approximate":false, "measured_max_error":4e-09, "reference":"quad_out", "max_error":0.000001},
+    {"id":"quad_in_out", "name":"Quad In Out", "controls":[[0.45,0],[0.55,1]], "approximate":true, "measured_max_error":0.005255623, "reference":"quad_in_out", "max_error":0.0053},
+    {"id":"quart_in", "name":"Quart In", "controls":[[0.5,0],[0.75,0]], "approximate":true, "measured_max_error":0.005619439, "reference":"quart_in", "max_error":0.0057},
+    {"id":"quart_out", "name":"Quart Out", "controls":[[0.25,1],[0.5,1]], "approximate":true, "measured_max_error":0.005619439, "reference":"quart_out", "max_error":0.0057},
+    {"id":"quart_in_out", "name":"Quart In Out", "controls":[[0.76,0],[0.24,1]], "approximate":true, "measured_max_error":0.021749364, "reference":"quart_in_out", "max_error":0.0218},
+    {"id":"quint_in", "name":"Quint In", "controls":[[0.64,0],[0.78,0]], "approximate":true, "measured_max_error":0.011349193, "reference":"quint_in", "max_error":0.0114},
+    {"id":"quint_out", "name":"Quint Out", "controls":[[0.22,1],[0.36,1]], "approximate":true, "measured_max_error":0.011349167, "reference":"quint_out", "max_error":0.0114},
+    {"id":"quint_in_out", "name":"Quint In Out", "controls":[[0.83,0],[0.17,1]], "approximate":true, "measured_max_error":0.032159447, "reference":"quint_in_out", "max_error":0.0322},
+    {"id":"expo_in", "name":"Expo In", "controls":[[0.7,0],[0.84,0]], "approximate":true, "measured_max_error":0.01201285, "reference":"expo_in", "max_error":0.0121},
+    {"id":"expo_out", "name":"Expo Out", "controls":[[0.16,1],[0.3,1]], "approximate":true, "measured_max_error":0.012012816, "reference":"expo_out", "max_error":0.0121},
+    {"id":"expo_in_out", "name":"Expo In Out", "controls":[[0.87,0],[0.13,1]], "approximate":true, "measured_max_error":0.037466884, "reference":"expo_in_out", "max_error":0.0375},
+    {"id":"circ_in", "name":"Circ In", "controls":[[0.55,0],[1,0.45]], "approximate":true, "measured_max_error":0.001799312, "reference":"circ_in", "max_error":0.0018},
+    {"id":"circ_out", "name":"Circ Out", "controls":[[0,0.55],[0.45,1]], "approximate":true, "measured_max_error":0.001799312, "reference":"circ_out", "max_error":0.0018},
+    {"id":"circ_in_out", "name":"Circ In Out", "controls":[[0.85,0],[0.15,1]], "approximate":true, "measured_max_error":0.038668902, "reference":"circ_in_out", "max_error":0.0387}
+  ]
+}

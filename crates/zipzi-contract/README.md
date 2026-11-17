@@ -5,6 +5,11 @@ wire codecs and copy-on-write sequences. Core, SDK and Runtime re-export these
 same types; operation declarations are bound to Runtime handlers with matching
 input and output types. This crate does not depend on execution packages.
 
+`motion_curve` defines the shared easing-preset identities, fixed normalized
+control table and approximation labels, plus canonical segment-local Frame Step
+values. These preparatory types have shape/binary codecs; command and document
+integration, including their Python projection, follows the curve-authoring plan.
+
 `kernel` contains the new authoring kernel's content/resource identities, publication
 and candidate sources, and path-independent image records. These preparatory values
 are not yet exported by the current wire/schema; protocol and clients will switch

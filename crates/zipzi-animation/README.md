@@ -9,6 +9,14 @@ fades, expressions, physics or events, and resolves Pose immediately.
 `motion_positions` and `canonical_motion_seek_time` expose playback coordinates
 for timeline seeking.
 
+Curve-authoring primitives compile a contiguous Auto Smooth group with zero
+endpoint slopes and time-weighted monotone interior slopes, map the Contract's
+fixed easing controls, and quantize segment-local sample times for Frame Step.
+Resolve the outgoing segment with `CompiledCurve::segment_at` before quantizing;
+`sample_motion_segment` evaluates its base curve. Monotone Bezier time inversion
+uses a safeguarded f64 solve; non-monotone curves retain the MotionBehavior V2
+root choice. These primitives do not yet add persistent authoring modes to tracks.
+
 Motion tracks and events use copy-on-write storage. Edits validate the affected
 fields and dependencies; SDK publication validates the complete document.
 
