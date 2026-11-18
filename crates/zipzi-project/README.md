@@ -57,8 +57,12 @@ case-alias, lock and replacement tests always execute.
 
 ## Native project container
 
-`ProjectIo` reads and atomically publishes native ZIP files:
-container version 1, document identifier `zipzi-project`, document version 23.
+`ProjectIo` opens native ZIP container v1 with document identifier
+`zipzi-project` and document versions 22 and 23. Opening v22 converts its four
+motion segment kinds in memory, preserving key IDs, explicit Bezier controls,
+and imported motion3 provenance. Frame stepping defaults to Off. Save and
+Save As atomically write document v23. The compatibility gate is
+`cargo test --locked -p zipzi-project --test native_compatibility`.
 An optional `preview.png` and `format.json.preview` descriptor carry a static
 RGBA8 image (maximum 1024 × 1024) and SHA-256. This does not change the container
 version or add a required feature. The image is advisory; the Editor ignores its
@@ -136,7 +140,9 @@ and undo retain these records; exchange formats such as CMO3 report their loss.
 Motion initial keys and segment endpoints carry persistent UUIDs; Bezier
 controls remain anonymous points. Auto Smooth compiles to numeric Bezier controls;
 Frame Step lowers to Step spans using the same represented frame grid and sampler
-as preview. `preflight_motion3` / `preflight_motion_exports` bound segment growth
+as preview. Source-range crops include the extra playback frame on looping clips.
+A tail change outside the motion3 endpoint tolerance that cannot be encoded returns
+`MOTION_LOOP_TAIL_UNREPRESENTABLE`. `preflight_motion3` / `preflight_motion_exports` bound segment growth
 and workspace before compilation. `export_motion3_with_summary` returns the
 actual lowering counts; package reports and publication notices expose them.
 Exports leave native authoring modes, preset sources and N intact. Reimported

@@ -9,6 +9,29 @@ pub(crate) struct MotionChanges {
     pub order: Vec<String>,
     pub affected: Vec<String>,
 }
+
+/// A locked key protects its own position and the complete intervals on either side.
+/// Each incoming segment stores the key itself but omits its starting point.
+#[derive(PartialEq)]
+struct MotionKeyContext<'a> {
+    key: &'a MotionKey,
+    incoming: Option<(&'a MotionKey, &'a MotionSegment)>,
+    outgoing: Option<&'a MotionSegment>,
+}
+
+fn key_contexts(track: &MotionTrack) -> impl Iterator<Item = MotionKeyContext<'_>> {
+    let incoming = std::iter::once(None).chain(track.keys().zip(track.segments.iter()).map(Some));
+    track
+        .keys()
+        .zip(incoming)
+        .enumerate()
+        .map(|(i, (key, incoming))| MotionKeyContext {
+            key,
+            incoming,
+            outgoing: track.segments.get(i),
+        })
+}
+
 impl Model<'_> {
     pub fn motion_order(&self) -> &[String] {
         self.content.motion_order
@@ -132,28 +155,21 @@ impl Model<'_> {
                 if tracks.get(&t.id).copied() != Some(t) {
                     self.motion_unlocked(&t.id)?;
                     let next = tracks.get(&t.id).copied();
-                    let old_keys: Vec<_> = t.keys().collect();
-                    let new_keys: HashMap<_, _> = next
-                        .into_iter()
-                        .flat_map(|t| t.keys())
-                        .map(|k| (&k.id, k))
-                        .collect();
-                    for k in &old_keys {
-                        if new_keys.get(&k.id).copied() != Some(*k)
-                            || next.is_none_or(|next| next.target != t.target)
-                        {
-                            self.motion_unlocked(&k.id)?;
-                        }
+                    let mut locked = key_contexts(t)
+                        .filter(|context| self.editor_state().get(&context.key.id).locked)
+                        .peekable();
+                    if locked.peek().is_none() {
+                        continue;
                     }
-                    let new_segments: HashMap<_, _> = next
+                    let new_keys: HashMap<_, _> = next
+                        .filter(|track| track.target == t.target)
                         .into_iter()
-                        .flat_map(|t| t.keys().zip(t.segments.iter()))
-                        .map(|(key, s)| (&key.id, s))
+                        .flat_map(key_contexts)
+                        .map(|context| (context.key.id.as_str(), context))
                         .collect();
-                    for (index, segment) in t.segments.iter().enumerate() {
-                        if new_segments.get(&old_keys[index].id).copied() != Some(segment) {
-                            self.motion_unlocked(&old_keys[index].id)?;
-                            self.motion_unlocked(&segment.end.id)?;
+                    for context in locked {
+                        if new_keys.get(context.key.id.as_str()) != Some(&context) {
+                            return Err(Status::error("OBJECT_LOCKED", &context.key.id));
                         }
                     }
                 }
@@ -669,29 +685,26 @@ impl Model<'_> {
                                 let mut segment = segment.clone();
                                 segment.end_mut().id = remap[right].clone();
                                 segment.end_mut().time += time_offset;
-                                if let MotionSegment {
-                                    curve:
-                                        MotionCurve::Bezier {
-                                            control1, control2, ..
-                                        },
-                                    ..
-                                } = &mut segment
-                                {
-                                    control1.time += time_offset;
-                                    control2.time += time_offset;
-                                }
+                                let start = MotionPoint {
+                                    time: all[i].time + time_offset,
+                                    value: all[i].value,
+                                };
+                                let end = segment.end.point();
+                                validate_motion_interval_times(start.time, end.time)?;
                                 if let MotionCurve::Bezier {
                                     control1,
                                     control2,
-                                    preset: Some(source),
+                                    preset,
                                 } = &mut segment.curve
                                 {
-                                    let start = MotionPoint {
-                                        time: all[i].time + time_offset,
-                                        value: all[i].value,
-                                    };
-                                    [*control1, *control2] =
-                                        source.mapped_controls(start, segment.end.point()).unwrap();
+                                    if let Some(source) = preset {
+                                        [*control1, *control2] = source
+                                            .mapped_controls(start, end)
+                                            .expect("validated interval and finite key values");
+                                    } else {
+                                        control1.time += time_offset;
+                                        control2.time += time_offset;
+                                    }
                                 }
                                 internal
                                     .insert((remap[left].clone(), remap[right].clone()), segment);
@@ -1229,11 +1242,8 @@ fn rebuild_key_connections(
     keys: Vec<MotionKey>,
     internal: &BTreeMap<(String, String), MotionSegment>,
 ) -> Result<(), Status> {
-    if keys.windows(2).any(|p| p[0].time >= p[1].time) {
-        return Err(Status::error(
-            "MOTION_KEY_COLLISION",
-            "Key times must be strictly increasing",
-        ));
+    for pair in keys.windows(2) {
+        validate_motion_interval_times(pair[0].time, pair[1].time)?;
     }
     let old: Vec<_> = track.keys().collect();
     let connections: BTreeMap<_, _> = track

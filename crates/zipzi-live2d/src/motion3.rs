@@ -392,11 +392,14 @@ fn validate(motion: &Motion3, writer: bool) -> Result<(), Motion3Error> {
         // Its own Mao sample has Duration 9.23 and final points at 9.233.
         // Accept at most half a frame of rounding, while still rejecting
         // endpoints that materially extend past the clip.
-        let end_tolerance = (0.5 / motion.meta.fps).max(0.0001);
+        let maximum_end = zipzi_core::document::maximum_motion_curve_end_time(
+            motion.meta.duration,
+            motion.meta.fps,
+        );
         if curve
             .segments
             .last()
-            .is_some_and(|segment| segment.end().time > motion.meta.duration + end_tolerance)
+            .is_some_and(|segment| segment.end().time > maximum_end)
         {
             return Err(error(
                 "CURVE_EXCEEDS_DURATION",

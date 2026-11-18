@@ -97,7 +97,7 @@ pub(super) fn mesh_from_wire(mesh: &MeshWire, masks: Vec<String>) -> Result<Mesh
     })
 }
 
-pub(super) fn parse_wire(text: &str) -> Result<ProjectWire, Status> {
+pub(super) fn document_version(text: &str) -> Result<u64, Status> {
     validate_json_syntax(text)?;
 
     #[derive(serde::Deserialize)]
@@ -107,33 +107,24 @@ pub(super) fn parse_wire(text: &str) -> Result<ProjectWire, Status> {
     }
     let header: Header =
         serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
-    let format = header.format.as_deref();
-    let version = header.format_version;
-    if format != Some("zipzi-project") {
+    if header.format.as_deref() != Some("zipzi-project") {
         return Err(Status::error(
             "INVALID_PROJECT",
             "Unknown project document identifier",
         ));
     }
-    if version != Some(23) {
-        return Err(Status::error(
-            "UNSUPPORTED_VERSION",
-            "Unsupported project document version",
-        ));
-    }
-    let root: ProjectWire =
-        serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
-
-    Ok(root)
+    header
+        .format_version
+        .ok_or_else(|| Status::error("UNSUPPORTED_VERSION", "Missing project document version"))
 }
 
-pub(super) fn admit_wire(
-    mut root: ProjectWire,
+pub(super) fn admit_wire<M>(
+    mut root: ProjectWire<M>,
 ) -> Result<
     (
-        DocumentWire,
+        DocumentWire<M>,
         Option<zipzi_core::document::DisplayInfo>,
-        AnimationAssetsWire,
+        AnimationAssetsWire<M>,
     ),
     Status,
 > {

@@ -152,7 +152,7 @@ impl Model<'_> {
             }
             // Ordinary motion3 retains its half-frame rounding tolerance;
             // editable Cubism sources explicitly preserve their wider key range.
-            let end_tolerance = (0.5 / clip.fps).max(0.0001);
+            let maximum_end = maximum_motion_curve_end_time(maximum_time, clip.fps);
             let mut previous = track.initial.time;
             let mut previous_value = track.initial.value;
             for (segment_index, segment) in track.segments.iter().enumerate() {
@@ -160,7 +160,7 @@ impl Model<'_> {
                 if !end.time.is_finite()
                     || !end.value.is_finite()
                     || end.time <= previous
-                    || end.time > maximum_time + end_tolerance
+                    || end.time > maximum_end
                 {
                     return Status::error(
                         "INVALID_MOTION_POINT",

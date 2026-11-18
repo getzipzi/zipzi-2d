@@ -84,9 +84,10 @@ fn interpolations(_: &Document) -> Vec<Choice> {
         })
         .collect()
 }
-fn presets(_: &Document) -> Vec<Choice> {
+fn presets<const RESTRICTED_ONLY: bool>(_: &Document) -> Vec<Choice> {
     MotionEasingPreset::ALL
         .into_iter()
+        .filter(|preset| !RESTRICTED_ONLY || preset.supports_restricted_time())
         .map(|preset| Choice {
             value: curves::preset_id(preset),
             label: curves::preset_label(preset).into(),
@@ -132,11 +133,14 @@ impl TimelineTarget {
                         .choices(false, interpolations),
                 ];
                 if settings.bezier() {
-                    let mut preset = PRESET;
-                    preset.readonly = settings.restricted_conversion_locked;
+                    let choices = if settings.restricted_conversion_locked {
+                        presets::<true>
+                    } else {
+                        presets::<false>
+                    };
                     specs.push(
-                        FieldSpec::new(preset, "timeline.easing", FieldEditor::Select)
-                            .choices(false, presets),
+                        FieldSpec::new(PRESET, "timeline.easing", FieldEditor::Select)
+                            .choices(false, choices),
                     );
                 }
                 specs.push(FieldSpec::new(

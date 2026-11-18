@@ -319,12 +319,16 @@ impl TimelineProjection {
                         _ => None,
                     }),
                     frame_step: track.segments.get(i).map_or_default(|s| s.frame_step),
-                    outgoing_locked: model.editor_state().get(&clip.id).locked
-                        || model.editor_state().get(&track.id).locked
-                        || model.editor_state().get(&key.id).locked
-                        || all
-                            .get(i + 1)
-                            .is_some_and(|end| model.editor_state().get(&end.id).locked),
+                    outgoing_locked: track.segments.get(i).is_some_and(|segment| {
+                        zipzi_core::document::motion_interval_lock(
+                            model.editor_state(),
+                            &clip.id,
+                            &track.id,
+                            &key.id,
+                            &segment.end.id,
+                        )
+                        .is_some()
+                    }),
                     outgoing: track.segments.get(i).map(|segment| match segment {
                         MotionSegment {
                             curve: MotionCurve::Linear {},

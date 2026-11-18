@@ -13,11 +13,17 @@ use zipzi_core::document::{MotionCurve, MotionEasingPreset, MotionFrameStep};
 use zipzi_editor_core::{CommandId, Editor};
 
 pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
-    for locale in ["en", "zh-CN", "ja"] {
+    use gpui_kit::component::ThemeMode;
+    for (locale, theme) in [
+        ("en", ThemeMode::Dark),
+        ("zh-CN", ThemeMode::Light),
+        ("ja", ThemeMode::Dark),
+    ] {
         let mut h = Harness::new()?;
         let (document, assets) = fixture::animation_document()?;
         h._assets = assets;
         i18n::activate(Some(locale));
+        h.cx.update(|cx| crate::theme::change(theme, cx));
         update(&mut h, |view, window, cx| {
             view.replace_editor(Editor::from_document(document), cx);
             view.run_command(CommandId::AnimationWorkspace, window, cx);
@@ -65,19 +71,24 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             );
         })?;
         h.capture()?;
-        for (button, item) in [
-            ("timeline-interpolation", "timeline-interpolation-bezier"),
-            ("timeline-easing", "timeline-easing-cubic_out"),
-            ("timeline-frame-step", "timeline-frame-step-3"),
+        for item in [
+            "timeline-curve-menu",
+            "timeline-interpolation-bezier",
+            "timeline-easing",
+            "timeline-easing-family-cubic",
+            "timeline-easing-cubic_out",
+            "timeline-frame-step-3",
         ] {
             h.cx.update_window(h.window, |_, w, c| {
-                w.click(button, c);
-                w.render_frame(c);
                 w.click(item, c);
                 w.render_frame(c);
             })?;
             h.capture()?;
         }
+        h.cx.update_window(h.window, |_, w, c| {
+            w.click("timeline-curve-menu", c);
+            w.render_frame(c);
+        })?;
         h.view.read_with(&h.cx, |view, _| {
             let clip = view
                 .editor
@@ -139,6 +150,8 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             &format!("curve-authoring-{locale}-stairs.png"),
         )?;
         h.cx.update_window(h.window, |_, w, c| {
+            w.click("timeline-curve-menu", c);
+            w.render_frame(c);
             w.click("timeline-easing", c);
             w.render_frame(c);
         })?;
@@ -178,13 +191,18 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             });
             w.render_frame(c);
         })?;
-        let narrow = h.capture()?;
-        h.cx.update_window(h.window, |_, w, _| {
-            assert!(w.find("timeline-curve-menu").visible());
+        h.capture()?;
+        h.cx.update_window(h.window, |_, w, c| {
+            w.click("timeline-more", c);
+            w.render_frame(c);
+            w.click("timeline-menu-curve-settings", c);
+            w.render_frame(c);
+            w.click("timeline-frame-step-4", c);
+            w.render_frame(c);
             assert!(w.find("timeline-frame-step-number").visible());
         })?;
         save(
-            &narrow,
+            &h.capture()?,
             directory,
             &format!("curve-authoring-{locale}-narrow.png"),
         )?;

@@ -1,0 +1,49 @@
+{
+  "Curves": [
+    {
+      "Id": "ParamX",
+      "Segments": [
+        0.0,
+        0.0,
+        0.0,
+        0.25,
+        1.0,
+        1.0,
+        0.30000001192092896,
+        1.2000000476837158,
+        0.44999998807907104,
+        1.100000023841858,
+        0.5,
+        0.5,
+        2.0,
+        0.75,
+        0.10000000149011612,
+        3.0,
+        1.0,
+        0.8999999761581421
+      ],
+      "Target": "Parameter"
+    }
+  ],
+  "Future": {
+    "label": "v22 opaque reference"
+  },
+  "Meta": {
+    "AreBeziersRestricted": false,
+    "CurveCount": 1,
+    "Duration": 1.0,
+    "Fps": 30.0,
+    "Loop": false,
+    "TotalPointCount": 7,
+    "TotalSegmentCount": 4,
+    "TotalUserDataSize": 6,
+    "UserDataCount": 1
+  },
+  "UserData": [
+    {
+      "Time": 0.75,
+      "Value": "你好"
+    }
+  ],
+  "Version": 3
+}

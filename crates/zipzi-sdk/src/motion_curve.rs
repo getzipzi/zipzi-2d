@@ -151,6 +151,7 @@ fn is_monotonic(start: f32, segment: &MotionSegment) -> bool {
 }
 
 fn outgoing_targets(
+    document: &DocumentBuilder,
     clip: &MotionClip,
     keys: &[MotionKeyRef],
 ) -> Result<Vec<(usize, usize)>, Status> {
@@ -180,41 +181,136 @@ fn outgoing_targets(
             .ok_or_else(|| error("MISSING_MOTION_KEY", &key.key_id))?;
         if index < track.segments.len() && seen.insert((track_index, index)) {
             editable(track)?;
+            if let Some(id) = zipzi_core::document::motion_interval_lock(
+                document.editor_state(),
+                &clip.id,
+                &track.id,
+                &key.key_id,
+                &track.segments[index].end.id,
+            ) {
+                return Err(error("OBJECT_LOCKED", id));
+            }
             targets.push((track_index, index));
         }
     }
     Ok(targets)
 }
 
-fn unrestrict_beziers(clip: &mut MotionClip) {
-    for track in &mut clip.tracks {
-        let mut start = track.initial.point();
-        if !track
-            .segments
-            .iter()
-            .any(|s| matches!(s.curve, MotionCurve::Bezier { .. }))
-        {
+/// In normalized time the cubic differs from u by at most the largest
+/// control-time rounding error (convex hull property). Multiplying by a
+/// bound on |dy/du| bounds the change at every inverse-time sample.
+fn check_unrestricted_precision(
+    start: MotionPoint,
+    first: MotionPoint,
+    second: MotionPoint,
+    end: MotionPoint,
+) -> Result<(), Status> {
+    if start.time.next_up() >= end.time {
+        return Ok(());
+    }
+    let span = f64::from(end.time) - f64::from(start.time);
+    let normalized = |time: f32| (f64::from(time) - f64::from(start.time)) / span;
+    let time_error = (normalized(first.time) - 1. / 3.)
+        .abs()
+        .max((normalized(second.time) - 2. / 3.).abs());
+    let values = [start.value, first.value, second.value, end.value].map(f64::from);
+    let derivative_bound = 3.
+        * values
+            .windows(2)
+            .map(|pair| (pair[1] - pair[0]).abs())
+            .fold(0., f64::max);
+    let tolerance = bezier_value_tolerance(values);
+    if derivative_bound * time_error <= tolerance {
+        return Ok(());
+    }
+    // A third rounded by more than the normalized tolerance means the interval
+    // spans few f32 ticks relative to its origin. Check its actual samples:
+    // even rounded, coincident controls can preserve every representable time.
+    let segment = CompiledSegment::Bezier {
+        control1: first,
+        control2: second,
+        end,
+    };
+    let mut time = start.time.next_up();
+    while time < end.time {
+        let restricted = zipzi_animation::sample_motion_segment(start, &segment, time, true);
+        let unrestricted = zipzi_animation::sample_motion_segment(start, &segment, time, false);
+        if (f64::from(restricted) - f64::from(unrestricted)).abs() > tolerance {
+            return Err(error("MOTION_BEZIER_CONVERSION_PRECISION",
+                "The stored control times cannot preserve this restricted Bezier within numerical tolerance"));
+        }
+        time = time.next_up();
+    }
+    Ok(())
+}
+
+fn bezier_value_tolerance(values: [f64; 4]) -> f64 {
+    let minimum = values.into_iter().fold(f64::INFINITY, f64::min);
+    let maximum = values.into_iter().fold(f64::NEG_INFINITY, f64::max);
+    0.0001 * (maximum - minimum).max(1.0)
+}
+
+fn unrestrict_beziers(
+    clip: &mut MotionClip,
+    document: &DocumentBuilder,
+    targets: &[(usize, usize)],
+) -> Result<(), Status> {
+    let replaced: HashSet<_> = targets.iter().copied().collect();
+    for (track_index, track) in clip.tracks.iter_mut().enumerate() {
+        if !track.segments.iter().any(|s| {
+            matches!(
+                s.curve,
+                MotionCurve::Bezier { .. } | MotionCurve::AutoSmooth {}
+            )
+        }) {
             continue;
         }
-        for segment in Arc::make_mut(&mut track.segments) {
-            if let MotionCurve::Bezier {
-                control1,
-                control2,
-                preset,
-            } = &mut segment.curve
-            {
-                (control1.time, control2.time) = thirds(start.time, segment.end.time);
-                if preset.is_some_and(|source| {
-                    source.mapped_controls(start, segment.end.point())
-                        != Some([*control1, *control2])
-                }) {
-                    *preset = None;
+        let compiled = CompiledCurve::from_track(track, clip.fps);
+        for (index, base) in compiled.segments.iter().enumerate() {
+            let CompiledSegment::Bezier {
+                control1: mut first,
+                control2: mut second,
+                end,
+            } = *base
+            else {
+                continue;
+            };
+            if replaced.contains(&(track_index, index)) {
+                continue;
+            }
+            let start = index
+                .checked_sub(1)
+                .map_or(&track.initial, |i| &track.segments[i].end);
+            let segment = &track.segments[index];
+            if matches!(segment.curve, MotionCurve::Bezier { .. }) {
+                if let Some(id) = zipzi_core::document::motion_interval_lock(
+                    document.editor_state(),
+                    &clip.id,
+                    &track.id,
+                    &start.id,
+                    &segment.end.id,
+                ) {
+                    return Err(error("OBJECT_LOCKED", id));
                 }
             }
-            start = segment.end.point();
+            // A validated compatible preset already stores its rounded thirds.
+            // Keep its exact controls and provenance through the mode change.
+            let custom = matches!(segment.curve, MotionCurve::Bezier { preset: None, .. });
+            if custom {
+                (first.time, second.time) = thirds(start.time, segment.end.time);
+            }
+            check_unrestricted_precision(start.point(), first, second, end)?;
+            if custom {
+                Arc::make_mut(&mut track.segments)[index].curve = MotionCurve::Bezier {
+                    control1: first,
+                    control2: second,
+                    preset: None,
+                };
+            }
         }
     }
     clip.restricted_beziers = false;
+    Ok(())
 }
 
 impl CurveWorkspace {
@@ -495,7 +591,7 @@ impl CurveWorkspace {
         kind: MotionInterpolation,
     ) -> Result<(), Status> {
         self.apply(document, |clip| {
-            let targets = outgoing_targets(clip, keys)?;
+            let targets = outgoing_targets(document, clip, keys)?;
             let mut compiled = HashMap::new();
             if kind == MotionInterpolation::Bezier {
                 for &(track, _) in &targets {
@@ -555,10 +651,10 @@ impl CurveWorkspace {
         preset: MotionEasingPreset,
     ) -> Result<(), Status> {
         self.apply(document, |clip| {
-            let targets = outgoing_targets(clip, keys)?;
+            let targets = outgoing_targets(document, clip, keys)?;
             if !targets.is_empty() && clip.restricted_beziers && !preset.supports_restricted_time()
             {
-                unrestrict_beziers(clip);
+                unrestrict_beziers(clip, document, &targets)?;
             }
             for (track_index, index) in targets {
                 let track = &mut clip.tracks[track_index];
@@ -588,7 +684,7 @@ impl CurveWorkspace {
             let step = step.normalized().ok_or_else(|| {
                 error("INVALID_MOTION_FRAME_STEP", "Frame count must be positive")
             })?;
-            for (track_index, index) in outgoing_targets(clip, keys)? {
+            for (track_index, index) in outgoing_targets(document, clip, keys)? {
                 let track = &mut clip.tracks[track_index];
                 if track.segments[index].frame_step != step {
                     Arc::make_mut(&mut track.segments)[index].frame_step = step;
@@ -771,7 +867,7 @@ impl CurveWorkspace {
         keys: &[MotionKeyRef],
     ) -> Result<(), Status> {
         self.apply(document, |clip| {
-            for (track_index, index) in outgoing_targets(clip, keys)? {
+            for (track_index, index) in outgoing_targets(document, clip, keys)? {
                 let track = &mut clip.tracks[track_index];
                 if !matches!(
                     track.segments[index].curve,
@@ -827,6 +923,7 @@ impl CurveWorkspace {
                     segment.end_mut().time = scale(segment.end().time);
                     let end = segment.end().time;
                     let end_point = segment.end.point();
+                    zipzi_core::document::validate_motion_interval_times(start.time, end)?;
                     if let MotionSegment {
                         curve:
                             MotionCurve::Bezier {
@@ -993,9 +1090,7 @@ fn verify_bezier_split(
         unreachable!()
     };
     let values = [start.value, control1.value, control2.value, end.value].map(f64::from);
-    let minimum = values.into_iter().fold(f64::INFINITY, f64::min);
-    let maximum = values.into_iter().fold(f64::NEG_INFINITY, f64::max);
-    let tolerance = 0.0001 * (maximum - minimum).max(1.0);
+    let tolerance = bezier_value_tolerance(values);
     let span = f64::from(end.time) - f64::from(start.time);
     let times = (0..=128)
         .map(|i| (f64::from(start.time) + span * f64::from(i) / 128.0) as f32)

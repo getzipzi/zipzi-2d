@@ -20,7 +20,7 @@
 
 ### 第 2 阶段（2026-11-18）
 
-- `MotionSegment` 已改为 `end`、`curve: MotionCurve`、`frame_step: MotionFrameStep`，持久保存五种模式、显式控制点、可校验的预设来源和 N；Auto Smooth 控制点仅在编译时生成。原生文档版本升为 23，不提供旧版本迁移。
+- `MotionSegment` 已改为 `end`、`curve: MotionCurve`、`frame_step: MotionFrameStep`，持久保存五种模式、显式控制点、可校验的预设来源和 N；Auto Smooth 控制点仅在编译时生成。原生文档写入 v23，读取 v22 时保留原有关键帧和控制点，帧步进设为 Off。
 - `CompiledCurve::from_track(track, fps)` 编译完整自动区间组及各段帧步进。原始预览、结果播放与时间线投影复用同一采样器；FPS 独立参与编辑预览缓存失效，事件继续使用真实动画时间。
 - Draft 接入 `EasingPreset`、`FrameStep`、`BezierHandleAligned` 和 `TidyHandles`。类型切换保留 N；自动转手动保留当时编译控制点；连续手柄操作在一次事务中转换两侧自动段，共线时保留另一手柄长度；整理手柄将所选段恢复为直线三等分控制点和 Custom。
 - 首个新建区间默认 Auto Smooth。插入继承模式与 N、分段重新计步；删除继承左侧模式与 N；复制完整区间携带配置；平移和时间缩放保留有效预设，普通单键形变及手动编辑清除来源。受限 Bezier 应用不兼容预设时，对整个 clip 做三等分时间的等价转换。
@@ -56,6 +56,13 @@
 最终 focused gates 通过：42 项 SDK 曲线回归；Animation 的 12 项 authoring、2 项预设基准、4 项编辑预览、27 项预览和 5 项采样；Contract 全套；Project 的 14 项 motion 与 11 项 authoring formats；Runtime 的 2 项导出测试及当时的 CAN3 拒绝测试（已由支持回归取代）；EditorCore 的既有 50 项时间线与 5 项曲线验收、61 项时间线／属性 UI；Python 的 54 项主门禁、native publication、14 项生成测试和 installed Connected 门禁。独立代码生成及工作区 domain 检查亦通过。
 
 原生截图复现使用上面的 `curve-authoring` 场景；本次产物位于 `target/curve-authoring-native/`，实际桌面宿主探针记录在 `target/curve-authoring-desktop/connected-probe.json`。这些是可重新生成的本地产物，不进入工程数据或 Git。motion3 保留播放效果。CAN3 的 Frame Step 拒绝是实现缺口，不能视为目标格式限制；修复与验证见下文。
+
+### 审查后的边界回归
+
+- 缩放和转移先检查变换后的 f32 键时刻。两键碰撞返回 `MOTION_KEY_COLLISION`，整个编辑事务回滚。
+- 锁定关键帧保护入段、出段及两端的时间和值。批量曲线命令检查所有选中区间，包括已经符合目标设置的区间。其他区间被锁时，属性面板仍可选择兼容受限时间的预设。
+- 转换受限 Bezier 前，SDK 根据归一化控制时间的舍入误差和值方向导数上界检查未选区间。当上界超过容差时，再逐个检查短区间内可表示的 f32 时刻。实际采样误差超出曲线编辑容差时，返回 `MOTION_BEZIER_CONVERSION_PRECISION`。
+- 源范围裁剪覆盖循环的额外一帧。可表示的尾帧跳变保留在 motion3 中。无法在目标时间范围保真的尾部返回 `MOTION_LOOP_TAIL_UNREPRESENTABLE`。回归在步进边界两侧、精确循环末端和下一循环起点对比原工程与重导入的 MotionPreview。
 
 ### CAN3 Frame Step 补完（2026-11-18）
 
@@ -103,13 +110,7 @@ Cubism 另有 Frame Step，提供单帧、双帧、三帧及数值输入，可�
 
 ### 时间线工具栏
 
-在 Dope Sheet 和曲线视图共同提供：
-
-```text
-插值 [Bezier ▾]   缓动 [Cubic Out ▾]   帧步进 [关闭 ▾] [N 帧]
-```
-
-插值入口常驻。Bezier 时显示缓动入口，其他模式隐藏其专属设置；帧步进始终可见。面板过窄时折叠到有文字标签的“曲线设置”菜单，不能只留下无提示的图标。曲线与阶梯的小图形用于辅助辨认，选项同时保留名称与提示。
+Dope Sheet 和曲线视图共用同一个分体按钮。左侧曲线图标切换视图并保留选区，右侧箭头打开“区间曲线”浮层。浮层直接列出插值类型，在适用时显示缓动预设和手柄操作。选中自定义帧步进后显示 N 输入框。窄面板的“更多工具”菜单将“曲线”与“区间曲线设置”相邻排列，右键菜单也能打开同一个浮层。
 
 属性面板同步显示“区间曲线”分组，包含插值、缓动预设、帧步进，以及适用时的 Bezier 控制柄数值。工具栏、属性面板和右键菜单使用同一命令和状态计算，不各自维护一份配置。
 
@@ -266,7 +267,7 @@ MotionSegment
 | Editor | 工具栏、属性、菜单、手柄和图形显示 |
 | Project／格式适配 | 原生持久化、motion3 烘焙、重新导入验证 |
 
-原生工程尚未正式发布，允许必要的破坏性重构，不设计旧原生版本迁移。外部 motion3 的既有导入语义继续保留。
+原生工程从文档 v22 起提供读取兼容。打开 v22 时在内存中转换曲线，保存或另存时写入 v23。旧 Bezier 使用原始控制点和 Custom 模式。外部 motion3 的既有导入语义继续保留。
 
 `restricted_beziers` 是现有 clip 级语义：时间限制模式不能直接套用任意时间控制点预设。首次应用不兼容预设时，应在同一事务中将 clip 转为 unrestricted，并将既有受限段转换为等价的三等分时间控制点，保证无关段采样不变；不可只切换布尔值。此转换需有数值对照测试。
 

@@ -431,3 +431,45 @@ fn export_preflight_rejects_unbounded_expansion_and_tiny_workspaces_before_bakin
         "MOTION_EXPORT_LIMIT"
     );
 }
+
+#[test]
+fn cropped_loop_keeps_a_frame_step_tick_after_duration_or_reports_the_format_limit() {
+    let mut definition = clip([0., 0.], &[(1., 1., MotionCurve::Linear {}, 3)], 30.);
+    definition.looping = true;
+    definition.meta_extensions.insert(
+        "ZipziSourceKeyRange".into(),
+        serde_json::json!({"start":0.,"end":1.}),
+    );
+    definition.duration = 0.49;
+    let source = state(definition.clone());
+    let (reimported, summary) = roundtrip_motion(&source);
+    assert!(summary.output_segments <= summary.estimated_output_segments);
+    let cycle = definition.duration + 1. / definition.fps;
+    for t in [
+        0.49,
+        0.5_f32.next_down(),
+        0.5,
+        0.5_f32.next_up(),
+        0.51,
+        cycle,
+        cycle.next_up(),
+    ] {
+        let sample = |s| {
+            let mut preview = MotionPreview::new(s);
+            preview.schedule_motion(MOTION, 0.).unwrap();
+            preview.advance(0.).unwrap();
+            preview.advance(t).unwrap().parameters[PARAM]
+        };
+        let value = sample(&source);
+        assert_eq!(sample(&reimported), value, "at {t}");
+        if t == 0.51 {
+            assert_eq!(value, 0.5);
+        }
+    }
+    // The tick at 0.5 is still played, but now exceeds the wire endpoint tolerance.
+    definition.duration = 0.475;
+    assert_eq!(
+        export_motion3(&state(definition), MOTION).unwrap_err().code,
+        "MOTION_LOOP_TAIL_UNREPRESENTABLE"
+    );
+}

@@ -41,23 +41,10 @@ fn select(h: &Harness, w: &mut Window, c: &mut App) -> TimelineKeyRef {
     w.render_frame(c);
     key
 }
-fn open(w: &mut Window, c: &mut App, button: &str, label: &str) {
-    if w.try_find(button.to_owned()).is_some() {
-        w.click(button.to_owned(), c);
-        w.render_frame(c);
-    } else {
-        w.click("timeline-curve-menu", c);
-        w.render_frame(c);
-        let item = (0..12usize)
-            .find(|i| {
-                w.within("popup-menu")
-                    .try_find(*i)
-                    .is_some_and(|e| e.label() == Some(label))
-            })
-            .expect("curve submenu");
-        w.within("popup-menu").hover(item, c);
-        w.render_frame(c);
-    }
+fn open(w: &mut Window, c: &mut App) {
+    w.click("timeline-curve-menu", c);
+    w.render_frame(c);
+    assert!(w.find("timeline-curve-settings-popover").visible());
 }
 
 #[gpui_kit::test]
@@ -67,41 +54,63 @@ fn curve_authoring_toolbar_inspector_and_menu_share_real_selection_and_one_undo(
     let h = setup(cx);
     let key = cx
         .update_window(h.window, |_, w, c| {
-            w.click("timeline-interpolation", c);
+            assert!(w.try_find("timeline-curve-settings").is_none());
+            w.click("timeline-curve-menu", c);
             w.render_frame(c);
-            assert!(w.try_find("popup-menu").is_none());
-            select(&h, w, c)
+            assert!(w.try_find("timeline-curve-settings-popover").is_none());
+            let key = select(&h, w, c);
+            let graph = w.find("timeline-graph").bounds();
+            open(w, c);
+            assert_eq!(w.find("timeline-graph").bounds(), graph);
+            assert_eq!(
+                h.view.read(c).editor.timeline_view().unwrap().mode,
+                zipzi_editor_core::TimelineDisplayMode::Overview
+            );
+            key
         })
         .unwrap();
     cx.run_until_parked();
-    for (button, label, item) in [
-        (
-            "timeline-interpolation",
-            "Interpolation to next key",
-            "timeline-interpolation-auto_smooth",
-        ),
-        (
-            "timeline-interpolation",
-            "Interpolation to next key",
-            "timeline-interpolation-bezier",
-        ),
-        ("timeline-easing", "Easing", "timeline-easing-cubic_out"),
-        ("timeline-frame-step", "Frame Step", "timeline-frame-step-3"),
+    for item in [
+        "timeline-interpolation-auto_smooth",
+        "timeline-interpolation-bezier",
+        "timeline-easing",
+        "timeline-easing-family-sine",
+        "timeline-easing-family-cubic",
+        "timeline-easing-cubic_out",
+        "timeline-easing-cubic_out",
+        "timeline-frame-step-3",
     ] {
         cx.update_window(h.window, |_, w, c| {
             w.render_frame(c);
-            open(w, c, button, label);
-            assert!(
-                w.try_find(item.to_owned()).is_some(),
-                "menu {button}: {item}"
-            );
             w.click(item, c);
             w.render_frame(c);
+            assert!(w.find("timeline-curve-settings-popover").visible());
+            if item == "timeline-easing-family-sine" {
+                assert!(w.find("timeline-easing-sine_in").visible());
+                assert!(w.find("timeline-easing-sine_in_out").visible());
+                assert!(w.try_find("timeline-easing-cubic_out").is_none());
+            }
         })
         .unwrap();
         cx.run_until_parked();
     }
     cx.update_window(h.window, |_, w, c| {
+        for (checked, unchecked) in [
+            (
+                "timeline-interpolation-bezier",
+                "timeline-interpolation-auto_smooth",
+            ),
+            ("timeline-easing-cubic_out", "timeline-easing-cubic_in"),
+            ("timeline-frame-step-3", "timeline-frame-step-1"),
+        ] {
+            assert_eq!(w.find(checked).role(), Some(gpui_kit::Role::RadioButton));
+            assert_eq!(w.find(checked).checked(), Some(true));
+            assert_eq!(w.find(unchecked).checked(), Some(false));
+        }
+        assert_eq!(
+            w.find("timeline-aligned-handles").role(),
+            Some(gpui_kit::Role::CheckBox)
+        );
         let p = h.view.read(c).editor.timeline_projection().unwrap();
         let s = p.curve_settings(&[key.clone()], false);
         assert_eq!(
@@ -150,8 +159,17 @@ fn curve_authoring_toolbar_inspector_and_menu_share_real_selection_and_one_undo(
     cx.run_until_parked();
     cx.update_window(h.window, |_, w, c| {
         w.render_frame(c);
-        assert!(w.try_find("popup-menu").is_some());
-        w.press("escape", c);
+        w.click("timeline-menu-curve-settings", c);
+        w.render_frame(c);
+        assert!(w.find("timeline-curve-settings-popover").visible());
+        w.click("timeline-view", c);
+        w.render_frame(c);
+        assert!(w.try_find("timeline-curve-settings-popover").is_none());
+        let state = h.view.read(c).editor.timeline_view().unwrap();
+        assert_eq!(state.mode, zipzi_editor_core::TimelineDisplayMode::Curves);
+        assert!(state.keys.contains(&key));
+        open(w, c);
+        assert!(w.find("timeline-easing").visible());
     })
     .unwrap();
 }
@@ -162,7 +180,16 @@ fn curve_authoring_n_uses_draft_cancel_single_commit_and_integer_validation(
 ) {
     let h = setup(cx);
     let key = cx
-        .update_window(h.window, |_, w, c| select(&h, w, c))
+        .update_window(h.window, |_, w, c| {
+            let key = select(&h, w, c);
+            open(w, c);
+            assert!(w.try_find("timeline-frame-step-number").is_none());
+            w.click("timeline-frame-step-4", c);
+            w.render_frame(c);
+            w.press("tab", c);
+            w.render_frame(c);
+            key
+        })
         .unwrap();
     cx.run_until_parked();
     for cancel in [true, false] {
@@ -268,12 +295,14 @@ fn curve_authoring_terminal_mixed_and_event_selection_explain_disabled_state(
             v.redraw(c);
         });
         w.render_frame(c);
-        w.click("timeline-interpolation", c);
+        w.click("timeline-curve-menu", c);
         w.render_frame(c);
-        assert!(w.try_find("popup-menu").is_none());
+        assert!(w.try_find("timeline-curve-settings-popover").is_none());
+        w.click("timeline-view", c);
+        w.render_frame(c);
         assert_eq!(
-            w.find("timeline-curve-status").label(),
-            Some("No following keyframe")
+            h.view.read(c).editor.timeline_view().unwrap().mode,
+            zipzi_editor_core::TimelineDisplayMode::Curves
         );
         h.view.update(c, |v, c| {
             v.editor
@@ -282,7 +311,7 @@ fn curve_authoring_terminal_mixed_and_event_selection_explain_disabled_state(
             v.redraw(c);
         });
         w.render_frame(c);
-        assert_ne!(w.find("timeline-interpolation").disabled(), Some(true));
+        open(w, c);
         assert!(
             w.find("timeline-curve-status")
                 .label()
@@ -290,9 +319,9 @@ fn curve_authoring_terminal_mixed_and_event_selection_explain_disabled_state(
                 .contains("1 intervals")
         );
         super::tool(w, "timeline-add-event", c);
-        w.click("timeline-interpolation", c);
+        w.click("timeline-curve-menu", c);
         w.render_frame(c);
-        assert!(w.try_find("popup-menu").is_none());
+        assert!(w.try_find("timeline-curve-settings-popover").is_none());
     })
     .unwrap();
 }
@@ -331,15 +360,21 @@ fn curve_authoring_narrow_panel_keeps_a_labeled_menu_and_custom_n(cx: &mut TestA
     cx.run_until_parked();
     cx.update_window(h.window, |_, w, c| {
         w.render_frame(c);
-        assert!(w.find("timeline-curve-menu").visible());
-        assert!(
-            w.find("timeline-curve-menu")
-                .label()
-                .unwrap()
-                .contains("Curve settings")
+        assert!(w.try_find("timeline-curve-menu").is_none());
+        w.click("timeline-more", c);
+        w.render_frame(c);
+        assert!(w.find("timeline-menu-view").visible());
+        assert_eq!(
+            w.find("timeline-menu-curve-settings").label(),
+            Some("Interval Curve Settings…")
         );
+        w.click("timeline-menu-curve-settings", c);
+        w.render_frame(c);
+        assert!(w.find("timeline-curve-settings-popover").visible());
+        assert!(w.try_find("timeline-frame-step-number").is_none());
+        w.click("timeline-frame-step-4", c);
+        w.render_frame(c);
         assert!(w.find("timeline-frame-step-number").visible());
-        open(w, c, "timeline-interpolation", "Interpolation to next key");
         w.click("timeline-interpolation-auto_smooth", c);
         w.render_frame(c);
         let p = h.view.read(c).editor.timeline_projection().unwrap();

@@ -89,7 +89,10 @@ impl Timeline {
         !window.has_active_dialog(cx) && self.target(cx).is_some()
     }
     pub(super) fn editable(&self, window: &mut Window, cx: &mut App) -> bool {
-        self.allowed(window, cx)
+        !window.has_active_dialog(cx) && self.can_edit(cx)
+    }
+    pub(super) fn can_edit(&self, cx: &App) -> bool {
+        self.target(cx).is_some()
             && self.owner.upgrade().is_some_and(|owner| {
                 let view = owner.read(cx);
                 !view.editor.animation().unwrap().playing
@@ -154,6 +157,7 @@ impl Timeline {
                         .is_some_and(|projection| field.exists(projection))
                 });
             } else {
+                self.curve_popover = None;
                 self.fields.clear();
                 self.range_key = None;
                 self.error = None;
@@ -253,6 +257,7 @@ impl Timeline {
     }
 
     pub(crate) fn deactivate(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.curve_popover = None;
         let cancellation = self.cancel_local(window, cx);
         if !matches!(
             cancellation.0,

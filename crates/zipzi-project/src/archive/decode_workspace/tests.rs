@@ -222,9 +222,24 @@ fn decode_estimate_covers_geometry_and_keyforms_at_multiple_sizes() {
 #[test]
 fn decode_estimate_covers_motion_tracks_and_keys_at_multiple_sizes() {
     for (clips, tracks, keys) in [(1, 1, 4), (8, 4, 64)] {
+        let bytes = motions(clips, tracks, keys);
+        calibrate(&format!("motions_{clips}_{tracks}_{keys}"), &bytes, None);
+        let mut legacy: Value = serde_json::from_slice(&bytes).unwrap();
+        legacy["format_version"] = 22.into();
+        for clip in legacy["document"]["animation_assets"]["motions"]
+            .as_array_mut()
+            .unwrap()
+        {
+            clip["opaque_source_content_hash"] = json!("0".repeat(64));
+            for track in clip["tracks"].as_array_mut().unwrap() {
+                for segment in track["segments"].as_array_mut().unwrap() {
+                    *segment = json!({"kind":"linear","end":segment["end"].take()});
+                }
+            }
+        }
         calibrate(
-            &format!("motions_{clips}_{tracks}_{keys}"),
-            &motions(clips, tracks, keys),
+            &format!("v22_motions_{clips}_{tracks}_{keys}"),
+            &serde_json::to_vec(&legacy).unwrap(),
             None,
         );
     }

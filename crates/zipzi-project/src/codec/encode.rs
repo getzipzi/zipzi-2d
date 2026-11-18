@@ -299,7 +299,7 @@ pub(super) fn encode_wire(document: &impl super::view::EncodeModel) -> Result<Pr
 
     let project = ProjectWire {
         format: "zipzi-project".into(),
-        format_version: 23,
+        format_version: super::CURRENT_DOCUMENT_VERSION,
         document: DocumentWire {
             id: document.id().to_string(),
             export_settings: document.export_settings(),

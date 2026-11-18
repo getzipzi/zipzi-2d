@@ -278,7 +278,6 @@ impl Render for Timeline {
                 )
                 .into_any_element();
         };
-        panel = panel.child(self.curve_controls(&projection, &state, window, cx));
         self.update_range(&projection, &state);
         if let Some(reveal) = &state.reveal_row {
             if let Some(index) = rows.iter().position(|row| &row.id == reveal) {

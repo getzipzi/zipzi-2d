@@ -215,6 +215,74 @@ fn namespace(document: &DocumentState, clip: Option<&MotionClip>) -> BTreeMap<St
 }
 
 fn content_hash(clip: &MotionClip) -> String {
+    content_hash_with(clip, |track| {
+        track
+            .segments
+            .iter()
+            .map(|s| (&s.curve, s.frame_step, s.end.point()))
+            .collect()
+    })
+}
+
+const V22_HASH_PREFIX: &str = "v22:";
+
+pub(crate) fn upgrade_v22_content_hash(clip: &mut MotionClip) {
+    let Some(stored) = clip.opaque_source_content_hash.take() else {
+        return;
+    };
+    // A matching baseline can be written in the standard v23 representation.
+    // Preserve an older, stale baseline so restoring the source still permits export.
+    clip.opaque_source_content_hash = Some(if stored == v22_content_hash(clip) {
+        content_hash(clip)
+    } else {
+        format!("{V22_HASH_PREFIX}{stored}")
+    });
+}
+
+fn v22_content_hash(clip: &MotionClip) -> String {
+    content_hash_with(clip, |track| {
+        zipzi_animation::CompiledCurve::from_track(track, clip.fps)
+            .segments
+            .iter()
+            .map(wire_segment)
+            .collect()
+    })
+}
+
+fn matches_content_hash(clip: &MotionClip) -> bool {
+    let Some(stored) = clip.opaque_source_content_hash.as_deref() else {
+        return false;
+    };
+    let Some(legacy) = stored.strip_prefix(V22_HASH_PREFIX) else {
+        return stored == content_hash(clip);
+    };
+    // v22 hashed the motion3 projection. A v23-only setting is always an edit,
+    // even when it happens to produce the same numeric curve.
+    if clip
+        .tracks
+        .iter()
+        .flat_map(|track| track.segments.iter())
+        .any(|segment| {
+            segment.frame_step != Default::default()
+                || matches!(
+                    segment.curve,
+                    MotionCurve::AutoSmooth {}
+                        | MotionCurve::Bezier {
+                            preset: Some(_),
+                            ..
+                        }
+                )
+        })
+    {
+        return false;
+    }
+    legacy == v22_content_hash(clip)
+}
+
+fn content_hash_with<'a, S: serde::Serialize>(
+    clip: &'a MotionClip,
+    segments: impl Fn(&'a MotionTrack) -> Vec<S>,
+) -> String {
     // Key UUIDs are project identity, not unknown motion3 content. Replacing
     // their identities alone must not invalidate an opaque import baseline.
     let tracks: Vec<_> = clip
@@ -225,11 +293,7 @@ fn content_hash(clip: &MotionClip) -> String {
                 &track.id,
                 &track.target,
                 track.initial.point(),
-                track
-                    .segments
-                    .iter()
-                    .map(|s| (&s.curve, s.frame_step, s.end.point()))
-                    .collect::<Vec<_>>(),
+                segments(track),
                 track.fade_in,
                 track.fade_out,
                 &track.extensions,
@@ -499,7 +563,7 @@ pub(crate) fn opaque_export_problems(
     if clip.opaque_source_ids.as_ref() != Some(&namespace(document, Some(clip))) {
         problems.push(P::NamespaceChanged);
     }
-    if clip.opaque_source_content_hash.as_deref() != Some(content_hash(clip).as_str()) {
+    if !matches_content_hash(clip) {
         problems.push(P::ContentChanged);
     }
     problems

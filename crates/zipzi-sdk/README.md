@@ -25,7 +25,11 @@ Bezier preset sources and independent Frame Step. Curve commands apply presets,
 frame counts, independent or aligned handles, and tidy controls in one Draft.
 Automatic-to-manual transitions materialize current compiled handles; applying
 an incompatible preset converts restricted Beziers equivalently in that same
-transaction. Splits inherit mode and frame count and restart stepping. Deletion
+transaction. The command rejects a conversion when rounded control times cannot
+preserve an unselected interval within numerical tolerance. Scaling or transferring
+keys rejects collisions at stored time precision. Batch curve edits check both
+ends of every selected interval, including intervals already at the requested
+setting. Splits inherit mode and frame count and restart stepping. Deletion
 inherits the left interval; common translations and time scaling retain valid
 preset sources. Editing a handle or changing normalized shape clears the source.
 

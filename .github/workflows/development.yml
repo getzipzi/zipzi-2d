@@ -107,6 +107,7 @@ jobs:
       - run: "uv run --locked python tools/dev.py test editor fast platform_paths::"
       - run: "uv run --locked python tools/dev.py test editor fast storage_tests::"
       - run: cargo test --locked -p zipzi-project --lib filesystem::tests -- --nocapture
+      - run: cargo test --locked -p zipzi-project --test native_compatibility
       - run: cargo test --locked -p zipzi-runtime --test source_identity
       - run: "cargo test --locked -p zipzi-runtime --lib local::"
       - run: cargo test --locked -p zipzi-runtime --test binary --test protocol

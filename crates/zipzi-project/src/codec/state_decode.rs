@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use zipzi_core::document::MotionClip;
 use zipzi_core::state::{AssetContent, AssetRecord, OwnedDocument};
 use zipzi_core::types::{
     Appearance, BindingAxis, BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable,
@@ -18,8 +19,22 @@ pub(crate) struct DecodedState {
     pub images: Vec<zipzi_core::ImageAsset>,
 }
 pub(crate) fn decode_state(text: &str) -> Result<DecodedState, Status> {
-    let (doc, display_info, animation_assets) =
-        super::decode::admit_wire(super::decode::parse_wire(text)?)?;
+    match super::decode::document_version(text)? {
+        22 => decode_wire::<super::v22::V22Motion>(text),
+        super::CURRENT_DOCUMENT_VERSION => decode_wire::<MotionClip>(text),
+        _ => Err(Status::error(
+            "UNSUPPORTED_VERSION",
+            "Unsupported project document version",
+        )),
+    }
+}
+
+fn decode_wire<M: serde::de::DeserializeOwned + Into<MotionClip>>(
+    text: &str,
+) -> Result<DecodedState, Status> {
+    let wire: ProjectWire<M> =
+        serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
+    let (doc, display_info, animation_assets) = super::decode::admit_wire(wire)?;
     let mut input = OwnedDocument {
         id: doc.id,
         setup: zipzi_core::ModelSetup {
@@ -36,7 +51,11 @@ pub(crate) fn decode_state(text: &str) -> Result<DecodedState, Status> {
             Present::Absent => Default::default(),
         },
         expressions: animation_assets.expressions,
-        motions: animation_assets.motions,
+        motions: animation_assets
+            .motions
+            .into_iter()
+            .map(Into::into)
+            .collect(),
         motion_groups: animation_assets.motion_groups,
         motion_roots: animation_assets.motion_roots,
         pose: animation_assets.pose.map(Arc::new),

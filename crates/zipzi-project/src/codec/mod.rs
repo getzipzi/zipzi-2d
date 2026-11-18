@@ -1,6 +1,9 @@
+const CURRENT_DOCUMENT_VERSION: u64 = 23;
+
 mod decode;
 mod encode;
 mod types;
+mod v22;
 mod validation;
 
 pub use validation::validate_json_syntax;

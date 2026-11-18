@@ -1127,3 +1127,134 @@ fn authoring_transfer_copies_complete_interval_settings_and_move_merges_the_sour
     );
     b.validate_candidate().unwrap();
 }
+
+#[test]
+fn retiming_preset_endpoints_rejects_f32_collisions_atomically() {
+    use zipzi_core::document::MotionEdit;
+    for (start, scale) in [(0.7000001_f32, true), (0.25_f32, false)] {
+        let mut b = session();
+        let mut clip = b.motion(&id(3)).unwrap().clone();
+        let track = &mut clip.tracks[0];
+        track.initial.time = start;
+        track.segments = Arc::new(vec![MotionSegment::new(
+            key(101, start.next_up(), 1.),
+            MotionCurve::Linear {},
+        )]);
+        b.replace_authored_motion(clip).unwrap();
+        let mut c = candidate(&b);
+        c.set_easing_preset(&b, &[reference(0, 0)], MotionEasingPreset::CubicOut)
+            .unwrap();
+        let before = c.clip().clone();
+        if scale {
+            assert_eq!(
+                c.scale_time(&b, 0.75).unwrap_err().code,
+                "MOTION_KEY_COLLISION"
+            );
+            assert_eq!(c.clip(), &before);
+        } else {
+            b.replace_authored_motion(before.clone()).unwrap();
+            for copy in [false, true] {
+                let mut attempt = b.clone();
+                let error = attempt
+                    .edit_motion(MotionEdit::TransferKeys {
+                        ids: vec![id(100), id(101)],
+                        destination_track: id(11),
+                        time_offset: 0.5,
+                        copy,
+                    })
+                    .unwrap_err();
+                assert_eq!(error.code, "MOTION_KEY_COLLISION");
+                assert_eq!(attempt.motion(&id(3)), Some(&before));
+            }
+        }
+    }
+}
+
+#[test]
+fn locked_interval_checks_include_its_start_and_already_matching_batch_targets() {
+    let mut b = session();
+    let mut c = candidate(&b);
+    let step = MotionFrameStep::from_frames(3).unwrap();
+    c.set_frame_step(&b, &[reference(0, 1)], step).unwrap();
+    b.replace_authored_motion(c.into_clip()).unwrap();
+    let mut flags = b.editor_state().clone();
+    flags.objects.entry(id(102)).or_default().locked = true;
+    b.set_editor_state(flags).unwrap();
+    let before = b.motion(&id(3)).unwrap().clone();
+    for point in [movement(0, 1, 0.3, 1.), movement(0, 1, 0.25, 0.5)] {
+        let mut c = candidate(&b);
+        c.move_keys(&b, &[point]).unwrap();
+        let mut attempt = b.clone();
+        assert_eq!(
+            attempt
+                .replace_authored_motion(c.into_clip())
+                .unwrap_err()
+                .code,
+            "OBJECT_LOCKED"
+        );
+        assert_eq!(attempt.motion(&id(3)), Some(&before));
+    }
+    let mut c = candidate(&b);
+    let err = c
+        .set_frame_step(&b, &[reference(1, 0), reference(0, 1)], step)
+        .unwrap_err();
+    assert_eq!(err.code, "OBJECT_LOCKED");
+    assert_eq!(c.clip(), &before);
+}
+
+#[test]
+fn restricted_conversion_checks_unselected_short_intervals_before_publishing() {
+    let mut b = bezier_session(true);
+    let mut clip = b.motion(&id(3)).unwrap().clone();
+    let track = &mut clip.tracks[0];
+    track.initial.time = 0.5;
+    let end = f32::from_bits(0.5_f32.to_bits() + 4);
+    let segment = &mut Arc::make_mut(&mut track.segments)[0];
+    segment.end.time = end;
+    segment.curve = MotionCurve::Bezier {
+        control1: MotionPoint {
+            time: 0.5,
+            value: 1.,
+        },
+        control2: MotionPoint {
+            time: end,
+            value: 1.,
+        },
+        preset: None,
+    };
+    b.replace_authored_motion(clip.clone()).unwrap();
+    let mut c = candidate(&b);
+    assert_eq!(
+        c.set_easing_preset(&b, &[reference(1, 0)], MotionEasingPreset::Ease)
+            .unwrap_err()
+            .code,
+        "MOTION_BEZIER_CONVERSION_PRECISION"
+    );
+    assert_eq!(c.clip(), &clip);
+    // A target being explicitly reshaped need not preserve its previous controls.
+    c.set_easing_preset(&b, &[reference(0, 0)], MotionEasingPreset::Ease)
+        .unwrap();
+    assert!(!c.clip().restricted_beziers);
+
+    // With a single interior f32 time both rounded controls land at its midpoint.
+    // The conservative error bound is large, but the sole interior sample is exact.
+    let track = &mut clip.tracks[0];
+    let middle = track.initial.time.next_up();
+    let segment = &mut Arc::make_mut(&mut track.segments)[0];
+    segment.end.time = middle.next_up();
+    if let MotionCurve::Bezier { control2, .. } = &mut segment.curve {
+        control2.time = segment.end.time;
+    }
+    b.replace_authored_motion(clip.clone()).unwrap();
+    let mut c = candidate(&b);
+    c.set_easing_preset(&b, &[reference(1, 0)], MotionEasingPreset::Ease)
+        .unwrap();
+    let sample = |clip: &MotionClip| {
+        sample_motion_curve(
+            &CompiledCurve::from_track(&clip.tracks[0], clip.fps),
+            middle,
+            clip.restricted_beziers,
+        )
+    };
+    assert_eq!(sample(c.clip()), sample(&clip));
+}

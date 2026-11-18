@@ -1,6 +1,43 @@
-use crate::document::MotionCurve;
+use crate::document::{EditorState, MotionCurve};
+use crate::types::Status;
 use serde::Serialize;
 pub use zipzi_contract::document::MotionTrack;
+
+/// Cubism rounds the declared duration separately from its curve timestamps.
+pub fn maximum_motion_curve_end_time(duration: f32, fps: f32) -> f32 {
+    duration + (0.5 / fps).max(0.0001)
+}
+
+/// Transformed keys must still describe an interval in the stored f32 time domain.
+pub fn validate_motion_interval_times(start: f32, end: f32) -> Result<(), Status> {
+    if !start.is_finite() || !end.is_finite() {
+        return Err(Status::error(
+            "INVALID_MOTION_POINT",
+            "Transformed key time must be finite",
+        ));
+    }
+    if start >= end {
+        return Err(Status::error(
+            "MOTION_KEY_COLLISION",
+            "Key times must be strictly increasing",
+        ));
+    }
+    Ok(())
+}
+
+/// Resolve the lock that prevents editing a particular outgoing interval.
+pub fn motion_interval_lock<'a>(
+    state: &EditorState,
+    clip: &'a str,
+    track: &'a str,
+    start: &'a str,
+    end: &'a str,
+) -> Option<&'a str> {
+    [clip, track, start, end]
+        .into_iter()
+        .find(|id| state.get(id).locked)
+}
+
 pub trait MotionTrackEditing {
     fn retain_keys(&mut self, retain: impl Fn(&str) -> bool, restricted: bool) -> bool;
 }

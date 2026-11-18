@@ -1,7 +1,8 @@
 # Working in this repository
 
-This project has not been officially released. Breaking refactors are allowed;
-migrations do not need to be considered.
+Internal interfaces may be refactored. Native `.zipzi` compatibility starts at
+document v22. When changing the format, test opening supported versions, saving
+in the current format, and reopening the result.
 
 Use this file as the development entrypoint. Reading the root README is not
 required; it is the product introduction. Consult the affected crate's README

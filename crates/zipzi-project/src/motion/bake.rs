@@ -45,16 +45,12 @@ fn count_add(a: usize, b: usize) -> Result<usize, MotionProjectError> {
 }
 
 fn stepped_frames(step: MotionFrameStep, curve: &MotionCurve) -> Option<u32> {
-    match (step, curve) {
-        (
-            MotionFrameStep::EveryFrames { frames: 2.. },
-            MotionCurve::Stepped {} | MotionCurve::InverseStepped {},
-        ) => None,
-        (MotionFrameStep::EveryFrames { frames: 2.. }, _) => match step {
-            MotionFrameStep::EveryFrames { frames } => Some(frames),
-            _ => unreachable!(),
+    match curve {
+        MotionCurve::Stepped {} | MotionCurve::InverseStepped {} => None,
+        _ => match step {
+            MotionFrameStep::EveryFrames { frames: n @ 2.. } => Some(n),
+            _ => None,
         },
-        _ => None,
     }
 }
 
@@ -100,12 +96,19 @@ fn ticks(
     Ok(lower_bound(left, false)?..lower_bound(right, true)?)
 }
 
-fn playback_range(clip: &MotionClip, start: f32, end: f32) -> (f32, f32) {
-    if clip.source_key_range().is_some() {
-        (start.max(0.), end.min(clip.duration))
-    } else {
-        (start, end)
-    }
+/// The endpoint itself is sampled, including at exact multiples of a loop.
+fn crop_end(clip: &MotionClip) -> Option<f32> {
+    clip.source_key_range().map(|_| {
+        if clip.looping {
+            clip.duration + 1. / clip.fps
+        } else {
+            clip.duration
+        }
+    })
+}
+
+fn playback_range(crop: Option<f32>, start: f32, end: f32) -> (f32, f32) {
+    crop.map_or((start, end), |limit| (start.max(0.), end.min(limit)))
 }
 
 pub(super) fn estimate(
@@ -134,6 +137,7 @@ pub(super) fn estimate(
         source_segments,
         ..Default::default()
     };
+    let crop = crop_end(clip);
     let mut tracks = Vec::with_capacity(clip.tracks.len());
     for track in &clip.tracks {
         let mut count = 0;
@@ -143,7 +147,7 @@ pub(super) fn estimate(
             if matches!(segment.curve, MotionCurve::AutoSmooth {}) {
                 summary.auto_smooth_segments += 1;
             }
-            let (left, right) = playback_range(clip, start, end);
+            let (left, right) = playback_range(crop, start, end);
             if left < right {
                 let output = if let Some(frames) =
                     stepped_frames(segment.frame_step, &segment.curve)
@@ -170,7 +174,7 @@ pub(super) fn estimate(
         }
         // A crop may end exactly on an outgoing jump, and looping stepped
         // continuous curves retain a final continuous-kind seam marker.
-        if clip.source_key_range().is_some()
+        if crop.is_some()
             || (clip.looping
                 && track
                     .segments
@@ -414,8 +418,8 @@ pub(super) fn track(
     summary: &mut MotionExportSummary,
 ) -> Result<(MotionPoint, Vec<CompiledSegment>), MotionProjectError> {
     let source = CompiledCurve::from_track(track, clip.fps);
-    let cropped = clip.source_key_range().is_some();
-    if cropped && source.initial.time >= clip.duration {
+    let crop = crop_end(clip);
+    if crop.is_some_and(|end| source.initial.time >= end) {
         if let Some(CompiledSegment::Bezier {
             control1,
             control2,
@@ -439,7 +443,7 @@ pub(super) fn track(
             }
         }
     }
-    let mut initial = if cropped {
+    let mut initial = if crop.is_some() {
         MotionPoint {
             time: 0.,
             value: sample_motion_curve(&source, 0., clip.restricted_beziers),
@@ -451,7 +455,7 @@ pub(super) fn track(
     let mut start = source.initial;
     for (index, &segment) in source.segments.iter().enumerate() {
         let end = segment.end();
-        let (left, right) = playback_range(clip, start.time, end.time);
+        let (left, right) = playback_range(crop, start.time, end.time);
         if left >= right {
             start = end;
             continue;
@@ -505,24 +509,20 @@ pub(super) fn track(
         }
         start = end;
     }
-    let final_index = source.segment_index(clip.duration);
-    let final_start = if final_index == 0 {
-        source.initial
-    } else {
-        source.segments[final_index - 1].end()
-    };
-    if cropped
-        && final_index < source.segments.len()
-        && final_start.time == clip.duration
-        && output.last().is_some_and(|s| s.end().time == clip.duration)
-    {
-        summary.boundary_segments += set_endpoint_value(
-            &mut initial,
-            &mut output,
-            sample_motion_curve(&source, clip.duration, clip.restricted_beziers),
-            &source,
-            clip.restricted_beziers,
-        )?;
+    if let Some(limit) = crop {
+        let (final_start, outgoing) = source.segment_at(limit);
+        if outgoing.is_some()
+            && final_start.time == limit
+            && output.last().is_some_and(|s| s.end().time == limit)
+        {
+            summary.boundary_segments += set_endpoint_value(
+                &mut initial,
+                &mut output,
+                sample_motion_curve(&source, limit, clip.restricted_beziers),
+                &source,
+                clip.restricted_beziers,
+            )?;
+        }
     }
     // The extra loop frame is handled by the existing playback layer using the
     // last segment's kind. Preserve that continuous seam after Step expansion.
@@ -556,6 +556,58 @@ pub(super) fn track(
             summary.boundary_segments += 1;
         }
     }
+    if clip.looping && crop.is_some() {
+        finish_cropped_loop(clip, &source, initial, &mut output)?;
+    }
     summary.output_segments = count_add(summary.output_segments, output.len())?;
     Ok((initial, output))
+}
+
+// motion3 accepts half a frame of duration rounding. The source can continue
+// for the entire extra playback frame. Keep every visible change and shorten
+// only a terminal constant hold, whose Step kind also holds after its endpoint.
+fn finish_cropped_loop(
+    clip: &MotionClip,
+    source: &CompiledCurve,
+    initial: MotionPoint,
+    output: &mut Vec<CompiledSegment>,
+) -> Result<(), MotionProjectError> {
+    let unsupported = || {
+        error(
+            "MOTION_LOOP_TAIL_UNREPRESENTABLE",
+            "$.Curves",
+            "The cropped loop tail cannot be preserved within motion3's curve time range",
+        )
+    };
+    let cycle = clip.duration + 1. / clip.fps;
+    if source.segments.last().is_some_and(|s| {
+        s.end().time.next_up() < cycle && !matches!(s, CompiledSegment::Stepped { .. })
+    }) && source.initial.value != initial.value
+    {
+        // The playback seam interpolates or jumps back to the original first value.
+        return Err(unsupported());
+    }
+    let maximum_end = zipzi_core::document::maximum_motion_curve_end_time(clip.duration, clip.fps);
+    if initial.time > clip.duration {
+        return Err(unsupported());
+    }
+    if output.last().is_none_or(|s| s.end().time <= maximum_end) {
+        return Ok(());
+    }
+    let (last, preceding) = output.split_last_mut().unwrap();
+    let previous = preceding.last().map_or(initial, CompiledSegment::end);
+    if let CompiledSegment::Stepped { end } = last {
+        if previous.value == end.value && previous.time <= maximum_end {
+            if matches!(preceding.last(), Some(CompiledSegment::Stepped { .. })) {
+                output.pop();
+                return Ok(());
+            }
+            let time = clip.duration.max(previous.time.next_up());
+            if time <= maximum_end {
+                end.time = time;
+                return Ok(());
+            }
+        }
+    }
+    Err(unsupported())
 }

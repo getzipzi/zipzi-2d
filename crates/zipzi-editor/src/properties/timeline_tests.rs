@@ -259,3 +259,73 @@ fn duration_is_an_ordinary_property_and_does_not_retime_keys() {
         time * 2.
     );
 }
+
+#[test]
+fn locked_neighbour_keeps_compatible_presets_in_the_interval_form() -> anyhow::Result<()> {
+    use zipzi_contract::motion_curve::MotionEasingPreset;
+    let (mut editor, _assets) = fixture();
+    let document = editor.active_id().unwrap();
+    let first = select_key(&mut editor);
+    let p = editor.timeline_projection().unwrap();
+    editor.seek_timeline(document, p.duration as f32 / 2.)?;
+    editor.execute_timeline(
+        document,
+        TimelineCommand::InsertKey {
+            channel: p.tracks[&first.track_id].channel.clone(),
+            track_id: Some(first.track_id.clone()),
+            selected_key: None,
+        },
+    )?;
+    let p = editor.timeline_projection().unwrap();
+    let keys = &p.tracks[&first.track_id].keys;
+    editor.execute_timeline(
+        document,
+        TimelineCommand::EasingPreset {
+            keys: vec![first.clone(), keys[1].reference.clone()],
+            preset: MotionEasingPreset::CubicIn,
+        },
+    )?;
+    let host = editor.runtime_host();
+    let session = editor.document().unwrap().runtime_session_id();
+    let client = host.write().register_client()?;
+    crate::test_fixture::publish_host(&host, client, session, "Lock terminal key", |commands| {
+        let mut flags = commands.read_document()?.editor_state().clone();
+        flags
+            .objects
+            .entry(keys[2].reference.key_id.clone())
+            .or_default()
+            .locked = true;
+        commands.replace_editor_state(flags)
+    })?;
+    editor.sync_runtime()?;
+    editor.reveal_timeline_keys(document, std::slice::from_ref(&first))?;
+    let t = target(&editor).unwrap();
+    let definition = t.definition(&editor);
+    let preset = definition
+        .fields
+        .iter()
+        .find(|field| field.binding.key == timeline::PRESET.key)
+        .unwrap();
+    assert!(!preset.binding.readonly);
+    let choices = preset.choices.unwrap()(editor.document().unwrap());
+    assert!(choices.iter().any(|choice| choice.value == "cubic_out"));
+    assert!(!choices.iter().any(|choice| choice.value == "ease"));
+    let mut form = PropertyForm::default();
+    form.sync_definition(definition, t.values(&editor)?);
+    form.set_value(&timeline::PRESET, PropertyValue::Text("cubic_out".into()));
+    t.commit(
+        &mut editor,
+        form.patch(ObjectKind::Motion, timeline::PRESET.key)
+            .unwrap(),
+    )?;
+    assert_eq!(
+        editor
+            .timeline_projection()
+            .unwrap()
+            .key(&first)
+            .unwrap()
+            .preset,
+        Some(MotionEasingPreset::CubicOut)
+    );
+    Ok(())
+}

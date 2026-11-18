@@ -95,6 +95,7 @@ impl Timeline {
         }
         let mut edit_buttons = Vec::new();
         let mut view_buttons = Vec::new();
+        let mut curve_button = None;
         let mut tools = div()
             .id("timeline-tools")
             .test_support()
@@ -129,118 +130,151 @@ impl Timeline {
             .selected(*selected)
             .disabled(!enabled)
             .on_click(cx.listener(move |this, _, window, cx| this.activate_tool(id, window, cx)));
-            if matches!(id, "timeline-snap" | "timeline-add-event") {
+            if id == "timeline-view" {
+                curve_button = Some(button);
+            } else if matches!(id, "timeline-snap" | "timeline-add-event") {
                 edit_buttons.push(button);
             } else {
                 view_buttons.push(button);
             }
         }
-        tools = tools
-            .child(compact::group(
-                "timeline-edit-tools",
-                t!("timeline.edit_group"),
-                Axis::Horizontal,
-                edit_buttons,
-            ))
-            .child(compact::group(
+        let settings = self.current_curve_settings(cx);
+        self.sync_curve_settings(settings.as_ref(), editable, window, cx);
+        tools = tools.child(compact::group(
+            "timeline-edit-tools",
+            t!("timeline.edit_group"),
+            Axis::Horizontal,
+            edit_buttons,
+        ));
+        if let Some(curve_button) = curve_button {
+            let settings_enabled = editable
+                && settings
+                    .as_ref()
+                    .is_some_and(zipzi_editor_core::TimelineCurveSettings::enabled);
+            let hint = self.curve_settings_hint(settings.as_ref(), cx);
+            let label = t!("timeline.interval_curve_settings").into_owned();
+            let open = settings_enabled && self.curve_popover.is_some();
+            let arrow = compact::header_button(Button::new("timeline-curve-menu"))
+                .icon(IconName::ChevronDown)
+                .accessibility_label(label.clone())
+                .tooltip(format!("{label} · {hint}"))
+                .open(open)
+                .disabled(!settings_enabled)
+                .rounded_tl(px(0.))
+                .rounded_bl(px(0.))
+                .ml(-px(1.))
+                .on_click(cx.listener(|this, _, window, cx| {
+                    if this.curve_popover.is_some() {
+                        this.close_curve_settings(window, cx);
+                    } else {
+                        this.show_curve_settings(window, cx);
+                    }
+                }));
+            tools = tools.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .child(curve_button.rounded_tr(px(0.)).rounded_br(px(0.)))
+                    .child(self.curve_settings_popup(arrow, settings, true, window, cx)),
+            );
+            tools = tools.child(compact::group(
                 "timeline-view-tools",
                 t!("timeline.view_group"),
                 Axis::Horizontal,
                 view_buttons,
             ));
-        if self.header_compact {
+        } else if self.header_compact {
             let weak = cx.weak_entity();
             let tiny = self.header_tiny;
-            tools = tools.child(
-                compact::header_button(Button::new("timeline-more"))
-                    .icon(IconName::Ellipsis)
-                    .accessibility_label(t!("timeline.more_tools").into_owned())
-                    .tooltip(t!("timeline.more_tools"))
-                    .disabled(!allowed)
-                    .dropdown_menu(move |mut menu, _, cx| {
-                        menu = crate::ui::compact::menu(menu);
-                        for (id, icon, label, selected, enabled) in &actions {
-                            let id = *id;
-                            let label = label.clone();
+            let more = compact::header_button(Button::new("timeline-more"))
+                .icon(IconName::Ellipsis)
+                .accessibility_label(t!("timeline.more_tools").into_owned())
+                .tooltip(t!("timeline.more_tools"))
+                .disabled(!allowed)
+                .dropdown_menu(move |mut menu, window, cx| {
+                    menu = crate::ui::compact::menu(menu);
+                    for (id, icon, label, selected, enabled) in &actions {
+                        let id = *id;
+                        let label = label.clone();
+                        let tool_panel = weak.clone();
+                        menu = menu.item(
+                            PopupMenuItem::element(move |_, _| {
+                                div()
+                                    .id(SharedString::from(format!(
+                                        "timeline-menu-{}",
+                                        id.trim_start_matches("timeline-")
+                                    )))
+                                    .test_support()
+                                    .child(label.clone())
+                            })
+                            .icon(tool_icon(id, *icon))
+                            .checked(*selected)
+                            .disabled(!enabled)
+                            .on_click(move |_, window, cx| {
+                                let _ = tool_panel
+                                    .update(cx, |this, cx| this.activate_tool(id, window, cx));
+                            }),
+                        );
+                        if id == "timeline-view" {
+                            menu =
+                                menu.item(Self::curve_settings_menu_item(weak.clone(), window, cx));
+                        }
+                    }
+                    if tiny {
+                        for (id, label, command) in [
+                            ("timeline-start", t!("timeline.jump_start"), "start"),
+                            (
+                                "timeline-previous-key",
+                                t!("timeline.previous_key"),
+                                "previous",
+                            ),
+                            ("timeline-next-key", t!("timeline.next_key"), "next"),
+                            ("timeline-end", t!("timeline.jump_end"), "end"),
+                            (
+                                "animation-preview-loop",
+                                t!("timeline.loop_playback"),
+                                "loop",
+                            ),
+                            (
+                                "animation-preview-mode",
+                                t!("timeline.preview_effect"),
+                                "preview",
+                            ),
+                        ] {
                             let weak = weak.clone();
+                            let label = label.into_owned();
                             menu = menu.item(
                                 PopupMenuItem::element(move |_, _| {
-                                    div()
-                                        .id(SharedString::from(format!(
-                                            "timeline-menu-{}",
-                                            id.trim_start_matches("timeline-")
-                                        )))
-                                        .test_support()
-                                        .child(label.clone())
+                                    div().id(id).test_support().child(label.clone())
                                 })
-                                .icon(tool_icon(id, *icon))
-                                .checked(*selected)
-                                .disabled(!enabled)
+                                .checked(
+                                    (command == "loop" && looping)
+                                        || (command == "preview"
+                                            && preview_mode == AnimationPreviewMode::Result),
+                                )
+                                .disabled(
+                                    !allowed
+                                        || tool_command(command).is_some_and(|id| {
+                                            !owner
+                                                .read(cx)
+                                                .editor
+                                                .command_state(owner.read(cx).editor.command(id))
+                                                .enabled
+                                        })
+                                        || (command == "loop"
+                                            && preview_mode != AnimationPreviewMode::Editing),
+                                )
                                 .on_click(move |_, window, cx| {
-                                    let _ = weak
-                                        .update(cx, |this, cx| this.activate_tool(id, window, cx));
+                                    _ = weak.update(cx, |this, cx| {
+                                        this.activate_tool(command, window, cx)
+                                    });
                                 }),
                             );
                         }
-                        if tiny {
-                            for (id, label, command) in [
-                                ("timeline-start", t!("timeline.jump_start"), "start"),
-                                (
-                                    "timeline-previous-key",
-                                    t!("timeline.previous_key"),
-                                    "previous",
-                                ),
-                                ("timeline-next-key", t!("timeline.next_key"), "next"),
-                                ("timeline-end", t!("timeline.jump_end"), "end"),
-                                (
-                                    "animation-preview-loop",
-                                    t!("timeline.loop_playback"),
-                                    "loop",
-                                ),
-                                (
-                                    "animation-preview-mode",
-                                    t!("timeline.preview_effect"),
-                                    "preview",
-                                ),
-                            ] {
-                                let weak = weak.clone();
-                                let label = label.into_owned();
-                                menu = menu.item(
-                                    PopupMenuItem::element(move |_, _| {
-                                        div().id(id).test_support().child(label.clone())
-                                    })
-                                    .checked(
-                                        (command == "loop" && looping)
-                                            || (command == "preview"
-                                                && preview_mode == AnimationPreviewMode::Result),
-                                    )
-                                    .disabled(
-                                        !allowed
-                                            || tool_command(command).is_some_and(|id| {
-                                                !owner
-                                                    .read(cx)
-                                                    .editor
-                                                    .command_state(
-                                                        owner.read(cx).editor.command(id),
-                                                    )
-                                                    .enabled
-                                            })
-                                            || (command == "loop"
-                                                && preview_mode != AnimationPreviewMode::Editing),
-                                    )
-                                    .on_click(
-                                        move |_, window, cx| {
-                                            _ = weak.update(cx, |this, cx| {
-                                                this.activate_tool(command, window, cx)
-                                            });
-                                        },
-                                    ),
-                                );
-                            }
-                        }
-                        menu
-                    }),
-            );
+                    }
+                    menu
+                });
+            tools = tools.child(self.curve_settings_popup(more, settings, false, window, cx));
         }
         tools.into_any_element()
     }
@@ -288,16 +322,19 @@ impl Timeline {
                     owner.complete_edit(result, cx);
                 });
             }
-            "timeline-view" => self.change_view(
-                |view| {
-                    view.mode = if view.mode == TimelineDisplayMode::Curves {
-                        TimelineDisplayMode::Overview
-                    } else {
-                        TimelineDisplayMode::Curves
-                    }
-                },
-                cx,
-            ),
+            "timeline-view" => {
+                self.close_curve_settings(window, cx);
+                self.change_view(
+                    |view| {
+                        view.mode = if view.mode == TimelineDisplayMode::Curves {
+                            TimelineDisplayMode::Overview
+                        } else {
+                            TimelineDisplayMode::Curves
+                        }
+                    },
+                    cx,
+                );
+            }
             "timeline-pan" => {
                 self.cancel(window, cx);
                 self.pan_tool = !self.pan_tool;

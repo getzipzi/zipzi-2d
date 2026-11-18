@@ -397,7 +397,8 @@ fn is_enabled(value: &bool) -> bool {
 }
 
 #[derive(Serialize, Deserialize)]
-pub(super) struct DocumentWire {
+#[serde(bound(deserialize = "M: Deserialize<'de>"))]
+pub(super) struct DocumentWire<M = MotionClip> {
     pub(super) id: String,
     pub(super) export_settings: zipzi_core::ExportSettings,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -431,7 +432,7 @@ pub(super) struct DocumentWire {
     #[serde(default, skip_serializing_if = "Present::is_absent")]
     pub(super) editor_state: Present<zipzi_core::document::EditorState>,
     #[serde(default, skip_serializing_if = "Present::is_absent")]
-    pub(super) animation_assets: Present<Option<AnimationAssetsWire>>,
+    pub(super) animation_assets: Present<Option<AnimationAssetsWire<M>>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) deformers: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -443,12 +444,12 @@ pub(super) struct DocumentWire {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(deny_unknown_fields)]
-pub(super) struct AnimationAssetsWire {
+#[serde(deny_unknown_fields, bound(deserialize = "M: Deserialize<'de>"))]
+pub(super) struct AnimationAssetsWire<M = MotionClip> {
     #[serde(default)]
     pub(super) expressions: Vec<ExpressionAsset>,
     #[serde(default)]
-    pub(super) motions: Vec<MotionClip>,
+    pub(super) motions: Vec<M>,
     #[serde(default)]
     pub(super) motion_groups: Vec<MotionGroup>,
     #[serde(default)]
@@ -466,10 +467,11 @@ pub(super) struct AnimationAssetsWire {
 }
 
 #[derive(Serialize, Deserialize)]
-pub(super) struct ProjectWire {
+#[serde(bound(deserialize = "M: Deserialize<'de>"))]
+pub(super) struct ProjectWire<M = MotionClip> {
     pub(super) format: String,
-    pub(super) format_version: u32,
-    pub(super) document: DocumentWire,
+    pub(super) format_version: u64,
+    pub(super) document: DocumentWire<M>,
     #[serde(flatten)]
     pub(super) extra: BTreeMap<String, serde_json::Value>,
 }
