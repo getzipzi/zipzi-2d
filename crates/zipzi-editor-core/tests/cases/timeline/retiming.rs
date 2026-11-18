@@ -2,6 +2,57 @@ use super::common::*;
 use zipzi_editor_core::*;
 
 #[test]
+fn retiming_validates_direction_before_snapping_and_reaches_frame_zero() -> anyhow::Result<()> {
+    let (mut editor, _temp) = fixture(false, false)?;
+    let document = editor.active_id().unwrap();
+    editor.update_timeline_view(document, |view| view.snap = false)?;
+    for (id, time) in [(id(40), f64::from(0.32f32)), (id(41), 17. / 30.)] {
+        editor.execute_timeline(
+            document,
+            TimelineCommand::Event {
+                id: Some(id),
+                time,
+                value: "cue".into(),
+            },
+        )?;
+    }
+    editor.update_timeline_view(document, |view| {
+        view.snap = true;
+        view.events.extend([id(40), id(41)]);
+    })?;
+    let projection = editor.timeline_projection().unwrap();
+    let selection = projection
+        .retime_selection(editor.timeline_view().unwrap())
+        .unwrap();
+    let history = editor.document().unwrap().history_lengths();
+    for target in [selection.first, selection.first - 0.001] {
+        let error = editor
+            .execute_timeline(
+                document,
+                selection.command(MotionRetimeFixedEnd::Earliest, target),
+            )
+            .unwrap_err();
+        assert_eq!(
+            error.downcast_ref::<zipzi_core::Status>().unwrap().code,
+            "INVALID_MOTION_RETIME_TARGET"
+        );
+    }
+    assert_eq!(
+        editor.timeline_projection().unwrap().events,
+        projection.events
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
+
+    let fixed = MotionRetimeFixedEnd::Latest;
+    let target = selection.moving_time_for_duration(fixed, 17., Some(projection.fps));
+    editor.execute_timeline(document, selection.command(fixed, target))?;
+    let events = &editor.timeline_projection().unwrap().events;
+    assert_eq!(events[0].time, 0.);
+    assert_eq!(events[1].time, 17. / 30.);
+    Ok(())
+}
+
+#[test]
 fn retiming_candidates_use_the_baseline_and_publish_one_mixed_edit() -> anyhow::Result<()> {
     let (mut editor, temp) = fixture(true, false)?;
     let document = editor.active_id().unwrap();

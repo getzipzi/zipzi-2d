@@ -1,6 +1,6 @@
 //! Range playback uses a single clip-local phase and an independent event cursor.
 use super::*;
-use crate::TimelineLoopRange;
+use crate::{TimelineLoopRange, represented_timeline_frame};
 use zipzi_core::{SharedVec, document::MotionEvent};
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
@@ -29,7 +29,10 @@ impl AnimationRangeEvents {
 
 pub(super) struct RangePlayback {
     bounds: TimelineLoopRange,
+    units_per_second: f64,
+    width: f64,
     offset: f64,
+    initial_local: f32,
     pub elapsed: f64,
     pub progress: AnimationRangeProgress,
     pub shown: Option<AnimationRangeProgress>,
@@ -51,11 +54,22 @@ impl RangePlayback {
         let end = bounds.end as f32;
         let inside = start <= head && head < end;
         let local = if inside { head } else { start };
-        let offset = if local == start {
-            0.
-        } else {
-            f64::from(local) - bounds.start
-        };
+        let frame = |time| represented_timeline_frame(time, clip.fps);
+        let fps = f64::from(clip.fps);
+        // Keep frame-aligned endpoints in frame units so subtracting two
+        // rounded seconds values cannot shift a loop boundary.
+        let (units_per_second, width, head_offset) =
+            if let Some((first, last)) = frame(bounds.start).zip(frame(bounds.end)) {
+                let head = frame(f64::from(local)).unwrap_or(f64::from(local) * fps);
+                (fps, last - first, head - first)
+            } else {
+                (
+                    1.,
+                    bounds.end - bounds.start,
+                    f64::from(local) - bounds.start,
+                )
+            };
+        let offset = if local == start { 0. } else { head_offset };
         let mut events: Vec<_> = clip
             .events
             .iter()
@@ -65,7 +79,10 @@ impl RangePlayback {
         events.sort_by(|a, b| a.time.total_cmp(&b.time));
         Self {
             bounds,
+            units_per_second,
+            width,
             offset,
+            initial_local: local,
             elapsed: 0.,
             progress: AnimationRangeProgress { cycle: 0, local },
             shown: None,
@@ -78,14 +95,19 @@ impl RangePlayback {
 
     pub fn update(&mut self, elapsed: f64) {
         self.elapsed = self.elapsed.max(elapsed);
-        let width = self.bounds.end - self.bounds.start;
-        let phase = self.offset + self.elapsed;
-        let remainder = phase.rem_euclid(width);
-        // Recover the integral quotient from the remainder. A rounded
-        // division can otherwise select the next cycle while % stays in this one.
-        let cycle = ((phase - remainder) / width).round() as u64;
+        let phase = self.offset + self.elapsed * self.units_per_second;
+        let mut cycle = (phase / self.width).floor();
+        let cycle_start = |cycle| (cycle * self.width - self.offset) / self.units_per_second;
+        // Compare in clock seconds so rounding the phase cannot advance or
+        // delay a wrap at the represented boundary.
+        if self.elapsed >= cycle_start(cycle + 1.) {
+            cycle += 1.;
+        } else if cycle > 0. && self.elapsed < cycle_start(cycle) {
+            cycle -= 1.;
+        }
+        let remainder = self.elapsed - cycle_start(cycle);
         self.progress = AnimationRangeProgress {
-            cycle,
+            cycle: cycle as u64,
             local: ((self.bounds.start + remainder) as f32).clamp(
                 self.bounds.start as f32,
                 (self.bounds.end as f32).next_down(),
@@ -110,7 +132,7 @@ impl RangePlayback {
             .replace(progress)
             .unwrap_or(AnimationRangeProgress {
                 cycle: 0,
-                local: (self.bounds.start + self.offset) as f32,
+                local: self.initial_local,
             });
         let first = self.events.partition_point(|e| {
             e.time < from.local || (e.time == from.local && !self.include_first)

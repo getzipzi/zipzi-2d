@@ -8,6 +8,59 @@ fn bind(editor: &mut Editor) -> TimelineBinding {
 }
 
 #[test]
+fn range_playback_wraps_on_the_represented_frame_boundary() -> anyhow::Result<()> {
+    let (mut editor, _temp) = fixture(false, false)?;
+    let document = editor.active_id().unwrap();
+    let binding = bind(&mut editor);
+    editor.update_timeline_view(document, |view| view.snap = true)?;
+    editor.set_animation_preview_mode(document, AnimationPreviewMode::Result)?;
+    for (frame, value) in [(2., "start"), (3., "end")] {
+        editor.execute_timeline(
+            document,
+            TimelineCommand::Event {
+                id: None,
+                time: frame / 30.,
+                value: value.into(),
+            },
+        )?;
+    }
+    editor.set_timeline_loop_range(binding, 2. / 30., 3. / 30.)?;
+    editor.toggle_animation()?;
+    let mut evaluator = AnimationEvaluator::default();
+    let first = evaluate(&mut editor, &mut evaluator)?;
+    assert!(editor.present_animation(first.identity, first.snapshot));
+    assert_eq!(editor.animation().unwrap().range_events().count(), 1);
+
+    let mut previous = 0;
+    for cycle in [1, 2, 31] {
+        let boundary = cycle as f64 / 30.;
+        editor.advance_animation_clock_precise(boundary.next_down());
+        let before = evaluate(&mut editor, &mut evaluator)?;
+        assert_eq!(before.identity.range_progress.unwrap().cycle, cycle - 1);
+        assert!(editor.present_animation(before.identity, before.snapshot));
+        assert_eq!(
+            editor.animation().unwrap().range_events().count(),
+            u128::from(cycle - 1 - previous)
+        );
+        editor.advance_animation_clock_precise(boundary);
+        let wrapped = evaluate(&mut editor, &mut evaluator)?;
+        assert_eq!(
+            wrapped.identity.range_progress.unwrap(),
+            AnimationRangeProgress {
+                cycle,
+                local: 2. / 30.
+            }
+        );
+        assert!(editor.present_animation(wrapped.identity, wrapped.snapshot));
+        let events = editor.animation().unwrap().range_events();
+        assert_eq!(events.count(), 1);
+        assert_eq!(events.head[0].value, "start");
+        previous = cycle;
+    }
+    Ok(())
+}
+
+#[test]
 fn range_playback_preserves_fractional_remainder_and_session_state() -> anyhow::Result<()> {
     let (mut editor, temp) = fixture(false, false)?;
     let document = editor.active_id().unwrap();
@@ -38,6 +91,18 @@ fn range_playback_preserves_fractional_remainder_and_session_state() -> anyhow::
         assert!((editor.animation().unwrap().edit_time - 40. / 30.).abs() < 1e-6);
         assert!(!editor.accepts_animation(unshown.identity));
     }
+    editor.seek_timeline(document, 31. / 30.)?;
+    editor.toggle_animation()?;
+    editor.advance_animation_clock_precise(10. / 30.);
+    let wrapped = editor.animation_request().unwrap().identity.range_progress;
+    assert_eq!(
+        wrapped,
+        Some(AnimationRangeProgress {
+            cycle: 1,
+            local: 24. / 30.
+        })
+    );
+    editor.pause_animation();
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     assert!(!editor.document().unwrap().modified());
     editor.enable_timeline_loop_range(binding, false)?;

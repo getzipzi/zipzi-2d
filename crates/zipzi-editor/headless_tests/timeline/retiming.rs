@@ -1,6 +1,9 @@
 use super::super::setup_with_document;
 use super::super::slide_number_input::{press, release, slide};
-use gpui_kit::{AppContext as _, TestAppContext, point, px, test::TestWindowExt};
+use gpui_kit::{
+    AppContext as _, InputEvent as _, MouseButton, RelativeMouseMoveEvent, TestAppContext, point,
+    px, test::TestWindowExt,
+};
 use zipzi_editor_core::{CommandId, TimelineDisplayMode};
 
 #[gpui_kit::test]
@@ -107,6 +110,70 @@ fn timeline_retime_final_release_escape_and_numeric_blur_are_atomic(cx: &mut Tes
         })
         .unwrap();
     }
+    let pointer = cx
+        .update_window(h.window, |_, w, c| {
+            super::tool(w, "timeline-seconds", c);
+            let origin = w
+                .within(duration)
+                .find("slide-number-input")
+                .bounds()
+                .center();
+            let pointer = origin + point(px(8.), px(0.));
+            press(w, origin, c);
+            slide(w, pointer, false, c);
+            pointer
+        })
+        .unwrap();
+    for delta in [-1072., 2272., -2272., 2272.] {
+        cx.update_window(h.window, |_, w, c| {
+            w.dispatch_event(
+                RelativeMouseMoveEvent {
+                    delta: point(px(delta), px(0.)),
+                    pressed_button: Some(MouseButton::Left),
+                    modifiers: Default::default(),
+                }
+                .to_platform_input(),
+                c,
+            );
+        })
+        .unwrap();
+        h.view.read_with(cx, |view, _| {
+            let editor = &view.editor;
+            if delta < 0. {
+                assert_eq!(
+                    editor
+                        .timeline_edit()
+                        .expect("valid duration preview")
+                        .candidate
+                        .tracks[0]
+                        .segments[1]
+                        .end()
+                        .time,
+                    32. / 30.
+                );
+            } else {
+                assert!(editor.timeline_edit().is_none());
+            }
+        });
+    }
+    cx.update_window(h.window, |_, w, c| {
+        release(w, pointer, c);
+        w.render_frame(c);
+        let editor = &h.view.read(c).editor;
+        assert!(editor.timeline_edit().is_none());
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        assert_eq!(
+            editor
+                .document()
+                .unwrap()
+                .motion_definition(&original.id)
+                .unwrap(),
+            original
+        );
+        assert!(w.find("timeline-retime-error").visible());
+        super::tool(w, "timeline-seconds", c);
+    })
+    .unwrap();
     cx.update_window(h.window, |_, w, c| {
         super::tool(w, "timeline-view", c);
         assert_eq!(

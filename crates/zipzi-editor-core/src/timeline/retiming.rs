@@ -17,6 +17,27 @@ impl TimelineRetimeSelection {
         self.last - self.first
     }
 
+    /// Resolve a numeric duration in seconds or frames against the fixed end.
+    pub fn moving_time_for_duration(
+        &self,
+        fixed_end: MotionRetimeFixedEnd,
+        duration: f64,
+        frame_rate: Option<f32>,
+    ) -> f64 {
+        let (fixed, moving, direction) = match fixed_end {
+            MotionRetimeFixedEnd::Earliest => (self.first, self.last, 1.),
+            MotionRetimeFixedEnd::Latest => (self.last, self.first, -1.),
+        };
+        let scale = frame_rate.map_or(1., f64::from);
+        if duration as f32 == (self.duration() * scale) as f32 {
+            return moving;
+        }
+        if let Some(frame) = frame_rate.and_then(|fps| represented_timeline_frame(fixed, fps)) {
+            return (frame + direction * duration) / scale;
+        }
+        fixed + direction * (duration / scale)
+    }
+
     pub fn command(&self, fixed_end: MotionRetimeFixedEnd, moving_time: f64) -> TimelineCommand {
         TimelineCommand::RetimeSelection {
             keys: self.keys.clone(),
@@ -77,10 +98,14 @@ impl TimelineProjection {
         snap: bool,
     ) -> Result<MotionCurveEdit> {
         let (first, last) = self.retime_span(keys, events)?;
-        let original = match fixed_end {
-            MotionRetimeFixedEnd::Earliest => last,
-            MotionRetimeFixedEnd::Latest => first,
+        let (original, stays_on_side) = match fixed_end {
+            MotionRetimeFixedEnd::Earliest => (last, moving_time > first),
+            MotionRetimeFixedEnd::Latest => (first, moving_time < last),
         };
+        ensure!(
+            moving_time.is_finite() && stays_on_side,
+            zipzi_core::Status::error("INVALID_MOTION_RETIME_TARGET", &self.clip_id)
+        );
         let fps = f64::from(self.fps);
         let mut target = moving_time;
         if (moving_time as f32) != (original as f32)

@@ -251,8 +251,7 @@ impl Timeline {
             self.retime_baseline(cx).and_then(|selection| {
                 let owner = self.owner.upgrade()?;
                 let fps = owner.read(cx).editor.timeline_projection()?.fps;
-                let scale = if self.seconds { 1. } else { f64::from(fps) };
-                Some((selection, scale))
+                Some((selection, (!self.seconds).then_some(fps)))
             })
         } else {
             None
@@ -260,13 +259,14 @@ impl Timeline {
         let numeric = match value.parse::<f64>() {
             Ok(value)
                 if value.is_finite()
+                    && (field != Field::RetimeDuration || value > 0.)
                     && (!matches!(field, Field::FrameStep)
                         || (value.fract() == 0. && (1. ..=u32::MAX as f64).contains(&value))) =>
             {
                 value
             }
             _ => {
-                if !sliding {
+                if !sliding || field == Field::RetimeDuration {
                     self.cancel_number_candidate(&field, cx);
                 }
                 self.error = Some(t!("timeline.invalid_number").into_owned());
@@ -324,31 +324,19 @@ impl Timeline {
             ..
         } = &mut command
         {
-            let Some((selection, scale)) = retime_input else {
+            let Some((selection, frame_rate)) = retime_input else {
                 return;
             };
-            if numeric as f32 == (selection.duration() * scale) as f32 {
-                *moving_time = match fixed_end {
-                    zipzi_editor_core::MotionRetimeFixedEnd::Earliest => selection.last,
-                    zipzi_editor_core::MotionRetimeFixedEnd::Latest => selection.first,
-                };
-            } else {
-                let duration = numeric / scale;
-                *moving_time = match fixed_end {
-                    zipzi_editor_core::MotionRetimeFixedEnd::Earliest => selection.first + duration,
-                    zipzi_editor_core::MotionRetimeFixedEnd::Latest => selection.last - duration,
-                };
-            }
+            *moving_time = selection.moving_time_for_duration(*fixed_end, numeric, frame_rate);
         }
         let token = edit.token;
-        self.update_candidate(token, command, cx);
-        if !sliding && self.error.is_some() {
+        let valid = self.update_candidate(token, command, cx);
+        if !valid && (!sliding || field == Field::RetimeDuration) {
             self.cancel_number_candidate(&field, cx);
         }
     }
-    // Invalid text must not leave a previous valid candidate available to Enter,
-    // blur or Save. Keep the text focused so the user can correct it. Pointer
-    // drags instead retain their last legal candidate when hitting a boundary.
+    // Invalid text and duration drags discard the candidate so a later commit
+    // cannot publish the last valid intermediate value.
     fn cancel_number_candidate(&mut self, field: &Field, cx: &mut Context<Self>) {
         if self
             .number_edit

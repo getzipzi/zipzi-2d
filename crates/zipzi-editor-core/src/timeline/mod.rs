@@ -313,6 +313,14 @@ impl TimelineSession {
     }
 }
 
+/// Recognize exact grid times and their stored f32 representation.
+pub(crate) fn represented_timeline_frame(time: f64, fps: f32) -> Option<f64> {
+    let fps = f64::from(fps);
+    let frame = (time * fps).round();
+    let grid_time = frame / fps;
+    (time == grid_time || time == f64::from(grid_time as f32)).then_some(frame)
+}
+
 /// Frame snapping is a command decision. Imported times are never quantized by projection.
 pub fn timeline_time(time: f64, fps: f32, snap: bool) -> anyhow::Result<f32> {
     anyhow::ensure!(
