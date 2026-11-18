@@ -37,16 +37,15 @@ impl Timeline {
         }
     }
 
-    pub(super) fn start_seek(
+    pub(super) fn begin_seek_at(
         &mut self,
-        event: &MouseDownEvent,
+        position: Point<Pixels>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         if !self.allowed(window, cx) || crate::benchmark::ignore_native_pointer_event() {
             return;
         }
-        self.finish_number(cx);
         let Some(target) = self.target(cx) else {
             return;
         };
@@ -54,7 +53,7 @@ impl Timeline {
         let start = self
             .owner
             .update(cx, |owner, cx| {
-                let time = self.seek_mapping(&owner.editor)?.time_at(event.position)?;
+                let time = self.seek_mapping(&owner.editor)?.time_at(position)?;
                 let result = owner.editor.begin_timeline_scrub(target.binding, time);
                 let started = result
                     .as_ref()
@@ -69,7 +68,7 @@ impl Timeline {
         if let Some((token, revision)) = start {
             window.focus(&self.focus, cx);
             self.gesture = Some(Gesture::Seek(token));
-            self.pointer = event.position;
+            self.pointer = position;
             self.seek.pointer_trace = frame_trace::current_input();
             self.seek.model_revision = revision;
             self.start_edge_scroll(window, cx);

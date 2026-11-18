@@ -41,7 +41,7 @@ use zipzi_editor_core::{
 
 const ROW: f32 = 24.;
 const LEFT: f32 = 248.;
-const RULER: f32 = 24.;
+const RULER: f32 = 32.;
 const COMPACT_WIDTH: f32 = 900.;
 const COMPACT_LEFT: f32 = 160.;
 
@@ -63,7 +63,7 @@ pub struct Timeline {
     context: Option<Target>,
     graph: Rc<Cell<Bounds<Pixels>>>,
     ruler: Rc<Cell<Bounds<Pixels>>>,
-    loop_range: loop_range::LoopLane,
+    loop_range: loop_range::LoopRuler,
     retime: retiming::Controls,
     body_height: f32,
     gesture: Option<input::Gesture>,

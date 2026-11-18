@@ -677,9 +677,11 @@ seek_cancelled = "上一次定位已取消。"
 evaluation_failed = "求值失败：%{detail}"
 
 [timeline]
-loop_create = "拖动创建循环区间"
+loop_create = "Shift＋拖动或右键创建循环区间"
+loop_from_playhead = "从播放头到此处创建循环区间"
 loop_enable = "单击启用循环"
 loop_disable = "单击停用循环"
+loop_resize = "拖动调整此端点"
 retime = "伸缩选区时间"
 retime_anchor = "固定端"
 retime_fix_start = "固定左端"

@@ -307,7 +307,6 @@ impl Render for Timeline {
                 });
             }
         }
-        let ruler_bounds = self.ruler.clone();
         let mut left = div()
             .id("timeline-rows")
             .test_support()
@@ -357,8 +356,6 @@ impl Render for Timeline {
                 cx,
             )
         });
-        let ruler_projection = projection.clone();
-        let ruler_state = state.clone();
         let axis_caption = axis_reference.map_or_else(
             || {
                 if state.normalized {
@@ -383,51 +380,13 @@ impl Render for Timeline {
             .flex_col()
             .child(
                 div()
-                    .id("timeline-time-ruler")
+                    .id("animation-seek")
                     .test_support()
-                    .flex()
-                    .flex_col()
                     .w_full()
                     .flex_shrink_0()
                     .border_b_1()
                     .border_color(cx.theme().border)
-                    .on_scroll_wheel(cx.listener(Self::wheel))
-                    .child(self.loop_lane(&state, projection.fps, window, cx))
-                    .child(
-                        div()
-                            .id("animation-seek")
-                            .test_support()
-                            .h(compact::rem(RULER))
-                            .w_full()
-                            .flex_shrink_0()
-                            .child(
-                                div()
-                                    .id("timeline-ruler")
-                                    .test_support()
-                                    .size_full()
-                                    .cursor(CursorStyle::ResizeLeftRight)
-                                    .on_mouse_down(MouseButton::Left, cx.listener(Self::start_seek))
-                                    .child(
-                                        canvas(
-                                            move |bounds, _, _| {
-                                                ruler_bounds.set(bounds);
-                                            },
-                                            move |bounds, _, window, cx| {
-                                                drawing::paint_ruler(
-                                                    bounds,
-                                                    &ruler_projection,
-                                                    &ruler_state,
-                                                    head,
-                                                    seconds,
-                                                    window,
-                                                    cx,
-                                                );
-                                            },
-                                        )
-                                        .size_full(),
-                                    ),
-                            ),
-                    ),
+                    .child(self.time_ruler(projection.clone(), &state, head, window, cx)),
             )
             .when(retime_lane, |graph| {
                 graph.child(
@@ -516,7 +475,7 @@ impl Render for Timeline {
                     .flex_col()
                     .child(
                         div()
-                            .h(compact::scaled(RULER + loop_range::LOOP_LANE_HEIGHT, cx) + px(1.))
+                            .h(compact::scaled(RULER, cx) + px(1.))
                             .flex_shrink_0()
                             .flex()
                             .items_center()

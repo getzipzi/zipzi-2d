@@ -1,17 +1,17 @@
-//! The upper half of the time ruler edits the session's loop range.
+//! Range overlays and mouse shortcuts on the time ruler.
 use super::*;
 use zipzi_editor_core::{TimelineLoopRange, TimelineLoopRangeError};
 
-pub(super) const LOOP_LANE_HEIGHT: f32 = 16.;
+const RANGE_HIT_HEIGHT: f32 = 9.;
+const CLEAR_SIZE: f32 = 14.;
 
 #[derive(Default)]
-pub(super) struct LoopLane {
-    bounds: Rc<Cell<Bounds<Pixels>>>,
+pub(super) struct LoopRuler {
     hover: Hit,
     error: Option<String>,
 }
 
-impl LoopLane {
+impl LoopRuler {
     pub fn reset(&mut self) {
         self.hover = Hit::Empty;
         self.error = None;
@@ -112,7 +112,7 @@ impl RangeGeometry {
     }
 
     fn clear_button(&self) -> (f32, f32) {
-        let width = (LOOP_LANE_HEIGHT * self.scale).min(self.width);
+        let width = (CLEAR_SIZE * self.scale).min(self.width);
         let gap = 2. * self.scale;
         let right = self.right + gap;
         let left = self.left - gap - width;
@@ -138,14 +138,18 @@ fn range_error(error: &anyhow::Error) -> String {
 }
 
 impl Timeline {
-    pub(super) fn loop_lane(
+    pub(super) fn time_ruler(
         &self,
+        projection: Arc<TimelineProjection>,
         state: &TimelineViewState,
-        fps: f32,
+        head: f32,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let bounds_cell = self.loop_range.bounds.clone();
+        let bounds_cell = self.ruler.clone();
+        let fps = projection.fps;
+        let ruler_state = state.clone();
+        let seconds = self.seconds;
         let view = state.time_range;
         let selection = match &self.gesture {
             Some(input::Gesture::LoopRange(drag)) => drag.candidate.or(drag.baseline),
@@ -166,6 +170,12 @@ impl Timeline {
             .clone()
             .or_else(|| {
                 let selection = selection?;
+                let action = match hover {
+                    Hit::Body if selection.enabled => t!("timeline.loop_disable"),
+                    Hit::Body => t!("timeline.loop_enable"),
+                    Hit::Start | Hit::End => t!("timeline.loop_resize"),
+                    Hit::Empty | Hit::Clear => return None,
+                };
                 let scale = if self.seconds { 1. } else { f64::from(fps) };
                 let units = t!(if self.seconds {
                     "timeline.seconds_label"
@@ -177,11 +187,6 @@ impl Timeline {
                     axis::number(selection.start * scale),
                     axis::number(selection.end * scale)
                 );
-                let action = t!(if selection.enabled {
-                    "timeline.loop_disable"
-                } else {
-                    "timeline.loop_enable"
-                });
                 Some(format!("{times} · {action}"))
             })
             .unwrap_or_else(|| creation.clone().into_owned());
@@ -202,7 +207,7 @@ impl Timeline {
                     .left(px(x))
                     .top(px(0.))
                     .w(px(width))
-                    .h(compact::rem(LOOP_LANE_HEIGHT))
+                    .h(compact::rem(CLEAR_SIZE))
                     .flex()
                     .items_center()
                     .justify_center()
@@ -212,8 +217,9 @@ impl Timeline {
                     .cursor(CursorStyle::PointingHand)
                     .role(Role::Button)
                     .aria_label(label.clone().into_owned())
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        if this.allowed(window, cx)
+                    .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
+                        if !matches!(event, ClickEvent::Mouse(mouse) if mouse.down.modifiers.shift)
+                            && this.allowed(window, cx)
                             && this.target(cx).as_ref() == Some(&target)
                             && this.current_loop_range(cx) == Some(range)
                         {
@@ -232,87 +238,134 @@ impl Timeline {
             )
         });
 
+        let panel = cx.weak_entity();
+        let menu_range = Rc::new(Cell::new(None));
+        let clicked_range = menu_range.clone();
         div()
-            .id("timeline-loop-lane")
+            .id("timeline-ruler")
             .test_support()
             .relative()
             .w_full()
-            .h(compact::rem(LOOP_LANE_HEIGHT))
+            .h(compact::rem(RULER))
             .flex_shrink_0()
             .overflow_hidden()
-            .bg(cx.theme().muted)
             .cursor(match hover {
                 Hit::Body | Hit::Clear => CursorStyle::PointingHand,
-                Hit::Start | Hit::End => CursorStyle::ResizeLeftRight,
-                Hit::Empty => CursorStyle::Crosshair,
+                _ => CursorStyle::ResizeLeftRight,
             })
-            .on_mouse_down(MouseButton::Left, cx.listener(Self::start_loop_range))
+            .on_mouse_down(MouseButton::Left, cx.listener(Self::start_ruler_gesture))
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, event: &MouseDownEvent, window, cx| {
+                    clicked_range.set(this.loop_from_playhead(event.position, window, cx));
+                }),
+            )
+            .on_scroll_wheel(cx.listener(Self::wheel))
             .tooltip(move |window, cx| {
                 gpui_kit::component::tooltip::Tooltip::new(hint.clone()).build(window, cx)
             })
             .child(
                 canvas(
                     move |bounds, _, _| bounds_cell.set(bounds),
-                    move |bounds, _, window, _| {
-                        let Some(selection) = selection else {
-                            return;
-                        };
-                        let Some(geometry) =
-                            RangeGeometry::new(selection, view, bounds.size.width.as_f32(), size)
-                        else {
-                            return;
-                        };
-                        let area = Bounds::new(
-                            bounds.origin + point(px(geometry.left), px(2.)),
-                            gpui_kit::size(
-                                px(geometry.right - geometry.left),
-                                bounds.size.height - px(4.),
-                            ),
-                        );
-                        let style = if selection.enabled {
-                            BorderStyle::Solid
-                        } else {
-                            BorderStyle::Dashed
-                        };
-                        let background = if selection.enabled {
-                            color.opacity(0.36)
-                        } else {
-                            transparent_black()
-                        };
-                        window.paint_quad(quad(area, px(0.), background, px(1.), color, style));
-                        for (visible, x) in [
-                            (geometry.start_visible, area.left()),
-                            (geometry.end_visible, area.right() - px(2.)),
-                        ] {
-                            if visible {
-                                window.paint_quad(fill(
-                                    Bounds::new(
-                                        point(x, area.top()),
-                                        gpui_kit::size(px(2.), area.size.height),
-                                    ),
-                                    color,
-                                ));
-                            }
+                    move |bounds, _, window, cx| {
+                        if let Some(selection) = selection
+                            && let Some(geometry) = RangeGeometry::new(
+                                selection,
+                                view,
+                                bounds.size.width.as_f32(),
+                                size,
+                            )
+                        {
+                            paint_range(bounds, selection, geometry, color, window);
                         }
+                        drawing::paint_ruler(
+                            bounds,
+                            &projection,
+                            &ruler_state,
+                            head,
+                            seconds,
+                            window,
+                            cx,
+                        );
                     },
                 )
                 .size_full(),
             )
-            .when(selection.is_none() && error.is_none(), |lane| {
-                lane.child(
-                    div()
-                        .absolute()
-                        .inset_0()
-                        .flex()
-                        .items_center()
-                        .px_1()
-                        .text_size(compact::rem(10.))
-                        .text_color(cx.theme().muted_foreground)
-                        .child(creation),
+            .children(clear)
+            .context_menu(move |menu, _, _| {
+                let range = menu_range.take();
+                let panel = panel.clone();
+                let target = target.clone();
+                let label = t!("timeline.loop_from_playhead").into_owned();
+                compact::menu(menu).item(
+                    PopupMenuItem::element(move |_, _| {
+                        div()
+                            .id("timeline-create-loop-range")
+                            .test_support()
+                            .child(label.clone())
+                    })
+                    .disabled(range.is_none())
+                    .on_click(move |_, window, cx| {
+                        let Some((start, end)) = range else {
+                            return;
+                        };
+                        let _ = panel.update(cx, |this, cx| {
+                            if this.allowed(window, cx) && this.target(cx) == target {
+                                this.apply_loop_control(cx, |editor, binding| {
+                                    editor.set_timeline_loop_range(binding, start, end)
+                                });
+                            }
+                        });
+                    }),
                 )
             })
-            .children(clear)
             .into_any_element()
+    }
+
+    fn loop_from_playhead(
+        &self,
+        position: Point<Pixels>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<(f64, f64)> {
+        if !self.allowed(window, cx) || self.gesture.is_some() {
+            return None;
+        }
+        let target = self.target(cx)?;
+        let owner = self.owner.upgrade()?;
+        let editor = &owner.read(cx).editor;
+        let state = editor.timeline_view()?;
+        let projection = editor.timeline_projection()?;
+        let clicked = self
+            .loop_pointer_time(position, state)
+            .clamp(0., projection.duration);
+        let head = f64::from(editor.animation()?.edit_time).clamp(0., projection.duration);
+        let candidate = |start, end| editor.timeline_loop_candidate(target.binding, start, end);
+        let range = match candidate(clicked.min(head), clicked.max(head)) {
+            Ok(range) => range,
+            Err(error)
+                if matches!(
+                    error.downcast_ref::<TimelineLoopRangeError>(),
+                    Some(TimelineLoopRangeError::Order)
+                ) =>
+            {
+                let fps = f64::from(projection.fps);
+                let anchor = if state.snap {
+                    (clicked * fps).round() / fps
+                } else {
+                    clicked
+                }
+                .min(projection.duration);
+                let frame = (1. / fps).min(projection.duration);
+                if anchor + frame <= projection.duration {
+                    candidate(anchor, anchor + frame).ok()?
+                } else {
+                    candidate((anchor - frame).max(0.), anchor).ok()?
+                }
+            }
+            Err(_) => return None,
+        };
+        Some((range.start, range.end))
     }
 
     fn current_loop_range(&self, cx: &App) -> Option<TimelineLoopRange> {
@@ -332,18 +385,27 @@ impl Timeline {
         RangeGeometry::new(
             range,
             state.time_range,
-            self.loop_range.bounds.get().size.width.as_f32(),
+            self.ruler.get().size.width.as_f32(),
             self.ui_scale,
         )
     }
 
     fn loop_hit(&self, state: &TimelineViewState, position: Point<Pixels>) -> Hit {
-        let x = (position.x - self.loop_range.bounds.get().left()).as_f32();
+        let x = (position.x - self.ruler.get().left()).as_f32();
         let show_clear = self.loop_range.hover != Hit::Empty;
-        state
+        let y = position.y - self.ruler.get().top();
+        let Some(geometry) = state
             .loop_range()
             .and_then(|range| self.loop_geometry(state, range))
-            .map_or(Hit::Empty, |geometry| geometry.hit(x, show_clear))
+        else {
+            return Hit::Empty;
+        };
+        let hit = geometry.hit(x, show_clear && y <= px(CLEAR_SIZE * self.ui_scale));
+        if hit == Hit::Clear || y <= px(RANGE_HIT_HEIGHT * self.ui_scale) {
+            hit
+        } else {
+            Hit::Empty
+        }
     }
 
     pub(super) fn hover_loop_range(
@@ -354,7 +416,7 @@ impl Timeline {
     ) {
         // The ruler and its clear target share one hover region. Keep tracking
         // from the window while moving between the two or leaving the ruler.
-        let hit = if self.loop_range.bounds.get().contains(&position) && self.allowed(window, cx) {
+        let hit = if self.ruler.get().contains(&position) && self.allowed(window, cx) {
             self.owner
                 .upgrade()
                 .and_then(|owner| owner.read(cx).editor.timeline_view())
@@ -369,7 +431,7 @@ impl Timeline {
     }
 
     fn loop_pointer_time(&self, position: Point<Pixels>, state: &TimelineViewState) -> f64 {
-        let bounds = self.loop_range.bounds.get();
+        let bounds = self.ruler.get();
         drawing::x_time(
             (position.x - bounds.left()).as_f32(),
             state.time_range,
@@ -377,13 +439,16 @@ impl Timeline {
         )
     }
 
-    fn start_loop_range(
+    fn start_ruler_gesture(
         &mut self,
         event: &MouseDownEvent,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if !self.allowed(window, cx) || self.gesture.is_some() {
+        if !self.allowed(window, cx)
+            || self.gesture.is_some()
+            || crate::benchmark::ignore_native_pointer_event()
+        {
             return;
         }
         self.finish_number(cx);
@@ -393,9 +458,20 @@ impl Timeline {
         let Some(state) = owner.read(cx).editor.timeline_view() else {
             return;
         };
-        let hit = self.loop_hit(state, event.position);
-        if hit == Hit::Clear {
-            return;
+        let hit = if event.modifiers.shift {
+            Hit::Empty
+        } else {
+            self.loop_hit(state, event.position)
+        };
+        if !event.modifiers.shift {
+            match hit {
+                Hit::Clear => return,
+                Hit::Empty => {
+                    self.begin_seek_at(event.position, window, cx);
+                    return;
+                }
+                _ => {}
+            }
         }
         let drag = Drag {
             hit,
@@ -427,12 +503,25 @@ impl Timeline {
         });
     }
 
-    pub(super) fn move_loop_range(&mut self, position: Point<Pixels>, cx: &mut Context<Self>) {
+    pub(super) fn move_loop_range(
+        &mut self,
+        position: Point<Pixels>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let Some(input::Gesture::LoopRange(drag)) = &self.gesture else {
             return;
         };
         if !drag.started {
             if !drag.moved(position, self.ui_scale) {
+                return;
+            }
+            if drag.hit == Hit::Body {
+                let origin = drag.origin;
+                self.gesture = None;
+                self.begin_seek_at(origin, window, cx);
+                self.pointer = position;
+                self.seek_to_pointer(window, cx);
                 return;
             }
             self.pause_for_loop_drag(cx);
@@ -463,6 +552,7 @@ impl Timeline {
         &mut self,
         drag: Drag,
         position: Point<Pixels>,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         let Some(owner) = self.owner.upgrade() else {
@@ -478,13 +568,17 @@ impl Timeline {
         let dx = (position.x - drag.origin.x).abs();
         if !drag.started && !drag.moved(position, self.ui_scale) {
             if drag.hit == Hit::Body
-                && self.loop_range.bounds.get().contains(&position)
+                && self.ruler.get().contains(&position)
+                && position.y <= self.ruler.get().top() + px(RANGE_HIT_HEIGHT * self.ui_scale)
                 && let Some(range) = drag.baseline
             {
                 self.apply_loop_control(cx, |editor, binding| {
                     editor.enable_timeline_loop_range(binding, !range.enabled)
                 });
             }
+        } else if drag.hit == Hit::Body {
+            self.begin_seek_at(drag.origin, window, cx);
+            self.release_seek(position, window, cx);
         } else if dx > px(0.) {
             let (start, end) = drag.endpoints(self.loop_pointer_time(position, state));
             self.apply_loop_control(cx, |editor, binding| {
@@ -528,5 +622,45 @@ impl Timeline {
             .ok()
             .and_then(|r| r.as_ref().err().map(range_error));
         cx.notify();
+    }
+}
+
+fn paint_range(
+    bounds: Bounds<Pixels>,
+    range: TimelineLoopRange,
+    geometry: RangeGeometry,
+    color: Hsla,
+    window: &mut Window,
+) {
+    let width = px(geometry.right - geometry.left);
+    let area = Bounds::new(
+        bounds.origin + point(px(geometry.left), px(1.)),
+        size(width, bounds.size.height - px(1.)),
+    );
+    if range.enabled {
+        window.paint_quad(fill(area, color.opacity(0.12)));
+    }
+    let rail = Bounds::new(area.origin, size(width, px(7. * geometry.scale)));
+    let style = if range.enabled {
+        BorderStyle::Solid
+    } else {
+        BorderStyle::Dashed
+    };
+    let fill_color = if range.enabled {
+        color.opacity(0.36)
+    } else {
+        transparent_black()
+    };
+    window.paint_quad(quad(rail, px(0.), fill_color, px(1.), color, style));
+    for (visible, x) in [
+        (geometry.start_visible, rail.left()),
+        (geometry.end_visible, rail.right() - px(2.)),
+    ] {
+        if visible {
+            window.paint_quad(fill(
+                Bounds::new(point(x, rail.top()), size(px(2.), rail.size.height)),
+                color,
+            ));
+        }
     }
 }

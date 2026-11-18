@@ -1,8 +1,9 @@
-use super::super::slide_number_input::{press, release, slide};
+use super::super::slide_number_input::{press, press_with_modifiers, release, slide};
 use super::super::{document_fixture, setup_with_document};
 use gpui_kit::{
-    App, AppContext as _, InputEvent as _, Modifiers, MouseMoveEvent, Pixels, Point,
-    TestAppContext, Window, point, px, size, test::TestWindowExt,
+    App, AppContext as _, InputEvent as _, Modifiers, MouseButton, MouseMoveEvent, Pixels, Point,
+    TestAppContext, Window, point, px, size,
+    test::{ClickOptions, TestWindowExt},
 };
 use zipzi_editor_core::{AnimationEvaluator, AnimationPreviewMode};
 
@@ -39,27 +40,41 @@ fn timeline_ruler_routes_loop_and_playhead_gestures_and_switches_playing_clocks(
             v.redraw(c);
         });
         w.render_frame(c);
-        let mut ruler = w.within("timeline-time-ruler");
-        let lane = ruler.find("timeline-loop-lane").bounds();
-        let ticks = ruler.find("timeline-ruler").bounds();
-        assert_eq!((lane.left(), lane.right()), (ticks.left(), ticks.right()));
-        assert_eq!(lane.bottom(), ticks.top());
-        let at = |fraction| point(lane.left() + lane.size.width * fraction, lane.center().y);
+        let ticks = w.within("animation-seek").find("timeline-ruler").bounds();
+        assert!(ticks.size.height >= px(30.));
+        assert!(w.try_find("timeline-loop-lane").is_none());
+        let at = |fraction| {
+            point(
+                ticks.left() + ticks.size.width * fraction,
+                ticks.top() + px(4.),
+            )
+        };
         let scrub_at =
             |fraction| point(ticks.left() + ticks.size.width * fraction, ticks.center().y);
         assert!(w.try_find("timeline-loop-range").is_none());
         assert!(w.try_find("timeline-loop-controls").is_none());
 
-        press(w, at(0.60), c);
-        slide(w, at(0.25), false, c);
+        // Even at the top edge an unmodified drag creates no range.
+        w.drag(at(0.6), at(0.25), c);
         assert!(range(c).is_none());
-        release(w, at(0.25), c);
+        press_with_modifiers(
+            w,
+            scrub_at(0.60),
+            Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+            c,
+        );
+        slide(w, scrub_at(0.25), true, c);
+        assert!(range(c).is_none());
+        release(w, scrub_at(0.25), c);
         w.render_frame(c);
         let selected = range(c).unwrap();
         assert!(selected.enabled);
 
-        // A playhead drag remains a scrub even after crossing into the upper zone.
-        press(w, scrub_at(0.40), c);
+        // Dragging through the existing marker scrubs; a stationary click toggles it.
+        press(w, at(0.40), c);
         slide(w, at(0.85), false, c);
         release(w, at(0.85), c);
         w.render_frame(c);
@@ -174,21 +189,29 @@ fn timeline_ruler_routes_loop_and_playhead_gestures_and_switches_playing_clocks(
     cx.run_until_parked();
     cx.update_window(h.window, |_, w, c| {
         w.render_frame(c);
-        let lane = w.find("timeline-loop-lane").bounds();
+        let lane = w.find("timeline-ruler").bounds();
         let at = |frame: f32| {
             point(
                 lane.left() + lane.size.width * (frame / 120.),
                 lane.center().y,
             )
         };
-        press(w, at(24.), c);
-        slide(w, at(25.), false, c);
+        press_with_modifiers(
+            w,
+            at(24.),
+            Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+            c,
+        );
+        slide(w, at(25.), true, c);
         release(w, at(25.), c);
         w.render_frame(c);
         let selected = range(c).unwrap();
         assert_eq!(selected.start, 24. / 60.);
         assert_eq!(selected.end, 25. / 60.);
-        hover(w, at(24.5), c);
+        hover(w, point(at(24.5).x, lane.top() + px(4.)), c);
         w.click("timeline-loop-clear", c);
         w.render_frame(c);
         assert!(range(c).is_none());
@@ -198,6 +221,51 @@ fn timeline_ruler_routes_loop_and_playhead_gestures_and_switches_playing_clocks(
         );
     })
     .unwrap();
+}
+
+#[gpui_kit::test]
+fn timeline_ruler_menu_creates_loop_from_playhead_and_clicked_frame(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let h = setup_with_document(cx, document, assets);
+    let click = |w: &mut Window, at: f32, button, c: &mut App| {
+        let ruler = w.find("timeline-ruler").bounds();
+        w.click_with_options(
+            "timeline-ruler",
+            ClickOptions::new()
+                .with_button(button)
+                .with_offset(point(ruler.size.width * at, ruler.size.height / 2.)),
+            c,
+        );
+    };
+    cx.update_window(h.window, |_, w, c| {
+        w.click("workspace-animation", c);
+        w.render_frame(c);
+        w.click(("animation-motion", 0usize), c);
+        w.render_frame(c);
+        click(w, 0.2, MouseButton::Left, c);
+    })
+    .unwrap();
+
+    for (at, end) in [(0.55, 66. / 60.), (0.2, 25. / 60.)] {
+        cx.update_window(h.window, |_, w, c| {
+            click(w, at, MouseButton::Right, c);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(h.window, |_, w, c| {
+            w.render_frame(c);
+            w.click("timeline-create-loop-range", c);
+            let editor = &h.view.read(c).editor;
+            let range = editor.timeline_view().unwrap().loop_range().unwrap();
+            assert_eq!(range.start, 24. / 60.);
+            assert_eq!(range.end, end);
+            assert!(range.enabled);
+            assert_eq!(editor.animation().unwrap().edit_time, 24. / 60.);
+            assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        })
+        .unwrap();
+        cx.run_until_parked();
+    }
 }
 
 #[gpui_kit::test]

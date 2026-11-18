@@ -1,8 +1,8 @@
 //! Synthetic production UI scenario, independent of optional licensed assets.
 use super::super::harness::{Harness, command, update};
-use super::common::{clip, drain, pointer};
+use super::common::{clip, drain, pointer, pointer_with_modifiers};
 use anyhow::{Context as _, ensure};
-use gpui_kit::{point, px, test::TestWindowExt};
+use gpui_kit::{Modifiers, point, px, test::TestWindowExt};
 use zipzi_core::document::{MotionCurve, MotionFrameStep};
 use zipzi_editor_core::{AnimationPreviewMode, CommandId, Document, Editor, TimelineRowId};
 
@@ -39,19 +39,23 @@ pub(super) fn run() -> anyhow::Result<()> {
     })??;
     drain(&mut h)?;
     let original = clip(&h);
-    let strip = h.cx.update_window(h.window, |_, window, cx| {
+    let ruler = h.cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
-        window.find("timeline-loop-lane").bounds()
+        window.find("timeline-ruler").bounds()
     })?;
-    let strip_at = |frame: f32| {
+    let ruler_at = |frame: f32| {
         point(
-            strip.left() + strip.size.width * (frame / 60.),
-            strip.center().y,
+            ruler.left() + ruler.size.width * (frame / 60.),
+            ruler.center().y,
         )
     };
-    pointer(&mut h, strip_at(41.), 0)?;
-    pointer(&mut h, strip_at(20.), 1)?;
-    pointer(&mut h, strip_at(20.), 2)?;
+    let shift = Modifiers {
+        shift: true,
+        ..Default::default()
+    };
+    pointer_with_modifiers(&mut h, ruler_at(41.), 0, shift)?;
+    pointer_with_modifiers(&mut h, ruler_at(20.), 1, shift)?;
+    pointer_with_modifiers(&mut h, ruler_at(20.), 2, shift)?;
     let range = h
         .view
         .read_with(&h.cx, |v, _| v.editor.timeline_view().unwrap().loop_range())
@@ -193,9 +197,12 @@ pub(super) fn run() -> anyhow::Result<()> {
 
     let toggle = h.cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
-        let lane = window.find("timeline-loop-lane").bounds();
+        let lane = window.find("timeline-ruler").bounds();
         window.click("animation-play-pause", cx);
-        point(lane.left() + lane.size.width * (30. / 60.), lane.center().y)
+        point(
+            lane.left() + lane.size.width * (30. / 60.),
+            lane.top() + px(4.),
+        )
     })?;
     drain(&mut h)?;
     let shown_time = h.view.read_with(&h.cx, |v, _| {

@@ -678,9 +678,11 @@ seek_cancelled = "The previous seek was cancelled."
 evaluation_failed = "Evaluation failed: %{detail}"
 
 [timeline]
-loop_create = "Drag to create a loop"
+loop_create = "Shift-drag or right-click to create a loop"
+loop_from_playhead = "Create Loop Range from Playhead"
 loop_enable = "Click to enable loop"
 loop_disable = "Click to disable loop"
+loop_resize = "Drag to adjust this endpoint"
 retime = "Retime Selection"
 retime_anchor = "Fixed end"
 retime_fix_start = "Fix start"

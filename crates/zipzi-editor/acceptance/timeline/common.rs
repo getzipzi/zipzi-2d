@@ -113,13 +113,22 @@ pub(crate) fn edit(h: &mut Harness, c: TimelineCommand) -> anyhow::Result<()> {
 }
 
 pub(crate) fn pointer(h: &mut Harness, position: Point<Pixels>, kind: u8) -> anyhow::Result<()> {
+    pointer_with_modifiers(h, position, kind, Modifiers::default())
+}
+
+pub(super) fn pointer_with_modifiers(
+    h: &mut Harness,
+    position: Point<Pixels>,
+    kind: u8,
+    modifiers: Modifiers,
+) -> anyhow::Result<()> {
     h.cx.update_window(h.window, |_, window, cx| match kind {
         0 => {
             window.dispatch_event(
                 MouseMoveEvent {
                     position,
                     pressed_button: None,
-                    modifiers: Modifiers::default(),
+                    modifiers,
                 }
                 .to_platform_input(),
                 cx,
@@ -128,7 +137,7 @@ pub(crate) fn pointer(h: &mut Harness, position: Point<Pixels>, kind: u8) -> any
                 MouseDownEvent {
                     button: MouseButton::Left,
                     position,
-                    modifiers: Modifiers::default(),
+                    modifiers,
                     click_count: 1,
                     first_mouse: false,
                 }
@@ -141,7 +150,7 @@ pub(crate) fn pointer(h: &mut Harness, position: Point<Pixels>, kind: u8) -> any
                 MouseMoveEvent {
                     position,
                     pressed_button: Some(MouseButton::Left),
-                    modifiers: Modifiers::default(),
+                    modifiers,
                 }
                 .to_platform_input(),
                 cx,
@@ -152,7 +161,7 @@ pub(crate) fn pointer(h: &mut Harness, position: Point<Pixels>, kind: u8) -> any
                 MouseUpEvent {
                     button: MouseButton::Left,
                     position,
-                    modifiers: Modifiers::default(),
+                    modifiers,
                     click_count: 1,
                 }
                 .to_platform_input(),

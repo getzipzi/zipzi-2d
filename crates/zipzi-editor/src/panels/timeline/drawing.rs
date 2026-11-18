@@ -666,7 +666,7 @@ pub(super) fn paint_ruler(
             label(
                 window,
                 cx,
-                bounds.origin + point(px(x + 3.), px(1.)),
+                bounds.origin + point(px(x + 3.), compact::scaled(9., cx)),
                 tick_label(time, step, projection.fps, seconds),
                 foreground,
             );

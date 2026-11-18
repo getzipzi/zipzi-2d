@@ -663,9 +663,11 @@ seek_cancelled = "前のシークはキャンセルされました。"
 evaluation_failed = "評価に失敗しました: %{detail}"
 
 [timeline]
-loop_create = "ドラッグしてループ範囲を作成"
+loop_create = "Shift＋ドラッグまたは右クリックでループを作成"
+loop_from_playhead = "再生ヘッドからここまでをループ範囲に設定"
 loop_enable = "クリックしてループを有効化"
 loop_disable = "クリックしてループを無効化"
+loop_resize = "ドラッグしてこの端点を調整"
 retime = "選択範囲の時間を伸縮"
 retime_anchor = "固定する端点"
 retime_fix_start = "開始を固定"

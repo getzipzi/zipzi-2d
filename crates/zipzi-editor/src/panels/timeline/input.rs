@@ -364,7 +364,7 @@ impl Timeline {
             return;
         }
         if matches!(self.gesture, Some(Gesture::LoopRange(_))) {
-            self.move_loop_range(event.position, cx);
+            self.move_loop_range(event.position, window, cx);
             cx.stop_propagation();
             return;
         }
@@ -571,7 +571,7 @@ impl Timeline {
                 return;
             }
             if let Gesture::LoopRange(drag) = gesture {
-                self.finish_loop_range(drag, event.position, cx);
+                self.finish_loop_range(drag, event.position, window, cx);
                 self.sync_status_bar(cx);
                 cx.stop_propagation();
                 return;

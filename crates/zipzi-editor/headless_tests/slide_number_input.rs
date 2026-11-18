@@ -6,11 +6,20 @@ use gpui_kit::{
 };
 
 pub(super) fn press(window: &mut Window, position: Point<Pixels>, cx: &mut App) {
+    press_with_modifiers(window, position, Modifiers::default(), cx);
+}
+
+pub(super) fn press_with_modifiers(
+    window: &mut Window,
+    position: Point<Pixels>,
+    modifiers: Modifiers,
+    cx: &mut App,
+) {
     window.dispatch_event(
         MouseMoveEvent {
             position,
             pressed_button: None,
-            modifiers: Modifiers::default(),
+            modifiers,
         }
         .to_platform_input(),
         cx,
@@ -19,7 +28,7 @@ pub(super) fn press(window: &mut Window, position: Point<Pixels>, cx: &mut App) 
         MouseDownEvent {
             button: MouseButton::Left,
             position,
-            modifiers: Modifiers::default(),
+            modifiers,
             click_count: 1,
             first_mouse: false,
         }
