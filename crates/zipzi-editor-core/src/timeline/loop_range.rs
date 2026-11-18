@@ -49,7 +49,22 @@ impl Editor {
         end: f64,
     ) -> Result<()> {
         let range = self.timeline_loop_candidate(binding, start, end)?;
-        self.install_timeline_loop_range(binding, Some(range))
+        self.install_timeline_loop_range(binding, Some(range), false)
+    }
+
+    pub fn resize_timeline_loop_range(
+        &mut self,
+        binding: TimelineBinding,
+        start: f64,
+        end: f64,
+    ) -> Result<()> {
+        let current = self
+            .timeline_loop_target(binding)?
+            .loop_range
+            .ok_or_else(|| anyhow::anyhow!("Set a loop range first"))?;
+        let mut range = self.timeline_loop_candidate(binding, start, end)?;
+        range.enabled = current.enabled;
+        self.install_timeline_loop_range(binding, Some(range), false)
     }
 
     pub fn timeline_loop_candidate(
@@ -101,26 +116,35 @@ impl Editor {
             .loop_range
             .ok_or_else(|| anyhow::anyhow!("Set a loop range first"))?;
         range.enabled = enabled;
-        self.install_timeline_loop_range(binding, Some(range))
+        self.install_timeline_loop_range(binding, Some(range), true)
     }
 
     pub fn clear_timeline_loop_range(&mut self, binding: TimelineBinding) -> Result<()> {
-        self.install_timeline_loop_range(binding, None)
+        self.install_timeline_loop_range(binding, None, true)
     }
 
     fn install_timeline_loop_range(
         &mut self,
         binding: TimelineBinding,
         range: Option<TimelineLoopRange>,
+        keep_playing: bool,
     ) -> Result<()> {
         let old = self.timeline_loop_target(binding)?.loop_range;
         if old == range {
             return Ok(());
         }
-        self.pause_animation();
-        let animation = &mut self.active_session_mut().unwrap().animation;
-        animation.playback.reset_range_playback();
-        animation.timeline.current_mut().unwrap().view.loop_range = range;
+        let enabled = |range: Option<TimelineLoopRange>| range.filter(|range| range.enabled);
+        if !keep_playing || enabled(old) != enabled(range) {
+            self.change_range_playback(enabled(range), keep_playing)?;
+        }
+        self.active_session_mut()
+            .unwrap()
+            .animation
+            .timeline
+            .current_mut()
+            .unwrap()
+            .view
+            .loop_range = range;
         Ok(())
     }
 

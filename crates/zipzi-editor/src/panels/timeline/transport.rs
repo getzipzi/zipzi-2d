@@ -181,21 +181,6 @@ impl Timeline {
                 }),
             );
         }
-        if !self.header_compact {
-            transport.push(
-                compact::header_button(Button::new("timeline-loop-range"))
-                    .icon(IconName::Clock)
-                    .selected(self.loop_range.open)
-                    .accessibility_label(t!("timeline.loop_range").into_owned())
-                    .tooltip(t!("timeline.loop_range"))
-                    .disabled(!allowed || resource.is_none())
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        if this.allowed(window, cx) {
-                            this.toggle_loop_controls(cx);
-                        }
-                    })),
-            );
-        }
         let weak = self.owner.clone();
         let preview = (!self.header_tiny).then(|| {
             compact::header_button(

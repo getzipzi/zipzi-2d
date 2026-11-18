@@ -1,100 +1,162 @@
 use super::super::slide_number_input::{press, release, slide};
 use super::super::{document_fixture, setup_with_document};
-use gpui_kit::{AppContext as _, TestAppContext, point, px, size, test::TestWindowExt};
+use gpui_kit::{
+    App, AppContext as _, InputEvent as _, Modifiers, MouseMoveEvent, Pixels, Point,
+    TestAppContext, Window, point, px, size, test::TestWindowExt,
+};
+use zipzi_editor_core::{AnimationEvaluator, AnimationPreviewMode};
+
+fn hover(window: &mut Window, position: Point<Pixels>, cx: &mut App) {
+    window.dispatch_event(
+        MouseMoveEvent {
+            position,
+            pressed_button: None,
+            modifiers: Modifiers::default(),
+        }
+        .to_platform_input(),
+        cx,
+    );
+    window.render_frame(cx);
+}
 
 #[gpui_kit::test]
-fn timeline_loop_strip_and_transport_share_ranges_in_both_views(cx: &mut TestAppContext) {
+fn timeline_ruler_routes_loop_and_playhead_gestures_and_switches_playing_clocks(
+    cx: &mut TestAppContext,
+) {
     let (document, assets) = document_fixture::animation_document().unwrap();
     let h = setup_with_document(cx, document, assets);
-    let range = |c: &gpui_kit::App| h.view.read(c).editor.timeline_view().unwrap().loop_range();
+    let range = |c: &App| h.view.read(c).editor.timeline_view().unwrap().loop_range();
     cx.update_window(h.window, |_, w, c| {
         w.click("workspace-animation", c);
         w.render_frame(c);
         w.click(("animation-motion", 0usize), c);
+        h.view.update(c, |v, c| {
+            let document = v.editor.active_id().unwrap();
+            v.editor
+                .set_animation_preview_mode(document, AnimationPreviewMode::Editing)
+                .unwrap();
+            v.animation_clock_running = true;
+            v.redraw(c);
+        });
         w.render_frame(c);
-        let strip = w.find("timeline-loop-strip").bounds();
-        let at = |fraction| point(strip.left() + strip.size.width * fraction, strip.center().y);
-        // Drag backwards to create the interval.
-        press(w, at(0.6), c);
+        let mut ruler = w.within("timeline-time-ruler");
+        let lane = ruler.find("timeline-loop-lane").bounds();
+        let ticks = ruler.find("timeline-ruler").bounds();
+        assert_eq!((lane.left(), lane.right()), (ticks.left(), ticks.right()));
+        assert_eq!(lane.bottom(), ticks.top());
+        let at = |fraction| point(lane.left() + lane.size.width * fraction, lane.center().y);
+        let scrub_at =
+            |fraction| point(ticks.left() + ticks.size.width * fraction, ticks.center().y);
+        assert!(w.try_find("timeline-loop-range").is_none());
+        assert!(w.try_find("timeline-loop-controls").is_none());
+
+        press(w, at(0.60), c);
         slide(w, at(0.25), false, c);
         assert!(range(c).is_none());
         release(w, at(0.25), c);
         w.render_frame(c);
         let selected = range(c).unwrap();
         assert!(selected.enabled);
-        let state = h.view.read(c).editor.timeline_view().unwrap();
-        let fraction = ((selected.end - state.time_range.0)
-            / (state.time_range.1 - state.time_range.0)) as f32;
-        press(w, at(fraction), c);
-        slide(w, at(0.8), false, c);
+
+        // A playhead drag remains a scrub even after crossing into the upper zone.
+        press(w, scrub_at(0.40), c);
+        slide(w, at(0.85), false, c);
+        release(w, at(0.85), c);
+        w.render_frame(c);
+        assert_eq!(range(c), Some(selected));
+        assert!(f64::from(h.view.read(c).editor.animation().unwrap().edit_time) > selected.end);
+
+        let view = h.view.read(c).editor.timeline_view().unwrap().time_range;
+        let end_x = ((selected.end - view.0) / (view.1 - view.0)) as f32;
+        press(w, at(end_x), c);
+        slide(w, at(0.75), false, c);
         w.press("escape", c);
-        release(w, at(0.8), c);
+        release(w, at(0.75), c);
         assert_eq!(range(c), Some(selected));
         w.render_frame(c);
 
-        super::tool(w, "timeline-loop-range", c);
-        assert!(w.find("timeline-loop-controls").visible());
-        w.click("timeline-loop-start", c);
+        press(w, at(end_x), c);
+        slide(w, at(0.65), false, c);
+        release(w, at(0.65), c);
         w.render_frame(c);
-        w.press("secondary-a", c);
-        w.input("1", c);
-    })
-    .unwrap();
-    cx.update_window(h.window, |_, w, c| w.press("enter", c))
-        .unwrap();
-    cx.run_until_parked();
-    cx.update_window(h.window, |_, w, c| {
-        w.render_frame(c);
-        let earlier = range(c).unwrap();
-        let fps = h.view.read(c).editor.timeline_projection().unwrap().fps;
-        assert_eq!(earlier.start, 1. / f64::from(fps));
-        w.click("timeline-loop-end", c);
-        w.render_frame(c);
-        w.press("secondary-a", c);
-        w.input("0", c);
-        earlier
-    })
-    .map(|earlier| {
-        cx.update_window(h.window, |_, w, c| w.press("enter", c))
-            .unwrap();
-        cx.run_until_parked();
-        cx.update_window(h.window, |_, w, c| {
-            w.render_frame(c);
-            assert!(w.find("timeline-loop-error").visible());
-            assert_eq!(range(c), Some(earlier));
-            w.press("escape", c);
-            w.render_frame(c);
-            assert!(w.try_find("timeline-loop-error").is_none());
+        let mut adjusted = range(c).unwrap();
+        assert_eq!(adjusted.start, selected.start);
+        assert!(adjusted.end > selected.end);
+        assert!(adjusted.enabled);
 
-            w.click("timeline-loop-toggle", c);
-            w.render_frame(c);
-            assert!(!range(c).unwrap().enabled);
-            let seeker = w.find("timeline-ruler").bounds();
-            let outside = point(seeker.left() + seeker.size.width * 0.9, seeker.center().y);
-            press(w, outside, c);
-            release(w, outside, c);
-            assert!(f64::from(h.view.read(c).editor.animation().unwrap().edit_time) > earlier.end);
-            w.click("animation-play-pause", c);
-            assert!(
-                h.view
-                    .read(c)
-                    .editor
-                    .animation()
-                    .unwrap()
-                    .playback_clock_time()
-                    > earlier.end
-            );
-            w.click("animation-play-pause", c);
-            super::tool(w, "timeline-view", c);
-            assert_eq!(range(c).unwrap().end, earlier.end);
+        // Click while paused, then enable again without starting playback.
+        for enabled in [false, true] {
+            press(w, at(0.43), c);
+            release(w, at(0.43), c);
+            let v = h.view.read(c);
+            assert!(!v.editor.animation().unwrap().playing);
             assert_eq!(
-                h.view.read(c).editor.timeline_view().unwrap().mode,
-                zipzi_editor_core::TimelineDisplayMode::Curves
+                range(c),
+                Some(zipzi_editor_core::TimelineLoopRange {
+                    enabled,
+                    ..adjusted
+                })
             );
-            super::tool(w, "timeline-loop-range", c);
-            assert!(w.try_find("timeline-loop-controls").is_none());
-        })
-        .unwrap();
+            if !enabled {
+                let end_x = ((adjusted.end - view.0) / (view.1 - view.0)) as f32;
+                press(w, at(end_x), c);
+                slide(w, at(0.70), false, c);
+                release(w, at(0.70), c);
+                let resized = range(c).unwrap();
+                assert!(!resized.enabled && resized.end > adjusted.end);
+                assert_eq!(resized.start, adjusted.start);
+                adjusted = resized;
+            }
+        }
+        w.render_frame(c);
+        w.click("animation-play-pause", c);
+        let presented = h.view.update(c, |v, _| {
+            v.editor.advance_animation_clock_precise(0.25);
+            let request = v.editor.animation_request().unwrap();
+            let frame = AnimationEvaluator::default()
+                .evaluate(&request, |_, _| true)
+                .unwrap();
+            assert!(v.editor.present_animation(frame.identity, frame.snapshot));
+            v.editor.animation().unwrap().edit_time
+        });
+
+        press(w, at(0.43), c);
+        assert!(h.view.read(c).editor.animation().unwrap().playing);
+        release(w, at(0.43), c);
+        let a = h.view.read(c).editor.animation().unwrap();
+        assert!(a.playing && !a.is_range_playing());
+        assert_eq!(a.time, presented);
+        assert!(!range(c).unwrap().enabled);
+
+        press(w, at(0.43), c);
+        release(w, at(0.43), c);
+        assert!(
+            h.view
+                .read(c)
+                .editor
+                .animation()
+                .unwrap()
+                .is_range_playing()
+        );
+        hover(w, at(0.43), c);
+        assert!(w.find("timeline-loop-clear").visible());
+        let clear = w.find("timeline-loop-clear").bounds().center();
+        hover(w, clear, c);
+        assert!(w.find("timeline-loop-clear").visible());
+        hover(w, point(clear.x, ticks.center().y), c);
+        assert!(w.try_find("timeline-loop-clear").is_none());
+        hover(w, at(0.43), c);
+        w.click("timeline-loop-clear", c);
+        w.render_frame(c);
+        assert!(range(c).is_none());
+        let a = h.view.read(c).editor.animation().unwrap();
+        assert!(a.playing && !a.is_range_playing());
+        w.click("animation-play-pause", c);
+        super::tool(w, "timeline-view", c);
+        assert_eq!(
+            h.view.read(c).editor.timeline_view().unwrap().mode,
+            zipzi_editor_core::TimelineDisplayMode::Curves
+        );
     })
     .unwrap();
 
@@ -102,18 +164,38 @@ fn timeline_loop_strip_and_transport_share_ranges_in_both_views(cx: &mut TestApp
     cx.run_until_parked();
     cx.update_window(h.window, |_, w, c| {
         w.render_frame(c);
-        assert!(w.try_find("timeline-loop-range").is_none());
-        assert!(w.find("timeline-more").visible());
         w.click("timeline-more", c);
         w.render_frame(c);
-        w.click("timeline-menu-loop-range", c);
+        assert!(w.find("timeline-menu-view").visible());
+        assert!(w.try_find("timeline-menu-loop-range").is_none());
+        w.press("escape", c);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, w, c| {
         w.render_frame(c);
-        assert!(w.find("timeline-loop-controls").visible());
+        let lane = w.find("timeline-loop-lane").bounds();
+        let at = |frame: f32| {
+            point(
+                lane.left() + lane.size.width * (frame / 120.),
+                lane.center().y,
+            )
+        };
+        press(w, at(24.), c);
+        slide(w, at(25.), false, c);
+        release(w, at(25.), c);
+        w.render_frame(c);
+        let selected = range(c).unwrap();
+        assert_eq!(selected.start, 24. / 60.);
+        assert_eq!(selected.end, 25. / 60.);
+        hover(w, at(24.5), c);
         w.click("timeline-loop-clear", c);
         w.render_frame(c);
-        let editor = &h.view.read(c).editor;
-        assert!(editor.timeline_view().unwrap().loop_range().is_none());
-        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        assert!(range(c).is_none());
+        assert_eq!(
+            h.view.read(c).editor.document().unwrap().history_lengths(),
+            (0, 0)
+        );
     })
     .unwrap();
 }

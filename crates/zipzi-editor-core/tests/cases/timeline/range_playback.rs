@@ -302,3 +302,51 @@ fn range_playback_clips_bounds_on_duration_changes_and_clears_empty_intersection
     assert!(editor.timeline_view().unwrap().loop_range().is_none());
     Ok(())
 }
+
+#[test]
+fn range_toggle_and_clear_handoff_uses_the_last_presented_frame() -> anyhow::Result<()> {
+    for mode in [AnimationPreviewMode::Editing, AnimationPreviewMode::Result] {
+        let (mut editor, _temp) = fixture(false, false)?;
+        let document = editor.active_id().unwrap();
+        let binding = bind(&mut editor);
+        let mut evaluator = AnimationEvaluator::default();
+        editor.set_animation_preview_mode(document, mode)?;
+        editor.set_timeline_loop_range(binding, 0.75, 1.25)?;
+        editor.seek_timeline(document, 0.875)?;
+        editor.toggle_animation()?;
+        editor.advance_animation_clock_precise(0.125);
+        let shown = evaluate(&mut editor, &mut evaluator)?;
+        let shown_time = shown.snapshot.time;
+        assert!(editor.present_animation(shown.identity, shown.snapshot));
+        assert_eq!(editor.animation().unwrap().edit_time, 1.);
+        editor.advance_animation_clock_precise(0.75);
+        let unshown = editor.animation_request().unwrap();
+
+        editor.enable_timeline_loop_range(binding, false)?;
+        let animation = editor.animation().unwrap();
+        assert!(animation.playing && !animation.is_range_playing());
+        assert_eq!(animation.time, shown_time);
+        assert_eq!(animation.edit_time, 1.);
+        assert!(!editor.accepts_animation(unshown.identity));
+        let first = evaluate(&mut editor, &mut evaluator)?;
+        assert_eq!(first.snapshot.time, shown_time);
+        assert!(editor.present_animation(first.identity, first.snapshot));
+        editor.advance_animation_clock_precise(f64::from(shown_time) + 0.375);
+        let whole = evaluate(&mut editor, &mut evaluator)?;
+        assert!(editor.present_animation(whole.identity, whole.snapshot));
+        assert!(editor.animation().unwrap().edit_time > 1.25);
+
+        editor.enable_timeline_loop_range(binding, true)?;
+        let restarted = evaluate(&mut editor, &mut evaluator)?;
+        assert_eq!(restarted.identity.range_progress.unwrap().local, 0.75);
+        let shown_time = restarted.snapshot.time;
+        assert!(editor.present_animation(restarted.identity, restarted.snapshot));
+        editor.clear_timeline_loop_range(binding)?;
+        let animation = editor.animation().unwrap();
+        assert!(animation.playing && !animation.is_range_playing());
+        assert_eq!(animation.time, shown_time);
+        assert_eq!(animation.edit_time, 0.75);
+        assert!(editor.timeline_view().unwrap().loop_range().is_none());
+    }
+    Ok(())
+}

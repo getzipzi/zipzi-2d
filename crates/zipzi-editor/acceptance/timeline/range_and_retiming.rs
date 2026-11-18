@@ -41,7 +41,7 @@ pub(super) fn run() -> anyhow::Result<()> {
     let original = clip(&h);
     let strip = h.cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
-        window.find("timeline-loop-strip").bounds()
+        window.find("timeline-loop-lane").bounds()
     })?;
     let strip_at = |frame: f32| {
         point(
@@ -189,6 +189,54 @@ pub(super) fn run() -> anyhow::Result<()> {
         ensure!(a.range_events().count() == 0);
         ensure!(v.editor.timeline_view().unwrap().loop_range() == Some(range));
         Ok(())
+    })?;
+
+    let toggle = h.cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        let lane = window.find("timeline-loop-lane").bounds();
+        window.click("animation-play-pause", cx);
+        point(lane.left() + lane.size.width * (30. / 60.), lane.center().y)
+    })?;
+    drain(&mut h)?;
+    let shown_time = h.view.read_with(&h.cx, |v, _| {
+        v.editor
+            .animation()
+            .unwrap()
+            .presented
+            .as_ref()
+            .unwrap()
+            .time
+    });
+    pointer(&mut h, toggle, 0)?;
+    pointer(&mut h, toggle, 2)?;
+    drain(&mut h)?;
+    h.view.read_with(&h.cx, |v, _| -> anyhow::Result<()> {
+        let a = v.editor.animation().unwrap();
+        ensure!(a.playing && !a.is_range_playing());
+        ensure!(a.presented.as_ref().unwrap().time == shown_time);
+        ensure!(
+            !v.editor
+                .timeline_view()
+                .unwrap()
+                .loop_range()
+                .unwrap()
+                .enabled
+        );
+        Ok(())
+    })?;
+    update(&mut h, |view, _, cx| {
+        view.editor
+            .advance_animation_clock_precise(f64::from(shown_time) + 0.75);
+        view.redraw(cx);
+    })?;
+    drain(&mut h)?;
+    ensure!(
+        h.view.read_with(&h.cx, |v, _| f64::from(
+            v.editor.animation().unwrap().edit_time
+        )) > range.end
+    );
+    h.cx.update_window(h.window, |_, window, cx| {
+        window.click("animation-play-pause", cx)
     })?;
 
     let temp = tempfile::tempdir()?;

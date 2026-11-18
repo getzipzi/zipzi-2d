@@ -452,18 +452,12 @@ impl Editor {
                 .document
                 .motion_definition(&motion.selection.clip_id)
                 .unwrap();
-            let sdk_cycle = animation
-                .result_position
-                .as_ref()
-                .map_or(0, |p| p.loop_index);
-            let run = range::RangePlayback::new(
+            let (run, time) = animation.prepare_range_playback(
                 bounds,
-                animation.edit_time,
-                sdk_cycle,
-                animation.range_resume == Some(animation.edit_time),
                 clip,
-            );
-            animation.time = run.sample_time(animation.preview_mode)?;
+                animation.range_resume == Some(animation.edit_time),
+            )?;
+            animation.time = time;
             animation.reset_range_playback();
             animation.range_playback = Some(run);
         } else if let Some(motion) = motion {
@@ -481,6 +475,44 @@ impl Editor {
         animation.playing = true;
         animation.head_located = false;
         animation.loop_position = false;
+        Ok(())
+    }
+
+    pub(crate) fn change_range_playback(
+        &mut self,
+        range: Option<crate::TimelineLoopRange>,
+        keep_playing: bool,
+    ) -> Result<()> {
+        let session = self.active_session().unwrap();
+        let animation = &session.animation.playback;
+        if keep_playing && animation.physics_preview.manual {
+            return Ok(());
+        }
+        let continuing = keep_playing && animation.playing;
+        let next = if let Some(range) = range.filter(|_| continuing) {
+            let clip = animation
+                .motion
+                .as_ref()
+                .and_then(|motion| session.document().motion_definition(&motion.clip_id))
+                .ok_or_else(|| anyhow::anyhow!("Select a playable motion"))?;
+            Some(animation.prepare_range_playback(range, clip, animation.presented.is_some())?)
+        } else {
+            None
+        };
+
+        // The displayed pose is authoritative when handing off the clock.
+        self.pause_animation();
+        let animation = &mut self.active_session_mut().unwrap().animation.playback;
+        animation.reset_range_playback();
+        if let Some((run, time)) = next {
+            animation.range_playback = Some(run);
+            animation.time = time;
+        }
+        if continuing {
+            animation.playing = true;
+            animation.head_located = false;
+            animation.loop_position = false;
+        }
         Ok(())
     }
     pub fn rewind_animation(&mut self) -> Result<()> {
@@ -560,7 +592,9 @@ impl Editor {
                 animation.time = if motion.looping {
                     target
                 } else {
-                    target.min(motion.duration)
+                    // A range can hand off a canonical result sample in the
+                    // final activation step after the nominal duration.
+                    target.min(motion.duration.max(animation.time))
                 };
                 if !motion.looping && animation.time >= motion.duration {
                     animation.pause();

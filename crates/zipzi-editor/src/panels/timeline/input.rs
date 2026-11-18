@@ -348,6 +348,7 @@ impl Timeline {
         }
         self.discard_stale_interactions(window, cx);
         if self.gesture.is_none() {
+            self.hover_loop_range(event.position, window, cx);
             return;
         }
         if !self.allowed(window, cx)
@@ -663,10 +664,6 @@ impl Timeline {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if event.keystroke.key == "escape" && self.cancel_loop_input(window, cx) {
-            cx.stop_propagation();
-            return;
-        }
         if event.keystroke.key == "escape"
             && self.allowed(window, cx)
             && (self.gesture.is_some() || self.number_edit.is_some())

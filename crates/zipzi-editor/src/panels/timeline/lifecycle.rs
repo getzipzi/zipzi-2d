@@ -242,7 +242,7 @@ impl Timeline {
             }
         }
         self.gesture = None;
-        self.loop_range.clear_error();
+        self.loop_range.reset();
         self.edge_scroll = None;
         self.error = None;
         self.publish_hints();

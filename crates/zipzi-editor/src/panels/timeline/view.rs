@@ -42,21 +42,6 @@ impl Timeline {
                         cx.propagate();
                         return;
                     }
-                    if let Some(index) = this.focused_loop_input(window, cx) {
-                        use zipzi_editor_core::CommandId::{CancelProperty, CommitProperty};
-                        match action.id {
-                            CommitProperty => this.apply_loop_input(index, window, cx),
-                            CancelProperty => {
-                                this.cancel_loop_input(window, cx);
-                            }
-                            _ => {
-                                cx.propagate();
-                                return;
-                            }
-                        }
-                        cx.stop_propagation();
-                        return;
-                    }
                     if let Some(command) = action.invocation {
                         if this
                             .owner
@@ -294,9 +279,6 @@ impl Render for Timeline {
                 .into_any_element();
         };
         self.update_range(&projection, &state);
-        if let Some(controls) = self.render_loop_controls(&projection, &state, window, cx) {
-            panel = panel.child(controls);
-        }
         if let Some(controls) = self.retime_controls(&projection, &state, window, cx) {
             panel = panel.child(controls);
         }
@@ -399,39 +381,51 @@ impl Render for Timeline {
             .h_full()
             .flex()
             .flex_col()
-            .child(self.loop_strip(&state, cx))
             .child(
                 div()
-                    .id("animation-seek")
+                    .id("timeline-time-ruler")
                     .test_support()
-                    .h(compact::rem(RULER))
+                    .flex()
+                    .flex_col()
                     .w_full()
                     .flex_shrink_0()
+                    .border_b_1()
+                    .border_color(cx.theme().border)
+                    .on_scroll_wheel(cx.listener(Self::wheel))
+                    .child(self.loop_lane(&state, projection.fps, window, cx))
                     .child(
                         div()
-                            .id("timeline-ruler")
+                            .id("animation-seek")
                             .test_support()
-                            .size_full()
-                            .cursor(CursorStyle::ResizeLeftRight)
-                            .on_mouse_down(MouseButton::Left, cx.listener(Self::start_seek))
+                            .h(compact::rem(RULER))
+                            .w_full()
+                            .flex_shrink_0()
                             .child(
-                                canvas(
-                                    move |bounds, _, _| {
-                                        ruler_bounds.set(bounds);
-                                    },
-                                    move |bounds, _, window, cx| {
-                                        drawing::paint_ruler(
-                                            bounds,
-                                            &ruler_projection,
-                                            &ruler_state,
-                                            head,
-                                            seconds,
-                                            window,
-                                            cx,
-                                        );
-                                    },
-                                )
-                                .size_full(),
+                                div()
+                                    .id("timeline-ruler")
+                                    .test_support()
+                                    .size_full()
+                                    .cursor(CursorStyle::ResizeLeftRight)
+                                    .on_mouse_down(MouseButton::Left, cx.listener(Self::start_seek))
+                                    .child(
+                                        canvas(
+                                            move |bounds, _, _| {
+                                                ruler_bounds.set(bounds);
+                                            },
+                                            move |bounds, _, window, cx| {
+                                                drawing::paint_ruler(
+                                                    bounds,
+                                                    &ruler_projection,
+                                                    &ruler_state,
+                                                    head,
+                                                    seconds,
+                                                    window,
+                                                    cx,
+                                                );
+                                            },
+                                        )
+                                        .size_full(),
+                                    ),
                             ),
                     ),
             )
@@ -522,12 +516,7 @@ impl Render for Timeline {
                     .flex_col()
                     .child(
                         div()
-                            .h(compact::rem(loop_range::STRIP_HEIGHT))
-                            .flex_shrink_0(),
-                    )
-                    .child(
-                        div()
-                            .h(compact::rem(RULER))
+                            .h(compact::scaled(RULER + loop_range::LOOP_LANE_HEIGHT, cx) + px(1.))
                             .flex_shrink_0()
                             .flex()
                             .items_center()

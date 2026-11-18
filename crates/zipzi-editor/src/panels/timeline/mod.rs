@@ -63,7 +63,7 @@ pub struct Timeline {
     context: Option<Target>,
     graph: Rc<Cell<Bounds<Pixels>>>,
     ruler: Rc<Cell<Bounds<Pixels>>>,
-    loop_range: loop_range::Controls,
+    loop_range: loop_range::LoopLane,
     retime: retiming::Controls,
     body_height: f32,
     gesture: Option<input::Gesture>,

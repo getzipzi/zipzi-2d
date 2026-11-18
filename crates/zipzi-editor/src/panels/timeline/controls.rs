@@ -83,13 +83,6 @@ impl Timeline {
                 editable,
             ),
             (
-                "timeline-loop-range",
-                IconName::Repeat,
-                t!("timeline.loop_range").into_owned(),
-                self.loop_range.open,
-                allowed && owner.read(cx).editor.timeline_projection().is_some(),
-            ),
-            (
                 "timeline-retime",
                 IconName::ArrowLeftRight,
                 t!("timeline.retime").into_owned(),
@@ -125,9 +118,6 @@ impl Timeline {
                 continue;
             }
             if self.header_compact {
-                continue;
-            }
-            if *id == "timeline-loop-range" {
                 continue;
             }
             let id = *id;
@@ -315,7 +305,6 @@ impl Timeline {
             return;
         }
         match id {
-            "timeline-loop-range" => self.toggle_loop_controls(cx),
             "timeline-retime" => self.toggle_retime_controls(cx),
             "loop" | "preview" => {
                 _ = self.owner.update(cx, |owner, cx| {

@@ -138,6 +138,21 @@ impl RangePlayback {
 }
 
 impl AnimationSession {
+    pub(super) fn prepare_range_playback(
+        &self,
+        bounds: TimelineLoopRange,
+        clip: Arc<zipzi_core::document::MotionClip>,
+        resume: bool,
+    ) -> Result<(RangePlayback, f32)> {
+        let sdk_cycle = self
+            .result_position
+            .as_ref()
+            .map_or(0, |position| position.loop_index);
+        let run = RangePlayback::new(bounds, self.edit_time, sdk_cycle, resume, clip);
+        let time = run.sample_time(self.preview_mode)?;
+        Ok((run, time))
+    }
+
     pub fn is_range_playing(&self) -> bool {
         self.range_playback.is_some()
     }
