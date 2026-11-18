@@ -158,6 +158,7 @@ impl Timeline {
                 });
             } else {
                 self.curve_popover = None;
+                self.loop_range.reset();
                 self.fields.clear();
                 self.range_key = None;
                 self.error = None;
@@ -240,6 +241,7 @@ impl Timeline {
             }
         }
         self.gesture = None;
+        self.loop_range.clear_error();
         self.edge_scroll = None;
         self.error = None;
         self.publish_hints();

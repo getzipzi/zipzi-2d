@@ -42,6 +42,21 @@ impl Timeline {
                         cx.propagate();
                         return;
                     }
+                    if let Some(index) = this.focused_loop_input(window, cx) {
+                        use zipzi_editor_core::CommandId::{CancelProperty, CommitProperty};
+                        match action.id {
+                            CommitProperty => this.apply_loop_input(index, cx),
+                            CancelProperty => {
+                                this.cancel_loop_input(window, cx);
+                            }
+                            _ => {
+                                cx.propagate();
+                                return;
+                            }
+                        }
+                        cx.stop_propagation();
+                        return;
+                    }
                     if let Some(command) = action.invocation {
                         if this
                             .owner
@@ -177,7 +192,7 @@ impl Render for Timeline {
             .scroll
             .min((rows.len() as f64 * self.row_height() as f64 - self.body_height as f64).max(0.));
         let time = owner.read(cx).editor.animation().map_or(0., |a| {
-            if a.playing {
+            if a.playing && !state.loop_range().is_some_and(|range| range.enabled) {
                 a.presented
                     .as_ref()
                     .and_then(|frame| {
@@ -279,6 +294,9 @@ impl Render for Timeline {
                 .into_any_element();
         };
         self.update_range(&projection, &state);
+        if let Some(controls) = self.render_loop_controls(&projection, &state, window, cx) {
+            panel = panel.child(controls);
+        }
         if let Some(reveal) = &state.reveal_row {
             if let Some(index) = rows.iter().position(|row| &row.id == reveal) {
                 let top = index as f64 * self.row_height() as f64;
@@ -376,6 +394,7 @@ impl Render for Timeline {
             .h_full()
             .flex()
             .flex_col()
+            .child(self.loop_strip(&state, cx))
             .child(
                 div()
                     .id("animation-seek")
@@ -483,6 +502,11 @@ impl Render for Timeline {
                     .flex_shrink_0()
                     .flex()
                     .flex_col()
+                    .child(
+                        div()
+                            .h(compact::rem(loop_range::STRIP_HEIGHT))
+                            .flex_shrink_0(),
+                    )
                     .child(
                         div()
                             .h(compact::rem(RULER))

@@ -8,6 +8,7 @@ pub(super) enum Gesture {
         button: MouseButton,
     },
     Seek(zipzi_editor_core::TimelineScrubToken),
+    LoopRange(super::loop_range::Drag),
     Marquee {
         origin: Point<f32>,
         current: Point<f32>,
@@ -350,6 +351,11 @@ impl Timeline {
             self.seek_to_pointer(window, cx);
             return;
         }
+        if matches!(self.gesture, Some(Gesture::LoopRange(_))) {
+            self.move_loop_range(event.position, cx);
+            cx.stop_propagation();
+            return;
+        }
         let local = self.local(event.position);
         let Some(owner) = self.owner.upgrade() else {
             return;
@@ -390,7 +396,7 @@ impl Timeline {
                 }
         };
         let command = match self.gesture.as_mut().unwrap() {
-            Gesture::Pan { .. } | Gesture::Seek(_) => unreachable!(),
+            Gesture::Pan { .. } | Gesture::Seek(_) | Gesture::LoopRange(_) => unreachable!(),
             Gesture::Marquee {
                 origin,
                 current,
@@ -532,6 +538,12 @@ impl Timeline {
             return;
         }
         if let Some(gesture) = self.gesture.take() {
+            if let Gesture::LoopRange(drag) = gesture {
+                self.finish_loop_range(drag, event.position, cx);
+                self.sync_status_bar(cx);
+                cx.stop_propagation();
+                return;
+            }
             if let Some(token) = gesture.token() {
                 self.finish_token(token, cx);
             }
@@ -620,6 +632,10 @@ impl Timeline {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if event.keystroke.key == "escape" && self.cancel_loop_input(window, cx) {
+            cx.stop_propagation();
+            return;
+        }
         if event.keystroke.key == "escape"
             && self.allowed(window, cx)
             && (self.gesture.is_some() || self.number_edit.is_some())

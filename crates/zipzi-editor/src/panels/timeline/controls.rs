@@ -82,6 +82,13 @@ impl Timeline {
                 false,
                 editable,
             ),
+            (
+                "timeline-loop-range",
+                IconName::Repeat,
+                t!("timeline.loop_range").into_owned(),
+                self.loop_range.open,
+                allowed && owner.read(cx).editor.timeline_projection().is_some(),
+            ),
         ];
         for (id, _, _, _, enabled) in &mut actions {
             if let Some(command) = tool_command(id) {
@@ -111,6 +118,9 @@ impl Timeline {
                 continue;
             }
             if self.header_compact {
+                continue;
+            }
+            if *id == "timeline-loop-range" {
                 continue;
             }
             let id = *id;
@@ -295,6 +305,7 @@ impl Timeline {
             return;
         }
         match id {
+            "timeline-loop-range" => self.toggle_loop_controls(cx),
             "loop" | "preview" => {
                 _ = self.owner.update(cx, |owner, cx| {
                     let Some(document) = owner.editor.active_id() else {
@@ -510,33 +521,42 @@ impl Timeline {
         }
         element = element.child(title);
         if row.id == TimelineRowId::Events {
-            let fired = self
-                .owner
-                .upgrade()
-                .map(|owner| {
-                    owner
-                        .read(cx)
+            let (count, hint) = self.owner.upgrade().map_or_else(
+                || (0, String::new()),
+                |owner| {
+                    let owner = owner.read(cx);
+                    if state.loop_range().is_some_and(|range| range.enabled) {
+                        let events = owner.editor.animation().unwrap().range_events();
+                        let mut lines: Vec<_> =
+                            events.tail.iter().map(|e| e.value.clone()).collect();
+                        if events.full_cycles > 0 && !events.cycle_events.is_empty() {
+                            lines.push(
+                                t!("timeline.loop_event_cycles", count = events.full_cycles)
+                                    .into_owned(),
+                            );
+                            lines.extend(events.cycle_events.iter().map(|e| e.value.clone()));
+                        }
+                        lines.extend(events.head.iter().map(|e| e.value.clone()));
+                        return (events.count(), lines.join("\n"));
+                    }
+                    let fired: Vec<_> = owner
                         .displayed_animation()
-                        .map(|frame| {
-                            frame
-                                .fired_events
-                                .iter()
-                                .filter(|event| event.motion_id == projection.clip_id)
-                                .map(|event| event.value.clone())
-                                .collect::<Vec<_>>()
-                        })
-                        .unwrap_or_default()
-                })
-                .unwrap_or_default();
-            if !fired.is_empty() {
-                let hint = fired.join("\n");
+                        .into_iter()
+                        .flat_map(|frame| &frame.fired_events)
+                        .filter(|event| event.motion_id == projection.clip_id)
+                        .map(|event| event.value.as_str())
+                        .collect();
+                    (fired.len() as u128, fired.join("\n"))
+                },
+            );
+            if count > 0 {
                 element = element.child(
                     div()
                         .id("timeline-fired-events")
                         .test_support()
                         .flex_shrink_0()
                         .text_color(cx.theme().primary)
-                        .child(t!("workspace.frame_events_count", count = fired.len()))
+                        .child(t!("workspace.frame_events_count", count = count))
                         .tooltip(move |window, cx| {
                             gpui_kit::component::tooltip::Tooltip::new(hint.clone())
                                 .build(window, cx)

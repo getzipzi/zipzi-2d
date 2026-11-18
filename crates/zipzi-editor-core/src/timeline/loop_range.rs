@@ -2,6 +2,14 @@
 use crate::{Editor, TimelineBinding};
 use anyhow::{Result, ensure};
 
+#[derive(Debug, thiserror::Error)]
+pub enum TimelineLoopRangeError {
+    #[error("Loop endpoints must be within the motion duration")]
+    Outside,
+    #[error("Loop end must be after its start")]
+    Order,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TimelineLoopRange {
     pub start: f64,
@@ -21,11 +29,11 @@ impl TimelineLoopRange {
                 && self.end.is_finite()
                 && self.start >= 0.
                 && self.end <= duration,
-            "Loop endpoints must be within the motion duration"
+            TimelineLoopRangeError::Outside
         );
         ensure!(
             self.start < self.end && (self.start as f32) < self.end as f32,
-            "Loop end must be after its start"
+            TimelineLoopRangeError::Order
         );
         Ok(self)
     }
@@ -40,6 +48,16 @@ impl Editor {
         start: f64,
         end: f64,
     ) -> Result<()> {
+        let range = self.timeline_loop_candidate(binding, start, end)?;
+        self.install_timeline_loop_range(binding, Some(range))
+    }
+
+    pub fn timeline_loop_candidate(
+        &self,
+        binding: TimelineBinding,
+        start: f64,
+        end: f64,
+    ) -> Result<TimelineLoopRange> {
         let view = self.timeline_loop_target(binding)?;
         let projection = self.timeline_projection().unwrap();
         ensure!(
@@ -47,7 +65,7 @@ impl Editor {
                 && end.is_finite()
                 && start >= 0.
                 && (end <= projection.duration || end as f32 == projection.duration as f32),
-            "Loop endpoints must be within the motion duration"
+            TimelineLoopRangeError::Outside
         );
         let previous = view.loop_range;
         let endpoint = |time: f64, old: Option<f64>| {
@@ -63,12 +81,12 @@ impl Editor {
                 snapped
             }
         };
-        let range = TimelineLoopRange {
+        TimelineLoopRange {
             start: endpoint(start, previous.map(|range| range.start)),
             end: endpoint(end, previous.map(|range| range.end)),
             enabled: true,
-        };
-        self.restore_timeline_loop_range(binding, Some(range))
+        }
+        .validate(projection.duration)
     }
 
     pub fn enable_timeline_loop_range(
@@ -81,22 +99,19 @@ impl Editor {
             .loop_range
             .ok_or_else(|| anyhow::anyhow!("Set a loop range first"))?;
         range.enabled = enabled;
-        self.restore_timeline_loop_range(binding, Some(range))
+        self.install_timeline_loop_range(binding, Some(range))
     }
 
     pub fn clear_timeline_loop_range(&mut self, binding: TimelineBinding) -> Result<()> {
-        self.restore_timeline_loop_range(binding, None)
+        self.install_timeline_loop_range(binding, None)
     }
 
-    /// Also used to restore the exact session range when a gesture is cancelled.
-    pub fn restore_timeline_loop_range(
+    fn install_timeline_loop_range(
         &mut self,
         binding: TimelineBinding,
         range: Option<TimelineLoopRange>,
     ) -> Result<()> {
         let old = self.timeline_loop_target(binding)?.loop_range;
-        let duration = self.timeline_projection().unwrap().duration;
-        let range = range.map(|range| range.validate(duration)).transpose()?;
         if old == range {
             return Ok(());
         }

@@ -28,7 +28,12 @@ impl Timeline {
                     .is_some_and(|r| position.motion_id == r.selection.clip_id)
             })
         });
-        let time = if playing {
+        let ranged = view
+            .editor
+            .timeline_view()
+            .and_then(TimelineViewState::loop_range)
+            .is_some_and(|range| range.enabled);
+        let time = if playing && !ranged {
             position.map_or_else(|| snapshot.map_or(0., |s| s.time), |p| p.local_time)
         } else {
             animation.map_or(0., |a| a.edit_time)
@@ -174,6 +179,21 @@ impl Timeline {
                         owner.complete_edit(result, cx);
                     });
                 }),
+            );
+        }
+        if !self.header_compact {
+            transport.push(
+                compact::header_button(Button::new("timeline-loop-range"))
+                    .icon(IconName::Clock)
+                    .selected(self.loop_range.open)
+                    .accessibility_label(t!("timeline.loop_range").into_owned())
+                    .tooltip(t!("timeline.loop_range"))
+                    .disabled(!allowed || resource.is_none())
+                    .on_click(cx.listener(|this, _, window, cx| {
+                        if this.allowed(window, cx) {
+                            this.toggle_loop_controls(cx);
+                        }
+                    })),
             );
         }
         let weak = self.owner.clone();
