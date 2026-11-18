@@ -80,9 +80,13 @@ impl RangePlayback {
         self.elapsed = self.elapsed.max(elapsed);
         let width = self.bounds.end - self.bounds.start;
         let phase = self.offset + self.elapsed;
+        let remainder = phase.rem_euclid(width);
+        // Recover the integral quotient from the remainder. A rounded
+        // division can otherwise select the next cycle while % stays in this one.
+        let cycle = ((phase - remainder) / width).round() as u64;
         self.progress = AnimationRangeProgress {
-            cycle: (phase / width).floor() as u64,
-            local: ((self.bounds.start + phase.rem_euclid(width)) as f32).clamp(
+            cycle,
+            local: ((self.bounds.start + remainder) as f32).clamp(
                 self.bounds.start as f32,
                 (self.bounds.end as f32).next_down(),
             ),
@@ -134,6 +138,10 @@ impl RangePlayback {
 }
 
 impl AnimationSession {
+    pub fn is_range_playing(&self) -> bool {
+        self.range_playback.is_some()
+    }
+
     /// The desktop wall clock anchors this value, applying playback speed once.
     pub fn playback_clock_time(&self) -> f64 {
         self.range_playback

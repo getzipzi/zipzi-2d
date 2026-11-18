@@ -45,7 +45,7 @@ impl Timeline {
                     if let Some(index) = this.focused_loop_input(window, cx) {
                         use zipzi_editor_core::CommandId::{CancelProperty, CommitProperty};
                         match action.id {
-                            CommitProperty => this.apply_loop_input(index, cx),
+                            CommitProperty => this.apply_loop_input(index, window, cx),
                             CancelProperty => {
                                 this.cancel_loop_input(window, cx);
                             }
@@ -297,6 +297,9 @@ impl Render for Timeline {
         if let Some(controls) = self.render_loop_controls(&projection, &state, window, cx) {
             panel = panel.child(controls);
         }
+        if let Some(controls) = self.retime_controls(&projection, &state, window, cx) {
+            panel = panel.child(controls);
+        }
         if let Some(reveal) = &state.reveal_row {
             if let Some(index) = rows.iter().position(|row| &row.id == reveal) {
                 let top = index as f64 * self.row_height() as f64;
@@ -388,6 +391,8 @@ impl Render for Timeline {
             drawing::channel_color(&projection, &channel.id)
         });
         let context_panel = cx.weak_entity();
+        let retime_handles = self.retime_handles(&projection, &state, window, cx);
+        let retime_lane = !retime_handles.is_empty();
         let graph = div()
             .flex_1()
             .min_w_0()
@@ -430,6 +435,19 @@ impl Render for Timeline {
                             ),
                     ),
             )
+            .when(retime_lane, |graph| {
+                graph.child(
+                    div()
+                        .relative()
+                        .w_full()
+                        .flex_shrink_0()
+                        .h(compact::rem(retiming::HANDLE_LANE))
+                        .border_b_1()
+                        .border_color(cx.theme().border)
+                        .on_scroll_wheel(cx.listener(Self::wheel))
+                        .children(retime_handles),
+                )
+            })
             .child(
                 div()
                     .id("timeline-graph")
@@ -550,6 +568,9 @@ impl Render for Timeline {
                                     })),
                             ),
                     )
+                    .when(retime_lane, |left| {
+                        left.child(div().h(compact::rem(retiming::HANDLE_LANE)).flex_shrink_0())
+                    })
                     .child(
                         div()
                             .flex_1()

@@ -221,3 +221,84 @@ fn range_playback_full_effect_reuses_sdk_cycle_and_observes_only_presented_passa
     assert_eq!(editor.animation().unwrap().range_events().count(), 0);
     Ok(())
 }
+
+#[test]
+fn range_playback_seek_parity_includes_physics_expression_and_motion_fade() -> anyhow::Result<()> {
+    let (document, _assets) = crate::support::combined_animation_document()?;
+    let mut editor = crate::support::editor_from_document(document);
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 256.,
+        height: 256.,
+        scale_factor: 1.,
+    });
+    let document = editor.active_id().unwrap();
+    editor.set_animation_preview_mode(document, AnimationPreviewMode::Result)?;
+    let selection = editor
+        .document()
+        .unwrap()
+        .motion_resources()
+        .iter()
+        .find(|r| r.name == "Once" && r.fade_in == 1.)
+        .unwrap()
+        .selection
+        .clone();
+    editor.select_motion(document, selection)?;
+    let expression = editor.document().unwrap().expression_resources()[0]
+        .id
+        .clone();
+    editor.select_expression(document, expression)?;
+    let panel = bind(&mut editor);
+    editor.set_timeline_loop_range(panel, 0.25, 0.75)?;
+    let mut evaluator = AnimationEvaluator::default();
+    editor.toggle_animation()?;
+    let first = evaluate(&mut editor, &mut evaluator)?;
+    assert!(editor.present_animation(first.identity, first.snapshot));
+    editor.advance_animation_clock_precise(0.4375);
+    let end = evaluate(&mut editor, &mut evaluator)?;
+    assert!(editor.present_animation(end.identity, end.snapshot));
+    editor.advance_animation_clock_precise(2.125);
+    let wrapped = evaluate(&mut editor, &mut evaluator)?;
+    assert_eq!(
+        wrapped.identity.range_progress.unwrap(),
+        AnimationRangeProgress {
+            cycle: 4,
+            local: 0.375
+        }
+    );
+    assert!(editor.present_animation(wrapped.identity, wrapped.snapshot.clone()));
+    editor.seek_timeline(document, 0.375)?;
+    let direct = evaluate(&mut editor, &mut AnimationEvaluator::default())?;
+    assert!(!direct.snapshot.physics.is_empty());
+    assert_eq!(wrapped.snapshot.parameters, direct.snapshot.parameters);
+    assert_eq!(wrapped.snapshot.physics, direct.snapshot.physics);
+    assert_eq!(
+        wrapped.snapshot.model_opacity,
+        direct.snapshot.model_opacity
+    );
+    assert_eq!(wrapped.scene.viewport_frame, direct.scene.viewport_frame);
+    Ok(())
+}
+
+#[test]
+fn range_playback_clips_bounds_on_duration_changes_and_clears_empty_intersections()
+-> anyhow::Result<()> {
+    let (mut editor, _temp) = fixture(false, false)?;
+    editor.create_timeline_motion(editor.active_id().unwrap())?;
+    let binding = bind(&mut editor);
+    editor.update_timeline_view(binding.document, |view| view.snap = false)?;
+    editor.set_timeline_loop_range(binding, 1.25, 1.9)?;
+    editor.enable_timeline_loop_range(binding, false)?;
+    editor.execute_timeline(binding.document, TimelineCommand::ScaleTime(1.5))?;
+    assert_eq!(
+        editor.timeline_view().unwrap().loop_range(),
+        Some(TimelineLoopRange {
+            start: 1.25,
+            end: 1.5,
+            enabled: false,
+        })
+    );
+    editor.execute_timeline(binding.document, TimelineCommand::ScaleTime(1.25))?;
+    assert!(editor.timeline_view().unwrap().loop_range().is_none());
+    Ok(())
+}

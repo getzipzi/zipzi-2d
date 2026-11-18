@@ -11,6 +11,7 @@ pub(crate) use hints::{TimelineCaptureKind, TimelineHints};
 mod lifecycle;
 mod loop_range;
 mod playback_speed;
+mod retiming;
 mod values;
 use lifecycle::Target;
 pub(crate) use lifecycle::TimelineOperation;
@@ -63,6 +64,7 @@ pub struct Timeline {
     graph: Rc<Cell<Bounds<Pixels>>>,
     ruler: Rc<Cell<Bounds<Pixels>>>,
     loop_range: loop_range::Controls,
+    retime: retiming::Controls,
     body_height: f32,
     gesture: Option<input::Gesture>,
     seek: seek::SeekInput,
@@ -92,7 +94,8 @@ impl Timeline {
                 let kind = match gesture {
                     input::Gesture::Pan { .. } => TimelineCaptureKind::Pan,
                     input::Gesture::Seek(_) => TimelineCaptureKind::Seek,
-                    input::Gesture::LoopRange(_) => TimelineCaptureKind::Seek,
+                    input::Gesture::LoopRange(_) => TimelineCaptureKind::LoopRange,
+                    input::Gesture::Retime(_) => TimelineCaptureKind::Retime,
                     input::Gesture::Marquee { .. } => TimelineCaptureKind::Marquee,
                     input::Gesture::Keys { .. } => TimelineCaptureKind::Keys,
                     input::Gesture::Handle { .. } => TimelineCaptureKind::Handle,
@@ -218,6 +221,7 @@ impl Timeline {
                 graph: Rc::new(Cell::new(Bounds::default())),
                 ruler: Rc::new(Cell::new(Bounds::default())),
                 loop_range: Default::default(),
+                retime: Default::default(),
                 body_height: 180.,
                 gesture: None,
                 seek: Default::default(),

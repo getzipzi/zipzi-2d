@@ -159,6 +159,7 @@ impl Timeline {
             } else {
                 self.curve_popover = None;
                 self.loop_range.reset();
+                self.retime = Default::default();
                 self.fields.clear();
                 self.range_key = None;
                 self.error = None;
@@ -260,6 +261,7 @@ impl Timeline {
 
     pub(crate) fn deactivate(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.curve_popover = None;
+        self.loop_range.reset();
         let cancellation = self.cancel_local(window, cx);
         if !matches!(
             cancellation.0,

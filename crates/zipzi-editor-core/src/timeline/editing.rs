@@ -71,6 +71,12 @@ pub enum TimelineCommand {
         value: String,
     },
     ScaleTime(f64),
+    RetimeSelection {
+        keys: Vec<TimelineKeyRef>,
+        events: Vec<String>,
+        fixed_end: MotionRetimeFixedEnd,
+        moving_time: f64,
+    },
     Timing {
         duration: f32,
         fps: f32,
@@ -104,6 +110,12 @@ impl TimelineCommand {
             Self::Handle { end, handle, .. } => format!("handle:{end:?}:{handle:?}"),
             Self::Event { id, .. } => format!("event:{id:?}"),
             Self::ScaleTime(_) => "scale".into(),
+            Self::RetimeSelection {
+                keys,
+                events,
+                fixed_end,
+                ..
+            } => format!("retime:{keys:?}:{events:?}:{fixed_end:?}"),
             Self::Timing { .. } => "timing".into(),
         }
     }
@@ -371,6 +383,9 @@ impl TimelineEdit {
                 curves.push(MotionCurveEdit::ScaleTime {
                     duration: *duration as f32,
                 });
+            }
+            TimelineCommand::RetimeSelection { .. } => {
+                unreachable!("retiming uses the Draft baseline")
             }
             TimelineCommand::Timing {
                 duration,
@@ -855,15 +870,33 @@ impl Editor {
                 .is_none_or(|expected| expected == &target),
             "Gesture target changed"
         );
-        let (clip, curves) = edit.prepare(&command, snap)?;
-        let clip_id = clip.id.clone();
-        edit.draft.preview(|commands| {
-            commands.replace_motion(clip)?;
-            for curve in curves {
-                commands.edit_motion_curve(&clip_id, curve)?;
-            }
-            Ok(())
-        })?;
+        let clip_id = edit.original_candidate.id.clone();
+        if let TimelineCommand::RetimeSelection {
+            keys,
+            events,
+            fixed_end,
+            moving_time,
+        } = &command
+        {
+            let curve = edit.original_projection.retime_command(
+                keys,
+                events,
+                *fixed_end,
+                *moving_time,
+                snap,
+            )?;
+            edit.draft
+                .preview_from_baseline(|commands| commands.edit_motion_curve(&clip_id, curve))?;
+        } else {
+            let (clip, curves) = edit.prepare(&command, snap)?;
+            edit.draft.preview(|commands| {
+                commands.replace_motion(clip)?;
+                for curve in curves {
+                    commands.edit_motion_curve(&clip_id, curve)?;
+                }
+                Ok(())
+            })?;
+        }
         let snapshot = edit.draft.read_snapshot()?;
         let candidate = snapshot
             .snapshot

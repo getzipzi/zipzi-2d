@@ -9,6 +9,7 @@ pub(super) enum Gesture {
     },
     Seek(zipzi_editor_core::TimelineScrubToken),
     LoopRange(super::loop_range::Drag),
+    Retime(super::retiming::Drag),
     Marquee {
         origin: Point<f32>,
         current: Point<f32>,
@@ -54,6 +55,7 @@ impl Gesture {
             Self::Keys { token, .. } | Self::Handle { token, .. } | Self::Event { token, .. } => {
                 Some(*token)
             }
+            Self::Retime(drag) => Some(drag.token),
             _ => None,
         }
     }
@@ -63,7 +65,7 @@ impl Timeline {
         let local = position - self.graph.get().origin;
         point(local.x.as_f32(), local.y.as_f32())
     }
-    fn begin(&mut self, cx: &mut Context<Self>) -> Option<TimelineCandidateIdentity> {
+    pub(super) fn begin(&mut self, cx: &mut Context<Self>) -> Option<TimelineCandidateIdentity> {
         let target = self.target(cx)?;
         let result = self
             .owner
@@ -91,15 +93,16 @@ impl Timeline {
         token: TimelineCandidateIdentity,
         command: TimelineCommand,
         cx: &mut Context<Self>,
-    ) {
+    ) -> bool {
         let Some(target) = self.target(cx) else {
-            return;
+            return false;
         };
+        let retime = matches!(command, TimelineCommand::RetimeSelection { .. });
         let result = self
             .owner
             .update(cx, |owner, cx| {
                 if !owner.editor.timeline_edit_owned(target.binding, token) {
-                    return Ok(token);
+                    anyhow::bail!("Timeline gesture changed");
                 }
                 let result = owner
                     .editor
@@ -109,8 +112,16 @@ impl Timeline {
                 result
             })
             .ok();
-        self.error = result.and_then(Result::err).map(|error| error.to_string());
+        let valid = matches!(result, Some(Ok(_)));
+        self.error = result.and_then(Result::err).map(|error| {
+            if retime {
+                super::retiming::retime_error(&error)
+            } else {
+                error.to_string()
+            }
+        });
         cx.notify();
+        valid
     }
     pub(super) fn start_graph(
         &mut self,
@@ -356,6 +367,11 @@ impl Timeline {
             cx.stop_propagation();
             return;
         }
+        if matches!(self.gesture, Some(Gesture::Retime(_))) {
+            self.move_retime(event.position, cx);
+            cx.stop_propagation();
+            return;
+        }
         let local = self.local(event.position);
         let Some(owner) = self.owner.upgrade() else {
             return;
@@ -396,7 +412,9 @@ impl Timeline {
                 }
         };
         let command = match self.gesture.as_mut().unwrap() {
-            Gesture::Pan { .. } | Gesture::Seek(_) | Gesture::LoopRange(_) => unreachable!(),
+            Gesture::Pan { .. } | Gesture::Seek(_) | Gesture::LoopRange(_) | Gesture::Retime(_) => {
+                unreachable!()
+            }
             Gesture::Marquee {
                 origin,
                 current,
@@ -537,7 +555,20 @@ impl Timeline {
             }
             return;
         }
+        if self
+            .gesture
+            .as_ref()
+            .is_some_and(|gesture| gesture.button() != event.button)
+        {
+            return;
+        }
         if let Some(gesture) = self.gesture.take() {
+            if let Gesture::Retime(drag) = gesture {
+                self.finish_retime(drag, event.position, cx);
+                self.sync_status_bar(cx);
+                cx.stop_propagation();
+                return;
+            }
             if let Gesture::LoopRange(drag) = gesture {
                 self.finish_loop_range(drag, event.position, cx);
                 self.sync_status_bar(cx);

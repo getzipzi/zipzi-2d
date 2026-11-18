@@ -89,6 +89,13 @@ impl Timeline {
                 self.loop_range.open,
                 allowed && owner.read(cx).editor.timeline_projection().is_some(),
             ),
+            (
+                "timeline-retime",
+                IconName::ArrowLeftRight,
+                t!("timeline.retime").into_owned(),
+                self.retime.open,
+                allowed && owner.read(cx).editor.timeline_projection().is_some(),
+            ),
         ];
         for (id, _, _, _, enabled) in &mut actions {
             if let Some(command) = tool_command(id) {
@@ -142,7 +149,10 @@ impl Timeline {
             .on_click(cx.listener(move |this, _, window, cx| this.activate_tool(id, window, cx)));
             if id == "timeline-view" {
                 curve_button = Some(button);
-            } else if matches!(id, "timeline-snap" | "timeline-add-event") {
+            } else if matches!(
+                id,
+                "timeline-snap" | "timeline-add-event" | "timeline-retime"
+            ) {
                 edit_buttons.push(button);
             } else {
                 view_buttons.push(button);
@@ -306,6 +316,7 @@ impl Timeline {
         }
         match id {
             "timeline-loop-range" => self.toggle_loop_controls(cx),
+            "timeline-retime" => self.toggle_retime_controls(cx),
             "loop" | "preview" => {
                 _ = self.owner.update(cx, |owner, cx| {
                     let Some(document) = owner.editor.active_id() else {

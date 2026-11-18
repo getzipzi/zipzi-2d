@@ -6,4 +6,5 @@ mod curve_authoring;
 mod navigation_scrub;
 mod playback_clipboard;
 mod range_playback;
+mod retiming;
 mod runtime_isolation;

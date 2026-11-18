@@ -13,6 +13,8 @@ mod clipboard;
 pub use clipboard::TimelinePasteTarget;
 mod loop_range;
 pub use loop_range::*;
+mod retiming;
+pub use retiming::*;
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;

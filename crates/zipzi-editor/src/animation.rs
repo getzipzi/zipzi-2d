@@ -353,17 +353,26 @@ impl EditorView {
     }
 
     pub(crate) fn settle_animation_clock(&mut self) {
+        self.settle_animation_clock_at(Instant::now());
+    }
+
+    pub(crate) fn settle_animation_clock_at(&mut self, now: Instant) {
         let Some((anchor, time)) = self.animation_anchor else {
             return;
         };
+        let elapsed = now.duration_since(anchor);
         let speed = if self.editor.cursor_physics_active() {
             1.
         } else {
             self.editor.animation().unwrap().playback_speed
         };
-        self.editor.advance_animation_clock_precise(
-            time + anchor.elapsed().as_secs_f64() * f64::from(speed),
-        );
+        if self.editor.animation().unwrap().is_range_playing() {
+            self.editor
+                .advance_animation_clock_precise(time + elapsed.as_secs_f64() * f64::from(speed));
+        } else {
+            self.editor
+                .advance_animation_clock(time as f32 + elapsed.as_secs_f32() * speed);
+        }
     }
 }
 

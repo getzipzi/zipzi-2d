@@ -662,6 +662,17 @@ impl HostedDraft {
             })
         })?)
     }
+    pub(crate) fn preview_from_baseline<T>(
+        &mut self,
+        run: impl FnOnce(&mut Commands<'_>) -> Result<T, Status>,
+    ) -> zipzi_runtime::Result<T> {
+        let (source, value) =
+            self.host
+                .write()
+                .preview_from_baseline(self.client, self.source, run)?;
+        self.source = source;
+        Ok(value)
+    }
     fn preview_manual<T>(
         &mut self,
         use_baseline: bool,
@@ -670,12 +681,7 @@ impl HostedDraft {
         if !use_baseline {
             return self.preview(run);
         }
-        let (source, value) =
-            self.host
-                .write()
-                .preview_from_baseline(self.client, self.source, run)?;
-        self.source = source;
-        Ok(value)
+        self.preview_from_baseline(run)
     }
     pub(crate) fn apply_manual_mesh_batch(
         &mut self,

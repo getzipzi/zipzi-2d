@@ -11,6 +11,7 @@ mod navigation_and_dock;
 pub(super) mod number_probe;
 mod parity_and_persistence;
 mod performance;
+mod range_and_retiming;
 mod variants;
 
 pub(crate) use common::*;
@@ -20,6 +21,7 @@ pub(super) fn run() -> anyhow::Result<()> {
         std::env::var_os("ZIPZI_DEV_SESSION_DIR").is_none(),
         "unset ZIPZI_DEV_SESSION_DIR"
     );
+    range_and_retiming::run()?;
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
     let sources = super::assets::available(
         std::env::var_os("ZIPZI_TIMELINE_MODEL").map(|path| vec![PathBuf::from(path)]),

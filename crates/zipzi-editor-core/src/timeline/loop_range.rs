@@ -60,16 +60,18 @@ impl Editor {
     ) -> Result<TimelineLoopRange> {
         let view = self.timeline_loop_target(binding)?;
         let projection = self.timeline_projection().unwrap();
-        ensure!(
-            start.is_finite()
-                && end.is_finite()
-                && start >= 0.
-                && (end <= projection.duration || end as f32 == projection.duration as f32),
-            TimelineLoopRangeError::Outside
-        );
+        for time in [start, end] {
+            ensure!(
+                time.is_finite() && time >= 0. && time as f32 <= projection.duration as f32,
+                TimelineLoopRangeError::Outside
+            );
+        }
         let previous = view.loop_range;
         let endpoint = |time: f64, old: Option<f64>| {
-            if !view.snap || old == Some(time) || time == projection.duration || !time.is_finite() {
+            if time >= projection.duration {
+                return projection.duration;
+            }
+            if !view.snap || old == Some(time) {
                 return time;
             }
             let fps = f64::from(projection.fps);

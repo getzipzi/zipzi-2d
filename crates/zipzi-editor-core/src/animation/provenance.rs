@@ -219,8 +219,11 @@ impl Editor {
                 .animation()
                 .is_some_and(|a| a.candidate == identity.candidate)
         {
-            self.pause_animation();
+            if identity.range_progress.is_some() {
+                self.pause_animation();
+            }
             let animation = &mut self.active_session_mut().unwrap().animation.playback;
+            animation.playing = false;
             animation.error = Some(error);
         }
     }

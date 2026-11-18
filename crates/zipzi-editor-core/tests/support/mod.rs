@@ -881,3 +881,108 @@ pub fn transfer_fixture(
         protected_paths,
     )
 }
+
+/// Three channels and a cue with frame-aligned timing. The first channel also
+/// drives the fixture's mesh, physics and expressions for preview comparisons.
+#[allow(dead_code)]
+pub fn retiming_document() -> anyhow::Result<(Document, TempDir)> {
+    use std::sync::Arc;
+    use zipzi_core::document::{
+        MotionClip, MotionEvent, MotionKey, MotionPoint, MotionSegment, MotionTrack,
+        MotionTrackTarget,
+    };
+    let (mut document, assets) = combined_animation_document()?;
+    let path = document.save(&assets.path().join("retiming.zipzi"))?.path;
+    let mut session = open_fixture(&path)?;
+    let parameter = session.snapshot().document().parameter_order()[0].clone();
+    let mut parameters = vec![parameter];
+    let id = || Uuid::new_v4().to_string();
+    publish_fixture(&mut session, "Retime fixture", |edit| {
+        for name in ["Eyes", "Body"] {
+            let parameter = id();
+            insert_fixture_parameter(
+                edit,
+                zipzi_core::Parameter {
+                    id: parameter.clone(),
+                    runtime_id: format!("Param{name}"),
+                    name: name.into(),
+                    minimum: -1.,
+                    maximum: 1.,
+                    ..Default::default()
+                },
+            )?;
+            parameters.push(parameter);
+        }
+        let tracks = parameters
+            .into_iter()
+            .enumerate()
+            .map(|(index, parameter_id)| {
+                let key = |frame: f32, value| MotionKey {
+                    id: id(),
+                    time: frame / 30.,
+                    value,
+                };
+                let mut first = MotionSegment::new(
+                    key(30., 0.5),
+                    if index == 0 {
+                        MotionCurve::Bezier {
+                            control1: MotionPoint {
+                                time: 26. / 30.,
+                                value: 0.1,
+                            },
+                            control2: MotionPoint {
+                                time: 28. / 30.,
+                                value: 0.4,
+                            },
+                            preset: None,
+                        }
+                    } else {
+                        MotionCurve::AutoSmooth {}
+                    },
+                );
+                if index == 1 {
+                    first.frame_step =
+                        zipzi_core::document::MotionFrameStep::EveryFrames { frames: 3 };
+                }
+                MotionTrack {
+                    id: id(),
+                    target: MotionTrackTarget::Parameter { parameter_id },
+                    initial: key(24., 0.),
+                    segments: Arc::new(vec![
+                        first,
+                        MotionSegment::new(key(36., 0.9), MotionCurve::AutoSmooth {}),
+                        MotionSegment::new(key(40., 1.), MotionCurve::Linear {}),
+                    ]),
+                    fade_in: None,
+                    fade_out: None,
+                    extensions: Default::default(),
+                }
+            })
+            .collect();
+        edit.create_motion(MotionClip {
+            id: id(),
+            name: "Retime".into(),
+            duration: 2.,
+            fps: 30.,
+            looping: true,
+            restricted_beziers: false,
+            fade_in: Some(0.5),
+            fade_out: Some(0.5),
+            track_order: vec![],
+            tracks,
+            events: vec![MotionEvent {
+                id: id(),
+                time: 33. / 30.,
+                value: "cue".into(),
+                extensions: Default::default(),
+            }]
+            .into(),
+            extensions: Default::default(),
+            meta_extensions: Default::default(),
+            opaque_source_ids: None,
+            opaque_source_content_hash: None,
+        })
+    })?;
+    save_fixture(&mut session, &path)?;
+    Ok((Document::open(&path)?, assets))
+}

@@ -223,9 +223,15 @@ impl Timeline {
 
     fn pause_for_loop_range(&self, cx: &mut Context<Self>) {
         let _ = self.owner.update(cx, |owner, cx| {
-            owner.editor.pause_animation();
-            owner.animation_anchor = None;
-            owner.redraw(cx);
+            if owner
+                .editor
+                .animation()
+                .is_some_and(|animation| animation.playing)
+            {
+                owner.editor.pause_animation();
+                owner.animation_anchor = None;
+                owner.redraw(cx);
+            }
         });
     }
 
@@ -300,7 +306,12 @@ impl Timeline {
         matches!(changed, Ok(Ok(())))
     }
 
-    pub(super) fn apply_loop_input(&mut self, index: usize, cx: &mut Context<Self>) {
+    pub(super) fn apply_loop_input(
+        &mut self,
+        index: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let Some(fields) = &self.loop_range.fields else {
             return;
         };
@@ -327,9 +338,21 @@ impl Timeline {
         } else {
             (current.map_or(0., |range| range.start), time)
         };
-        self.apply_loop_control(cx, move |editor, binding| {
+        if self.apply_loop_control(cx, move |editor, binding| {
             editor.set_timeline_loop_range(binding, start, end)
-        });
+        }) {
+            let range = owner
+                .read(cx)
+                .editor
+                .timeline_view()
+                .and_then(TimelineViewState::loop_range);
+            if let (Some(range), Some(fields)) = (range, self.loop_range.fields.as_mut()) {
+                let time = if index == 0 { range.start } else { range.end };
+                let value = axis::number(time * divisor);
+                fields.displayed[index] = value.clone();
+                fields.inputs[index].update(cx, |input, cx| input.set_value(value, window, cx));
+            }
+        }
     }
 
     pub(super) fn focused_loop_input(&self, window: &Window, cx: &App) -> Option<usize> {
@@ -407,8 +430,13 @@ impl Timeline {
                             }
                             match event {
                                 InputEvent::Focus => this.pause_for_loop_range(cx),
+                                InputEvent::Change
+                                    if source.read(cx).focus_handle(cx).is_focused(window) =>
+                                {
+                                    this.pause_for_loop_range(cx);
+                                }
                                 InputEvent::Blur | InputEvent::PressEnter { .. } => {
-                                    this.apply_loop_input(index, cx)
+                                    this.apply_loop_input(index, window, cx)
                                 }
                                 _ => {}
                             }
@@ -475,6 +503,11 @@ impl Timeline {
                         }
                     })),
             );
+        let units = t!(if self.seconds {
+            "timeline.seconds_label"
+        } else {
+            "timeline.frames_label"
+        });
         for (index, (id, label)) in [
             ("timeline-loop-start", t!("timeline.loop_start")),
             ("timeline-loop-end", t!("timeline.loop_end")),
@@ -482,11 +515,6 @@ impl Timeline {
         .into_iter()
         .enumerate()
         {
-            let units = t!(if self.seconds {
-                "timeline.seconds_label"
-            } else {
-                "timeline.frames_label"
-            });
             row = row.child(
                 div()
                     .flex()
@@ -502,6 +530,7 @@ impl Timeline {
                     ),
             );
         }
+        row = row.child(div().text_color(cx.theme().muted_foreground).child(units));
         if let Some(error) = &self.loop_range.error {
             row = row.child(
                 div()

@@ -9,13 +9,14 @@ use crate::ui::slide_number_input::{
 pub(super) enum Field {
     RowValue(TimelineRowId),
     FrameStep,
+    RetimeDuration,
 }
 impl Field {
     fn label(&self) -> String {
-        t!(if matches!(self, Self::FrameStep) {
-            "timeline.frame_step_n"
-        } else {
-            "timeline.value"
+        t!(match self {
+            Self::FrameStep => "timeline.frame_step_n",
+            Self::RetimeDuration => "timeline.retime_target",
+            _ => "timeline.value",
         })
         .into_owned()
     }
@@ -23,6 +24,7 @@ impl Field {
         match self {
             Self::RowValue(_) => format_one_decimal,
             Self::FrameStep => |value| format!("{value:.0}"),
+            Self::RetimeDuration => axis::number,
         }
     }
     fn number_options(
@@ -49,7 +51,7 @@ impl Field {
     pub(super) fn exists(&self, projection: &TimelineProjection) -> bool {
         match self {
             Self::RowValue(id) => projection.rows.iter().any(|row| &row.id == id),
-            Self::FrameStep => true,
+            Self::FrameStep | Self::RetimeDuration => true,
         }
     }
 }

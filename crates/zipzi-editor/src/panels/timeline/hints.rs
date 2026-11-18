@@ -48,8 +48,10 @@ impl TimelineHints {
 pub(crate) enum TimelineCaptureKind {
     Pan,
     Seek,
+    LoopRange,
     Marquee,
     Keys,
+    Retime,
     Handle,
     Event,
     Number,
@@ -64,8 +66,10 @@ impl TimelineCaptureKind {
         match self {
             Self::Pan => &[Drag(Pan)],
             Self::Seek => &[Drag(ScrubTime), Escape(CommandId::CancelGesture)],
+            Self::LoopRange => &[Drag(SetLoopRange), Escape(CommandId::CancelGesture)],
             Self::Marquee => &[Drag(BoxSelect), Escape(CommandId::CancelGesture)],
             Self::Keys => &[Drag(MoveKeys), Escape(CommandId::CancelGesture)],
+            Self::Retime => &[Drag(RetimeSelection), Escape(CommandId::CancelGesture)],
             Self::Handle => &[Drag(AdjustCurve), Escape(CommandId::CancelGesture)],
             Self::Event => &[Drag(MoveEvent), Escape(CommandId::CancelGesture)],
             Self::Number => &[Drag(Value), Escape(CommandId::CancelGesture)],

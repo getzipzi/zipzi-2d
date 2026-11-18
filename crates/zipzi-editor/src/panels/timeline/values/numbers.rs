@@ -30,6 +30,15 @@ impl Timeline {
         let state = view.editor.timeline_view()?;
         let time = view.editor.animation()?.edit_time as f64;
         match field {
+            Field::RetimeDuration => {
+                let selection = self.retime_baseline(cx)?;
+                let fixed_end = self.retime_fixed_end();
+                let moving = match fixed_end {
+                    zipzi_editor_core::MotionRetimeFixedEnd::Earliest => selection.last,
+                    zipzi_editor_core::MotionRetimeFixedEnd::Latest => selection.first,
+                };
+                Some(selection.command(fixed_end, moving))
+            }
             Field::FrameStep => {
                 let settings = projection.curve_settings(&state.keys, !state.events.is_empty());
                 settings.enabled().then_some(TimelineCommand::FrameStep {
@@ -238,6 +247,16 @@ impl Timeline {
         sliding: bool,
         cx: &mut Context<Self>,
     ) {
+        let retime_input = if field == Field::RetimeDuration {
+            self.retime_baseline(cx).and_then(|selection| {
+                let owner = self.owner.upgrade()?;
+                let fps = owner.read(cx).editor.timeline_projection()?.fps;
+                let scale = if self.seconds { 1. } else { f64::from(fps) };
+                Some((selection, scale))
+            })
+        } else {
+            None
+        };
         let numeric = match value.parse::<f64>() {
             Ok(value)
                 if value.is_finite()
@@ -298,6 +317,28 @@ impl Timeline {
         if let TimelineCommand::FrameStep { frame_step, .. } = &mut command {
             *frame_step =
                 zipzi_contract::motion_curve::MotionFrameStep::from_frames(numeric as u32).unwrap();
+        }
+        if let TimelineCommand::RetimeSelection {
+            fixed_end,
+            moving_time,
+            ..
+        } = &mut command
+        {
+            let Some((selection, scale)) = retime_input else {
+                return;
+            };
+            if numeric as f32 == (selection.duration() * scale) as f32 {
+                *moving_time = match fixed_end {
+                    zipzi_editor_core::MotionRetimeFixedEnd::Earliest => selection.last,
+                    zipzi_editor_core::MotionRetimeFixedEnd::Latest => selection.first,
+                };
+            } else {
+                let duration = numeric / scale;
+                *moving_time = match fixed_end {
+                    zipzi_editor_core::MotionRetimeFixedEnd::Earliest => selection.first + duration,
+                    zipzi_editor_core::MotionRetimeFixedEnd::Latest => selection.last - duration,
+                };
+            }
         }
         let token = edit.token;
         self.update_candidate(token, command, cx);
