@@ -18,8 +18,9 @@
 - [zipzi-python P3A refactor](archive/plans/python-sdk-rewrite/p3a-api-agent-contract.md): final API, generation boundaries, agent documentation and acceptance gates
 - [Runtime R5 / Python P5 animation authoring](archive/plans/sdk-runtime/python2-r5-authoring.md): typed edits, records, SDK plans and addresses; Preview, spatial/GPU observation, fair scheduling and Editor playback isolation are delivered; [R7 acceptance](archive/plans/sdk-runtime/python2-r7-closeout.md) records final workflows, distribution and performance
 - [Editor application](../crates/zipzi-editor/README.md), [editing core](../crates/zipzi-editor-core/README.md) and [render adapter](../crates/zipzi-editor-render/README.md)
-- [Editor Glue 工具实施方案](plans/editor-glue-tool.md): 连接点／权重连续编辑、原子补点绑定及接缝属性；核心、macOS UI 与原生 Metal 截图已验收
+- [Editor Glue 工具实施方案](archive/plans/editor-glue-tool.md): 连接点／权重连续编辑、原子补点绑定及接缝属性；核心、macOS UI 与原生 Metal 截图已验收
 - [动画曲线配置与帧步进方案](plans/animation-curve-authoring.md): 已实现时间线配置入口、五种插值、Bezier 缓动预设、区间级 Frame Step、持久化与 motion3／CAN3 导出验收
+- [时间轴区间循环预览与局部时间伸缩实施方案](plans/timeline-range-loop-and-retiming.md)记录初始设计、实际交付的标尺操作、多轨伸缩算法和验收场景。
 - [`.zipzi` 原生工程格式设计](plans/native-project-format.md): 单文件容器、原子保存、资源工作集、SDK 生命周期与跨平台文件打开；设计提案，尚未实现
 - [Authoring 新内核重写方案](archive/plans/authoring-architecture.md)涵盖所有权、任务协议、API 与旧实现删除清单。[各阶段实施记录](archive/plans/authoring-architecture.md#实施记录)包含验证范围和提交，[阶段 6 对照实验](archive/plans/authoring-architecture/phase-6.md)记录优化基线。
 - [Warp Deformer 交互与属性面板方案](archive/plans/warp-deformer-interaction.md): 画布变换、Warp／Rotation 属性透出、Bezier 整形、子对象保形编辑与原始形状恢复
@@ -33,8 +34,8 @@
 - [Windows 原生 D3D11 验证记录](archive/benchmarks/2026-11-10-windows-d3d11.md): 与 wgpu/DX12 的窗口对照、显存、像素一致性和 SDK 捕获
 - [Mesh 拖动求值和提交开销](archive/benchmarks/2026-11-10-control-drag-costs.md): keyform 候选校验与松手索引复用的独立对照
 - [Windows 视口预览交付实验](archive/benchmarks/2026-11-10-windows-preview-delivery.md): 绘制前取用后台结果与 UI 线程记录方案的对照
-- [Editor 密集输入调度架构](plans/dense-input-scheduling.md)及[网格样板实验](archive/benchmarks/2026-11-10-mesh-dense-input.md): 语义归约、帧调度与同步边界，参数/时间轴接入、约束失败契约及改进策略对照
-- [密集输入两个方向的深入研究](plans/dense-input-two-directions.md): 候选与 scene 的实际成本边界、9 份历史 trace、严格帧限流的持续等待反例与原生验证顺序
+- [Editor 密集输入调度架构](archive/plans/dense-input-scheduling.md)及[网格样板实验](archive/benchmarks/2026-11-10-mesh-dense-input.md): 语义归约、帧调度与同步边界，参数/时间轴接入、约束失败契约及改进策略对照
+- [密集输入两个方向的深入研究](archive/plans/dense-input-two-directions.md): 候选与 scene 的实际成本边界、9 份历史 trace、严格帧限流的持续等待反例与原生验证顺序
 - [Current topic references](references/README.md) and [benchmark guides](../tools/benchmarks/README.md)
 - [Tooling tests](../tools/tests/README.md) and [shared fixtures](../fixtures/README.md)
 
