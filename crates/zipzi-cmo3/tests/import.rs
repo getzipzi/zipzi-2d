@@ -385,6 +385,8 @@ fn malformed_or_corrupt_archives_return_errors() {
 fn opacity_curve_roundtrip_preserves_initial_keys_and_bezier_controls() {
     let (mut source, _) = fixture();
     let mut clip = initial_scene(100, 60.);
+    // Arbitrary handle times are effective only in unrestricted curves.
+    clip.restricted_beziers = false;
     let track = &mut clip.tracks[0];
     track.target = MotionTrackTarget::Model {
         runtime_id: "Opacity".into(),

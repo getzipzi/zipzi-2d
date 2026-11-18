@@ -275,7 +275,9 @@ bakes Auto Smooth/Frame Step into motion3 Bezier/Step segments without editing
 the source. The export receipt's `notices` and `export-report.json`'s
 `motion_baking` contain the conversion summary. Oversized expansion is rejected
 before publication. Reimported motion3 retains numeric playback, while exact
-editing roundtrips use native files. CAN3 currently rejects interval Frame Step.
+editing roundtrips use native files. CAN3 preserves shared Frame Step schedules
+as native N and converts independent intervals to editable Step keys. Fractional
+origins use scene-FPS sampling, reported in the conversion diagnostics.
 
 A host with `gpu_observation` supports `session.observe(input, view)`. Its Blob is
 a sequence of packets: four-byte big-endian JSON-header length, that header,

@@ -53,15 +53,15 @@ impl Animation<'_> {
         self.graph.set(&r, value);
         r
     }
-    pub(super) fn frame_step(&mut self, ctx: &Context) -> N {
+    pub(super) fn frame_step(&mut self, ctx: &Context, keys: &[(i32, i32)]) -> N {
         let r = self.graph.reserve("CMvAttrI");
         let base = N::new("ACValueSequence")
-            .field("curMin", d(0))
-            .field("curMax", d(0))
+            .field("curMin", d(keys.iter().map(|k| k.1).min().unwrap_or(0)))
+            .field("curMax", d(keys.iter().map(|k| k.1).max().unwrap_or(0)))
             .field("posStart", i(0))
-            .field("keyPts2", N::array("int-array", [] as [i32; 0]))
-            .field("keyMin", i(i32::MAX))
-            .field("keyMax", i(i32::MIN))
+            .field("keyPts2", N::array("int-array", keys.iter().map(|k| k.0)))
+            .field("keyMin", i(keys.first().map_or(i32::MAX, |k| k.0)))
+            .field("keyMax", i(keys.last().map_or(i32::MIN, |k| k.0)))
             .field("lastValue", d("NaN"))
             .field("lastPos", i(-1))
             .field("attr", r.clone())
@@ -73,12 +73,24 @@ impl Animation<'_> {
             )
             .field(
                 "valueData",
-                N::new("CIntSequence")
-                    .field("super", base)
-                    .field("points", array("CSeqPt", [])),
+                N::new("CIntSequence").field("super", base).field(
+                    "points",
+                    array(
+                        "CSeqPt",
+                        keys.iter().map(|&(frame, frames)| {
+                            N::new("CSeqPt")
+                                .field("isCorner", b(false))
+                                .field("pos", i(frame))
+                                .field("doubleValue", d(frames))
+                        }),
+                    ),
+                ),
             )
             .field("rangeMin", i(0))
-            .field("rangeMax", i(100));
+            .field(
+                "rangeMax",
+                i(keys.iter().map(|k| k.1).max().unwrap_or(100).max(100)),
+            );
         self.graph.set(&r, value);
         r
     }

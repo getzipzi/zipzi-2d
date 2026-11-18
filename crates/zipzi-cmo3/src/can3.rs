@@ -3,6 +3,7 @@
 use zipzi_core::document::MotionCurve;
 mod attributes;
 mod bake;
+mod frame_step;
 mod grid;
 mod inverse;
 mod scene;
@@ -38,6 +39,8 @@ pub struct Can3Options {
     /// incompatible curves at the declared rate when no grid is inferred.
     /// Conversions are Info; unsupported features still obey loss_policy.
     /// Runtime expression operations are always preserved alongside scene poses.
+    /// Frame Step is always supported via a native schedule or Step conversion,
+    /// independently of this option.
     pub bake_animation: bool,
     /// Infer a common anchor grid per declared-FPS group before any fallback
     /// baking. Millisecond-rounded anchors may be restored within 0.5 ms.
@@ -268,6 +271,7 @@ struct Scene {
     fade_out: i32,
     tracks: Vec<Track>,
     events: BTreeMap<i32, String>,
+    frame_steps: Vec<(i32, i32)>,
 }
 fn keys(
     track: &MotionTrack,
@@ -307,10 +311,10 @@ fn keys(
                 let start_frame = f64::from(keys[index].frame);
                 let span = f64::from(keys[index + 1].frame) - start_frame;
                 let handle = |time: f32, fraction: f64| {
-                    if !inferred {
-                        f64::from(time) * f64::from(fps)
-                    } else if restricted {
+                    if restricted {
                         start_frame + span * fraction
+                    } else if !inferred {
+                        f64::from(time) * f64::from(fps)
                     } else {
                         start_frame
                             + span * (f64::from(time) - f64::from(start_time))
@@ -477,23 +481,6 @@ fn prepare(
     bake: bool,
     auto: bool,
 ) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error> {
-    if doc
-        .motion_order()
-        .iter()
-        .filter_map(|id| doc.motion(id))
-        .flat_map(|clip| clip.tracks.iter())
-        .flat_map(|track| track.segments.iter())
-        .any(|segment| {
-            matches!(
-                segment.frame_step,
-                zipzi_core::document::MotionFrameStep::EveryFrames { frames: 2.. }
-            )
-        })
-    {
-        return Err(Cmo3Error::InvalidDocument(
-            "CAN3 cannot preserve segment Frame Step; export motion3 for baked playback".into(),
-        ));
-    }
     let mut report = Cmo3Report::default();
     let canvas = crate::canvas::for_document(doc)?;
     if [canvas.width, canvas.height]
@@ -533,6 +520,10 @@ fn prepare(
     for clip in clips {
         let inferred = grids.contains_key(&clip.fps.to_bits());
         let fps = grids.get(&clip.fps.to_bits()).copied().unwrap_or(clip.fps);
+        let frame_steps = frame_step::native_schedule(clip, fps);
+        if !frame_steps.is_empty() {
+            bake::info(&mut report, &clip.id, "CAN3_NATIVE_FRAME_STEP", "Retained the shared interval frame grid as editable native Frame Step keys; numeric curve anchors and handles are retained");
+        }
         let id = &clip.id;
         let mut timing = Cmo3Report::default();
         let frames = grid::frame(clip.duration, fps, id, &mut timing, inferred)?;
@@ -580,6 +571,7 @@ fn prepare(
             fade_out: millis(clip.fade_out, id, &mut report)?.unwrap_or(-1),
             tracks: Vec::new(),
             events: BTreeMap::new(),
+            frame_steps,
         };
         if clip.has_extensions() {
             loss(
@@ -605,6 +597,7 @@ fn prepare(
                 continue;
             }
             if !bake
+                && !frame_step::enabled(track)
                 && track.segments.iter().enumerate().any(|(index, segment)| {
                     matches!(
                         segment,
@@ -648,7 +641,9 @@ fn prepare(
             }
             scene.tracks.push(Track {
                 target: track.target.clone(),
-                keys: if inferred && bake {
+                keys: if frame_step::enabled(track) && scene.frame_steps.is_empty() {
+                    frame_step::keys(track, clip, fps, inferred, &mut report, &mut sample_budget)?
+                } else if inferred && bake {
                     inverse::repair(
                         keys(track, fps, &mut report, true, clip.restricted_beziers)?,
                         &track.id,
@@ -707,6 +702,7 @@ fn prepare(
             fade_out: -1,
             tracks: Vec::new(),
             events: BTreeMap::new(),
+            frame_steps: Vec::new(),
         });
     }
     Ok((scenes, canvas, report))

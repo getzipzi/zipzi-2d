@@ -17,44 +17,8 @@ fn key(n: u32, time: f32, value: f32) -> MotionKey {
     }
 }
 
-#[test]
-fn frame_step_is_explicitly_unsupported_in_every_can3_export_path() {
-    let (doc, _) = fixture();
-    let mut clip = make_clip();
-    clip.tracks.push(MotionTrack {
-        id: uuid(10),
-        target: MotionTrackTarget::Parameter {
-            parameter_id: PARAM.into(),
-        },
-        initial: key(11, 0.0125, 0.),
-        segments: Arc::new(vec![MotionSegment {
-            end: key(12, 1., 1.),
-            curve: MotionCurve::AutoSmooth {},
-            frame_step: MotionFrameStep::EveryFrames { frames: 3 },
-        }]),
-        fade_in: None,
-        fade_out: None,
-        extensions: Default::default(),
-    });
-    let doc = prepare(&doc, |b| b.create_motion(clip));
-    for bake_animation in [false, true] {
-        for auto_frame_rate in [false, true] {
-            let error = encode_can3(
-                &doc,
-                &Can3Options {
-                    bake_animation,
-                    auto_frame_rate,
-                    loss_policy: LossPolicy::Allow,
-                    ..Default::default()
-                },
-            )
-            .unwrap_err();
-            assert!(error
-                .to_string()
-                .contains("cannot preserve segment Frame Step"));
-        }
-    }
-}
+#[path = "can3/frame_step.rs"]
+mod frame_step;
 
 #[test]
 fn automatic_time_grid_preserves_millisecond_rounded_beziers_at_sixty_fps() {
@@ -574,7 +538,9 @@ fn linked_animation_preserves_scenes_curves_ids_and_metadata() {
             .unwrap()
             .parse::<f64>()
             .unwrap()
-            - 8.25)
+            // Restricted curves evaluate with third-time controls, even when
+            // the source stores different time coordinates.
+            - 8.)
             .abs()
             < 0.00001
     );
@@ -584,7 +550,7 @@ fn linked_animation_preserves_scenes_curves_ids_and_metadata() {
             .unwrap()
             .parse::<f64>()
             .unwrap()
-            - 9.75)
+            - 10.)
             .abs()
             < 0.00001
     );

@@ -34,9 +34,9 @@
 - motion3 使用共享编译与采样，将 Auto Smooth 输出为数值 Bezier，将连续曲线的 Frame Step 输出为 Step；保留原始区间的子帧计步原点、实际 FPS 和事件时间。源范围裁剪先编译完整自动组，避免改变切线或重启计步。
 - 针对精确 outgoing Inverse Step、旧式非单调时间分支及循环额外尾帧，导出生成必要的浮点边界段；不改写原生关键帧。无法保真的非单调 Bezier 裁剪明确报错。
 - 展开前计算段数及工作区预算，包级合并预检先于模型编码，Runtime 将估算加入已有任务资源预留。默认上限为一百万输出段和 256 MiB 曲线工作区，超限不创建输出或入队任务。导出报告保存逐动作统计，回执提供一条汇总提示。
-- 原生 ZIP 保存重开验证模式、控制点、预设来源、N 和关键帧身份。motion3 重新导入仅保留目标格式中的基础段；CAN3 当前显式报告不支持区间 Frame Step，包括开启既有 CAN3 重采样选项的路径。
+- 原生 ZIP 保存重开验证模式、控制点、预设来源、N 和关键帧身份。motion3 重新导入仅保留目标格式中的基础段；CAN3 在第 3 阶段结束时仍拒绝区间 Frame Step；这一实现缺口已由下述 CAN3 补完修复。
 
-验证通过：Animation 12 项 `motion_authoring`、Project 14 项 `motion_tests`、11 项 `authoring_formats` 和 2 项源范围裁剪测试、CAN3 的各导出选项拒绝测试，以及 Runtime 的入队前预算拒绝和实际发布烘焙提示测试。数值对照覆盖 25 项预设、24／29.97／60 FPS、N=1／2／3／7／100／u32::MAX、负子帧起点、非整帧端点、混合反向阶梯和循环尾部。
+验证通过：Animation 12 项 `motion_authoring`、Project 14 项 `motion_tests`、11 项 `authoring_formats` 和 2 项源范围裁剪测试、当时的 CAN3 各导出选项拒绝测试（已由支持回归取代），以及 Runtime 的入队前预算拒绝和实际发布烘焙提示测试。数值对照覆盖 25 项预设、24／29.97／60 FPS、N=1／2／3／7／100／u32::MAX、负子帧起点、非整帧端点、混合反向阶梯和循环尾部。
 
 ### 第 4 阶段（2026-11-18）
 
@@ -53,9 +53,17 @@
 - Python 的 Local／Connected 门禁增加原生保存重开、Runtime 导出、烘焙报告和回执 notices 验证。使用说明已更新至 Editor README、Project README、SDK README 及随 Python 客户端安装的 guide。
 - 构建并实际启动 `target/debug/zipzi-editor`，使用独立 `curve-authoring` Runtime profile、配置和缓存加载原生测试工程；确认 OS 窗口存在，并从 Connected 客户端读取 Cubic Out／N=3、完成六点采样且源版本不变。该测试进程已关闭，未操作原有 Editor 进程。当前桌面有 Window Server Display Shield，OS 截图无法用于视觉检查；面板输入、焦点、菜单和窄面板的可发现性由生产组件的原生 Metal 场景完成，不能将本次结果描述为已验证 OS 层鼠标投递或合成器呈现。
 
-最终 focused gates 通过：42 项 SDK 曲线回归；Animation 的 12 项 authoring、2 项预设基准、4 项编辑预览、27 项预览和 5 项采样；Contract 全套；Project 的 14 项 motion 与 11 项 authoring formats；Runtime 的 2 项导出测试及 CAN3 显式拒绝测试；EditorCore 的既有 50 项时间线与 5 项曲线验收、61 项时间线／属性 UI；Python 的 54 项主门禁、native publication、14 项生成测试和 installed Connected 门禁。独立代码生成及工作区 domain 检查亦通过。
+最终 focused gates 通过：42 项 SDK 曲线回归；Animation 的 12 项 authoring、2 项预设基准、4 项编辑预览、27 项预览和 5 项采样；Contract 全套；Project 的 14 项 motion 与 11 项 authoring formats；Runtime 的 2 项导出测试及当时的 CAN3 拒绝测试（已由支持回归取代）；EditorCore 的既有 50 项时间线与 5 项曲线验收、61 项时间线／属性 UI；Python 的 54 项主门禁、native publication、14 项生成测试和 installed Connected 门禁。独立代码生成及工作区 domain 检查亦通过。
 
-原生截图复现使用上面的 `curve-authoring` 场景；本次产物位于 `target/curve-authoring-native/`，实际桌面宿主探针记录在 `target/curve-authoring-desktop/connected-probe.json`。这些是可重新生成的本地产物，不进入工程数据或 Git。motion3 保留播放效果，CAN3 对区间 Frame Step 的明确拒绝属于已记录的目标格式限制。
+原生截图复现使用上面的 `curve-authoring` 场景；本次产物位于 `target/curve-authoring-native/`，实际桌面宿主探针记录在 `target/curve-authoring-desktop/connected-probe.json`。这些是可重新生成的本地产物，不进入工程数据或 Git。motion3 保留播放效果。CAN3 的 Frame Step 拒绝是实现缺口，不能视为目标格式限制；修复与验证见下文。
+
+### CAN3 Frame Step 补完（2026-11-18）
+
+- 移除区间 Frame Step 的整批拒绝。所有动画通道共用可对齐的计步设置时，输出 Cubism 原生 Frame Step 属性，保留曲线、可编辑 N 和相同 N 关键帧处的重新计步。
+- 独立通道或混合 Off 设置只展开启用步进的区间为可编辑 Step 键，未步进的控制柄保留。非整帧起点或目标网格不兼容时，按实际场景 FPS 使用共享采样器保留逐帧效果，报告子帧／编辑表示的变化，不要求开启 `bake_animation`。
+- 导入读取模型及参数组的原生计步、空覆盖和继承。能对应区间语义时保留 N；原生跨键相位、区间内部计步键、N=0 冻结等情况转成逐帧等效 Step，避免重新计步改变动作。导入和导出均在展开前检查预算。
+- 覆盖 24／29.97／30／60 FPS、N=1／2／3／7／100／u32::MAX、Auto Smooth／Bezier／Linear／Step／Inverse Step、独立网格、混合 Off、子帧起点、推导 FPS、受限控制柄、源数据不变及超限拒绝。CAN3 回归 21 项、CMO3 单元 13 项、导入回归 11 项及 Project authoring formats 11 项通过。
+- 使用本机 Cubism Editor 5.3 的原生读取、求值、保存和重开验证原生 N／计步相位，以及独立通道展开后的数值。原生保存文件重新导入 Zipzi 后保留 N 与相位；探针产物位于 `target/can3-frame-step-native/` 和 `target/can3-frame-step-local/`，复现命令见 CMO3 README。
 
 ## 需求与范围
 

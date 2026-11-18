@@ -140,8 +140,11 @@ as preview. `preflight_motion3` / `preflight_motion_exports` bound segment growt
 and workspace before compilation. `export_motion3_with_summary` returns the
 actual lowering counts; package reports and publication notices expose them.
 Exports leave native authoring modes, preset sources and N intact. Reimported
-motion3 contains ordinary numeric curves. CAN3 explicitly rejects interval Frame
-Step, including when its existing animation resampling option is enabled.
+motion3 contains ordinary numeric curves. CAN3 preserves aligned, shared Frame
+Step schedules as native N; independent intervals become editable Step keys,
+with unstepped curves retained. Fractional origins use scene-FPS sampling with
+conversion diagnostics. Frame Step does not require the optional animation
+resampling flag.
 
 Key IDs are excluded from motion3 arrays and
 opaque-content fingerprints; reimporting a motion allocates fresh key identities.

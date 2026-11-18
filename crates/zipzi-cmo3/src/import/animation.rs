@@ -83,6 +83,7 @@ pub fn read_with_budget(
         .flat_map(|group| group.entries.iter().map(|entry| entry.clip_id.as_str()))
         .collect();
     let mut clips = Vec::new();
+    let mut step_budget = (workspace / 512).min(10_000_000);
     for scene in g.list(root, "_scenes")? {
         let info = g.req(scene, "movieInfo")?;
         let fps: f32 = g.number(info, "fps")?;
@@ -125,6 +126,9 @@ pub fn read_with_budget(
                     return Err(invalid("CAN3 form animation is not supported"));
                 }
             }
+            let step_settings = super::frame_step::Settings::read(&g, source)?;
+            other_animation |= step_settings.active();
+            let first_track = tracks.len();
             // Inspect all channels, including preview transforms not mapped to
             // runtime motion tracks. An animated layout is not an expression.
             for effect in [
@@ -272,6 +276,15 @@ pub fn read_with_budget(
                         extensions: Default::default(),
                     });
                 }
+            }
+            for track in &mut tracks[first_track..] {
+                step_settings.apply(
+                    track,
+                    document,
+                    fps,
+                    g.optional(info, "isBezierRestricted", false)?,
+                    &mut step_budget,
+                )?;
             }
         }
         let fade = |name| -> Result<Option<f32>> {

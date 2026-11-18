@@ -106,6 +106,7 @@ gets one empty scene linked to the model so animation can be authored later.
 | Part opacity tracks | Part visibility attributes linked by runtime ID and CMO3 GUID |
 | Model opacity | Visual effect opacity curve |
 | Linear, Bezier, stepped and inverse-stepped segments | Mutable sequences, editable anchors, handles and curve types |
+| Frame Step | Native model-wide N when all animated channels share an aligned schedule; otherwise independent editable Step keys |
 | Clip/track fade durations | Scene fades and attribute options in milliseconds |
 | Motion events | Model-track user data at frame indices |
 
@@ -116,6 +117,15 @@ explicitly enabled. Inverse-step boundaries and subframe interpolation can
 differ. Expressions are represented as scenes and standard exp3 companions;
 see [expression semantics](EXPRESSION-SEMANTICS.md) for preservation limits.
 Pose and other runtime sidecars use the runtime package exporter.
+
+Frame Step does not require `bake_animation`. Shared schedules preserve the
+numeric curves and editable N, including phase resets at consecutive keys with
+the same N. Independent schedules and mixed Off intervals convert only the
+stepped intervals; unstepped curves retain their anchors and handles. Fractional
+origins or incompatible grids use the shared sampler at the actual scene FPS,
+preserving displayed frames with a reported change to subframe interpolation.
+Expansion is checked before allocation: one million keys/samples per track and
+ten million across the export. Conversion diagnostics accompany the artifact.
 
 ## Native editable project import
 
@@ -132,6 +142,12 @@ not guaranteed for every Cubism version or feature. Source keys outside scene
 duration remain in editable exports; runtime package export splits curves at
 playback boundaries.
 
+CAN3 import reads model-wide and parameter-group Frame Step settings, including
+group inheritance and empty overrides. Compatible phases retain interval N;
+native phase changes inside a numeric interval, phase carried across ordinary
+keys, and N=0 freezes become ordinary Step spans at the scene FPS. Import checks
+the expansion and workspace budget before allocating those spans.
+
 ## Validation
 
 ```sh
@@ -141,6 +157,16 @@ cargo test --locked -p zipzi-project --test authoring_formats
 # Optional: validate with a local Cubism Editor installation.
 uv run --locked python tools/validation/check_cmo3.py \
   --editor '/Applications/Live2D Cubism 5.4 alpha' --check-textures /tmp/model.cmo3
+# Frame Step fixtures: generate, verify native N/phase and Step values, resave,
+# then check native-save reimport. Repeat the probe for can3-frame-step-local.
+cargo test --locked -p zipzi-cmo3 --test can3 frame_step::
+uv run --locked python tools/validation/check_cmo3.py \
+  --editor '/Applications/Live2D Cubism 5.3' \
+  --expected-animation target/can3-frame-step-native/expected.json \
+  --resave-animation target/can3-frame-step-native/native-resaved.can3 \
+  target/can3-frame-step-native/model.can3
+cargo test --locked -p zipzi-cmo3 --test can3 \
+  native_frame_step_reimport_after_cubism_resave_retains_n_and_phase -- --ignored
 ```
 
 The crate's fixtures use Builder/frozen model values. Import returns unresolved

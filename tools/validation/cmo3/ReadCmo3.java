@@ -239,9 +239,26 @@ public final class ReadCmo3 {
                 String id = (String)expected.get("attribute");
                 com.live2d.cubism.doc.animation.movie.effect.attr.CMvAttrF attr = attributes.get(id);
                 if (attr == null) throw new AssertionError("Missing channel: " + name + "/" + id);
+                if (expected.containsKey("native_step_counts")) {
+                    for (Object row : (java.util.List<?>)expected.get("native_step_counts")) {
+                        java.util.Map<?,?> check = (java.util.Map<?,?>)row;
+                        int frame = ((Number)check.get("frame")).intValue();
+                        double value = ((Number)check.get("value")).doubleValue();
+                        double actual = attr.getTrack().getVisualEffect().getAttrFrameStep().getDoubleValue(frame);
+                        if (actual != value) throw new AssertionError("Native Frame Step changed: " + name + " frame " + frame + ": " + actual + " != " + value);
+                    }
+                }
+                if (expected.containsKey("step_checks")) {
+                    for (Object row : (java.util.List<?>)expected.get("step_checks")) {
+                        java.util.Map<?,?> check = (java.util.Map<?,?>)row;
+                        double frame = ((Number)check.get("frame")).doubleValue();
+                        double stepped = ((Number)check.get("stepped")).doubleValue();
+                        if (attr.getSteppedFrame(frame) != stepped) throw new AssertionError("Native Frame Step phase changed: " + name + " frame " + frame);
+                    }
+                }
                 java.util.List<?> values = (java.util.List<?>)expected.get("values");
                 for (int frame = 0; frame < values.size(); frame++) {
-                    double actual = attr.getValueData().getDoubleValue(frame);
+                    double actual = attr.getValueData().getDoubleValue(attr.getSteppedFrame(frame));
                     double value = ((Number)values.get(frame)).doubleValue();
                     double error = Math.abs(actual - value);
                     maximumError = Math.max(maximumError, error);
@@ -259,7 +276,7 @@ public final class ReadCmo3 {
                         java.util.Map<?,?> row = (java.util.Map<?,?>)check;
                         double frame = ((Number)row.get("frame")).doubleValue();
                         double value = ((Number)row.get("value")).doubleValue();
-                        double actual = attr.getValueData().getDoubleValue(frame);
+                        double actual = attr.getValueData().getDoubleValue(attr.getSteppedFrame(frame));
                         double error = Math.abs(actual - value);
                         maximumError = Math.max(maximumError, error);
                         double[] geometry = exactSequenceValue(attr, frame);
@@ -322,6 +339,7 @@ public final class ReadCmo3 {
     // geometry tightly (1e-4), and bound native playback separately by 0.5% of
     // the local control-polygon value range. Linear/step curves stay at 1e-4.
     private static double[] exactSequenceValue(com.live2d.cubism.doc.animation.movie.effect.attr.CMvAttrF attr, double frame) {
+        frame = attr.getSteppedFrame(frame);
         if (!(attr.getValueData() instanceof com.live2d.cubism.doc.animation.movie.effect.attr.value.CMutableSequence)) {
             return new double[]{attr.getValueData().getDoubleValue(frame), 0};
         }

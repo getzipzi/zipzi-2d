@@ -42,11 +42,21 @@ pub(super) fn keys(
     report: &mut Cmo3Report,
     budget: &mut usize,
 ) -> Result<Vec<Key>, Cmo3Error> {
-    let fps = f64::from(clip.fps);
+    keys_at_fps(track, clip, clip.fps, report, budget)
+}
+
+pub(super) fn keys_at_fps(
+    track: &MotionTrack,
+    clip: &MotionClip,
+    scene_fps: f32,
+    report: &mut Cmo3Report,
+    budget: &mut usize,
+) -> Result<Vec<Key>, Cmo3Error> {
+    let fps = f64::from(scene_fps);
     let start = (f64::from(track.initial.time) * fps).floor();
     let end = (f64::from(track.keys().last().unwrap().time) * fps).ceil();
     // Bound work before allocating, including keys outside the scene range.
-    if start < f64::from(i32::MIN) || end > f64::from(i32::MAX) || end - start > 1_000_000. {
+    if start < f64::from(i32::MIN) || end > f64::from(i32::MAX) || end - start >= 1_000_000. {
         return Err(Cmo3Error::InvalidDocument(format!(
             "{}: CAN3 frame baking exceeds the supported range or one million samples",
             track.id
@@ -59,27 +69,40 @@ pub(super) fn keys(
     let curve = CompiledCurve::from_track(track, clip.fps);
     let mut result: Vec<Key> = Vec::new();
     for frame in start as i32..=end as i32 {
-        let value = f64::from(sample_motion_curve(
-            &curve,
-            (f64::from(frame) / fps) as f32,
-            clip.restricted_beziers,
-        ));
+        let time = (f64::from(frame) / fps) as f32;
+        let index = curve.segment_index(time);
+        let kind = if track.segments.get(index).is_some_and(|s| {
+            matches!(
+                s.frame_step,
+                zipzi_core::document::MotionFrameStep::EveryFrames { frames: 2.. }
+            ) || matches!(
+                s.curve,
+                MotionCurve::Stepped {} | MotionCurve::InverseStepped {}
+            )
+        }) {
+            "STEP"
+        } else {
+            "LINEAR"
+        };
+        let value = f64::from(sample_motion_curve(&curve, time, clip.restricted_beziers));
         // Collapse only exactly constant runs; every nonconstant displayed
         // frame remains an explicit key, so no fitting error can accumulate.
         if result.len() >= 2
             && result[result.len() - 2].value == value
             && result[result.len() - 1].value == value
+            && result[result.len() - 2].curve == kind
+            && result[result.len() - 1].curve == kind
         {
             result.pop();
         }
         result.push(Key {
             frame,
             value,
-            curve: "LINEAR",
+            curve: kind,
             prev: (f64::from(frame), value),
             next: (f64::from(frame), value),
         });
     }
-    info(report, &track.id, "CAN3_BAKED_TRACK", "Curve sampled at the original FPS to retain every displayed frame without merging source keys; subframe interpolation and original curve editing may differ");
+    info(report, &track.id, "CAN3_BAKED_TRACK", &format!("Curve sampled at {scene_fps} FPS to retain every displayed frame, including Frame Step holds; subframe interpolation and original curve editing may differ"));
     Ok(result)
 }

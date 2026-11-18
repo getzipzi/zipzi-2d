@@ -2,6 +2,7 @@
 //! dependence on an adjacent runtime export is used to reconstruct the rig.
 mod animation;
 mod archive;
+mod frame_step;
 mod graph;
 mod metadata;
 mod model;

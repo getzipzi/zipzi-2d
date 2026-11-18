@@ -301,7 +301,7 @@ impl Animation<'_> {
             "artPathWidth".into(),
             self.static_float(ctx, "artPathWidth", "Art Path Width", 100., (0., f64::MAX)),
         ));
-        attrs.push(("frameStep".into(), self.frame_step(ctx)));
+        attrs.push(("frameStep".into(), self.frame_step(ctx, &scene.frame_steps)));
         let mut value = effect(
             "CMvEffect_VisualDefault",
             "VisualDefault",

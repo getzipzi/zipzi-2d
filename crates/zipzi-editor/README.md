@@ -115,8 +115,9 @@ Draft; release commits one undo step and Escape restores its baseline.
 
 Native `.zipzi` preserves editing modes, presets and N. Runtime motion3 export
 bakes the effect with a bounded preflight and reports its segment counts.
-Reimported motion3 contains ordinary Bezier/Step segments; editable CAN3 currently
-rejects interval Frame Step explicitly.
+Reimported motion3 contains ordinary Bezier/Step segments. CAN3 preserves shared
+Frame Step schedules as native N and converts independent interval settings to
+editable Step keys. Fractional origins use scene-FPS sampling with diagnostics.
 
 Native curve entrypoint and focus screenshots:
 
