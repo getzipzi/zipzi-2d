@@ -174,7 +174,10 @@ impl TimelineProjection {
                     MotionCurve::Bezier { preset, .. } => preset,
                     _ => None,
                 });
-                key.frame_step = track.segments.get(i).map_or_default(|s| s.frame_step);
+                key.frame_step = track
+                    .segments
+                    .get(i)
+                    .map_or(Default::default(), |s| s.frame_step);
                 key.outgoing_split_editable =
                     changed.editable && monotonic.get(i).copied().unwrap_or(false);
                 key.time_editable = changed.editable
@@ -318,7 +321,10 @@ impl TimelineProjection {
                         MotionCurve::Bezier { preset, .. } => preset,
                         _ => None,
                     }),
-                    frame_step: track.segments.get(i).map_or_default(|s| s.frame_step),
+                    frame_step: track
+                        .segments
+                        .get(i)
+                        .map_or(Default::default(), |s| s.frame_step),
                     outgoing_locked: track.segments.get(i).is_some_and(|segment| {
                         zipzi_core::document::motion_interval_lock(
                             model.editor_state(),
