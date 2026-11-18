@@ -54,6 +54,9 @@ impl AnimationSession {
             source: None,
             frames: provenance::FrameSequence::default(),
             scrubbing: false,
+            range_playback: None,
+            range_resume: None,
+            range_events: AnimationRangeEvents::default(),
         }
     }
     pub(crate) fn physics_input_changed(&mut self) {
@@ -69,7 +72,7 @@ impl AnimationSession {
         self.playing = false;
         // An explicit pause needs a fresh request even at an unchanged time.
         // Requests already in flight cannot replace this target frame.
-        self.barrier();
+        self.reset_range_playback();
     }
     pub(crate) fn set_candidate(&mut self, candidate: Option<TimelineCandidateIdentity>) {
         // Revisions inside one edit are successive preview targets, not new
@@ -103,6 +106,17 @@ impl AnimationSession {
         self.preview_generation += 1;
         self.presented = None;
         self.error = None;
+    }
+    pub(super) fn expression_schedule_changed(&mut self) {
+        if self.range_playback.is_some() {
+            self.barrier();
+            self.preview_generation += 1;
+            self.error = None;
+        } else {
+            let playing = self.playing;
+            self.rebuild();
+            self.playing = playing;
+        }
     }
     pub(super) fn new_run(&mut self) {
         self.edit_time = 0.;

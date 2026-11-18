@@ -90,7 +90,7 @@ struct EditorView {
     animation_content: Option<zipzi_editor_core::AnimationEvaluated>,
     animation_worker: Option<animation::AnimationWorker>,
     _animation_results: Option<Task<()>>,
-    animation_anchor: Option<(std::time::Instant, f32)>,
+    animation_anchor: Option<(std::time::Instant, f64)>,
     animation_clock_running: bool,
     menu_state: menus::MenuState,
     scene_creation_menus: menus::SceneCreationMenuCache,

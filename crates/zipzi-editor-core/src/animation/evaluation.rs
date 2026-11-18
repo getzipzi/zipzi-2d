@@ -41,6 +41,7 @@ impl AnimationEvaluator {
                 let mut frame = frame.clone();
                 frame.identity.request = request.identity.request;
                 frame.identity.acceptance_floor = request.identity.acceptance_floor;
+                frame.identity.range_progress = request.identity.range_progress;
                 return Ok(frame);
             }
         }

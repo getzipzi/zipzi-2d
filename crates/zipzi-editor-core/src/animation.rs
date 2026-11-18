@@ -2,6 +2,7 @@
 mod evaluation;
 mod playback;
 mod provenance;
+mod range;
 mod resources;
 mod session;
 use crate::{
@@ -11,6 +12,7 @@ use crate::{
 use anyhow::{Result, ensure};
 pub use evaluation::{AnimationEvaluated, AnimationEvaluator};
 pub use provenance::{AnimationIdentity, AnimationRequest};
+pub use range::{AnimationRangeEvents, AnimationRangeProgress};
 pub use resources::{ExpressionResource, ExpressionTrigger, MotionResource, MotionSelection};
 use std::sync::Arc;
 use zipzi_animation::ExpressionTransition;
@@ -69,4 +71,7 @@ pub struct AnimationSession {
     pub(crate) source: Option<Arc<AnimationSource>>,
     frames: provenance::FrameSequence,
     scrubbing: bool,
+    range_playback: Option<range::RangePlayback>,
+    range_resume: Option<f32>,
+    range_events: AnimationRangeEvents,
 }

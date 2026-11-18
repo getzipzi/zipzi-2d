@@ -293,7 +293,10 @@ impl EditorView {
             return;
         }
         if self.animation_anchor.is_none() {
-            self.animation_anchor = Some((Instant::now(), self.editor.animation().unwrap().time));
+            self.animation_anchor = Some((
+                Instant::now(),
+                self.editor.animation().unwrap().playback_clock_time(),
+            ));
         }
         if !self.animation_clock_running {
             // Render installs the first display callback; subsequent callbacks
@@ -332,18 +335,12 @@ impl EditorView {
                 }
                 this.sync_animation_clock(cx);
                 this.animation_clock_running = false;
-                let Some((anchor, time)) = this.animation_anchor else {
+                if this.animation_anchor.is_none() {
                     return;
-                };
+                }
                 // Display cadence chooses the sample time, never the physics
                 // integration step. The SDK retains its canonical 60 Hz history.
-                let speed = if this.editor.cursor_physics_active() {
-                    1.
-                } else {
-                    this.editor.animation().unwrap().playback_speed
-                };
-                this.editor
-                    .advance_animation_clock(time + anchor.elapsed().as_secs_f32() * speed);
+                this.settle_animation_clock();
                 this.request_preview();
                 if !this.editor.animation().is_some_and(|a| a.playing) {
                     this.animation_anchor = None;
@@ -353,6 +350,20 @@ impl EditorView {
                 this.schedule_animation_frame(window, cx);
             });
         });
+    }
+
+    pub(crate) fn settle_animation_clock(&mut self) {
+        let Some((anchor, time)) = self.animation_anchor else {
+            return;
+        };
+        let speed = if self.editor.cursor_physics_active() {
+            1.
+        } else {
+            self.editor.animation().unwrap().playback_speed
+        };
+        self.editor.advance_animation_clock_precise(
+            time + anchor.elapsed().as_secs_f64() * f64::from(speed),
+        );
     }
 }
 

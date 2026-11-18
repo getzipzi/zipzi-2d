@@ -227,8 +227,7 @@ impl Editor {
             transition,
         });
         animation.expression = Some(expression_id);
-        animation.rebuild();
-        animation.playing = playing;
+        animation.expression_schedule_changed();
         Ok(())
     }
     pub fn clear_expression(&mut self) -> Result<()> {
@@ -238,7 +237,6 @@ impl Editor {
         self.ensure_animation_target(id)?;
         self.cancel_timeline_edit();
         let animation = &mut self.active_session_mut().unwrap().animation.playback;
-        let playing = animation.playing;
         animation.inspected = animation
             .motion
             .as_ref()
@@ -249,8 +247,7 @@ impl Editor {
             animation.expression = None;
             animation.expressions.clear();
         }
-        animation.rebuild();
-        animation.playing = playing;
+        animation.expression_schedule_changed();
         Ok(())
     }
     pub fn reset_animation(&mut self) -> Result<()> {
@@ -353,6 +350,35 @@ impl Editor {
         self.timeline_scrub_owner = None;
         if let Some(session) = self.active_session_mut() {
             if session.animation.playback.playing || session.animation.playback.scrubbing {
+                let animation = &mut session.animation.playback;
+                if let Some(run) = &animation.range_playback {
+                    let position = run.shown;
+                    if let Some(position) = position {
+                        animation.edit_time = position.local;
+                        animation.time = animation.presented.as_ref().unwrap().time;
+                    } else {
+                        let animation_time = animation.edit_time;
+                        animation.time = if animation.preview_mode == AnimationPreviewMode::Result {
+                            zipzi_animation::canonical_motion_seek_time(
+                                &run.clip,
+                                animation
+                                    .result_position
+                                    .as_ref()
+                                    .map_or(0, |p| p.loop_index),
+                                animation_time,
+                            )
+                            .unwrap_or(animation.time)
+                        } else {
+                            animation_time
+                        };
+                    }
+                    // The static redraw can be earlier than the last sampled target.
+                    animation.head_located = true;
+                    animation.pause();
+                    animation.presented = None;
+                    animation.range_resume = position.map(|p| p.local);
+                    return;
+                }
                 if let Some(frame) = session.animation.playback.presented.as_ref().filter(|_| {
                     session.animation.playback.playing && !session.animation.playback.scrubbing
                 }) {
@@ -415,7 +441,32 @@ impl Editor {
         if animation.scrubbing {
             animation.pause();
         }
-        if let Some(motion) = motion {
+        let bounds = session
+            .animation
+            .timeline
+            .current()
+            .and_then(|clip| clip.view.loop_range())
+            .filter(|range| range.enabled);
+        if let Some((bounds, motion)) = bounds.zip(motion) {
+            let clip = session
+                .document
+                .motion_definition(&motion.selection.clip_id)
+                .unwrap();
+            let sdk_cycle = animation
+                .result_position
+                .as_ref()
+                .map_or(0, |p| p.loop_index);
+            let run = range::RangePlayback::new(
+                bounds,
+                animation.edit_time,
+                sdk_cycle,
+                animation.range_resume == Some(animation.edit_time),
+                clip,
+            );
+            animation.time = run.sample_time(animation.preview_mode)?;
+            animation.reset_range_playback();
+            animation.range_playback = Some(run);
+        } else if let Some(motion) = motion {
             let looping = if animation.preview_mode == AnimationPreviewMode::Editing {
                 animation.preview_loop
             } else {
@@ -448,7 +499,32 @@ impl Editor {
         Ok(())
     }
     pub fn advance_animation_clock(&mut self, target: f32) {
+        self.advance_animation_clock_precise(f64::from(target));
+    }
+
+    pub fn advance_animation_clock_precise(&mut self, target: f64) {
         if !target.is_finite() || target < 0. {
+            return;
+        }
+        if let Some(animation) = self
+            .active_session_mut()
+            .map(|session| &mut session.animation.playback)
+            && animation.playing
+            && let Some(run) = &mut animation.range_playback
+        {
+            run.update(target);
+            match run.sample_time(animation.preview_mode) {
+                Ok(time) => animation.time = time,
+                Err(error) => {
+                    self.pause_animation();
+                    self.active_session_mut().unwrap().animation.playback.error =
+                        Some(AnimationFailure::from_error(&error));
+                }
+            }
+            return;
+        }
+        let target = target as f32;
+        if !target.is_finite() {
             return;
         }
         if let Some(session) = self.active_session_mut() {
@@ -534,9 +610,12 @@ impl Editor {
             source
         };
         let animation = &mut session.animation.playback;
+        let range_progress = animation.range_playback.as_ref().map(|run| run.progress);
         if !animation.frames.target_dirty()
             && animation.frames.latest().is_some_and(|previous| {
-                previous.time == animation.time && previous.candidate == animation.candidate
+                previous.time == animation.time
+                    && previous.candidate == animation.candidate
+                    && previous.range_progress == range_progress
             })
         {
             return None;
@@ -554,6 +633,7 @@ impl Editor {
             time: animation.time,
             preview_mode: animation.preview_mode,
             candidate: animation.candidate,
+            range_progress,
         };
         animation.frames.record(identity);
         Some(AnimationRequest {

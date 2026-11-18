@@ -58,6 +58,7 @@ pub struct AnimationIdentity {
     pub time: f32,
     pub preview_mode: AnimationPreviewMode,
     pub candidate: Option<TimelineCandidateIdentity>,
+    pub range_progress: Option<AnimationRangeProgress>,
 }
 
 #[derive(Clone)]
@@ -78,6 +79,7 @@ impl AnimationRequest {
         AnimationIdentity {
             request: other.identity.request,
             acceptance_floor: other.identity.acceptance_floor,
+            range_progress: other.identity.range_progress,
             ..self.identity
         } == other.identity
             && Arc::ptr_eq(&self.source, &other.source)
@@ -100,6 +102,15 @@ impl AnimationSession {
                     }))
             && id.preview_mode == self.preview_mode
             && id.preview_generation == self.preview_generation
+            && match (id.range_progress, &self.range_playback) {
+                (Some(progress), Some(run)) => {
+                    run.shown.is_none_or(|shown| progress >= shown)
+                        && progress <= run.progress
+                        && id.request >= self.frames.shown
+                }
+                (None, None) => true,
+                _ => false,
+            }
             && id.request >= self.frames.floor
             && self
                 .frames
@@ -109,7 +120,8 @@ impl AnimationSession {
     pub(super) fn accepts(&self, id: AnimationIdentity) -> bool {
         self.accepts_content(id)
             && self.frames.accepts(id.request)
-            && ((self.preview_mode == AnimationPreviewMode::Editing && self.preview_loop)
+            && (id.range_progress.is_some()
+                || (self.preview_mode == AnimationPreviewMode::Editing && self.preview_loop)
                 || self.scrubbing
                 || self
                     .presented
@@ -175,7 +187,17 @@ impl Editor {
                 })
                 .cloned();
         }
-        if (animation.playing || !animation.head_located) && !animation.physics_preview.manual {
+        if let Some(progress) = identity.range_progress {
+            animation.edit_time = progress.local;
+            let run = animation.range_playback.as_mut().unwrap();
+            if animation.preview_mode == AnimationPreviewMode::Result {
+                animation.range_events = run.present(progress);
+            } else {
+                run.shown = Some(progress);
+            }
+        } else if (animation.playing || !animation.head_located)
+            && !animation.physics_preview.manual
+        {
             animation.edit_time = animation
                 .motion
                 .as_ref()
@@ -197,8 +219,8 @@ impl Editor {
                 .animation()
                 .is_some_and(|a| a.candidate == identity.candidate)
         {
+            self.pause_animation();
             let animation = &mut self.active_session_mut().unwrap().animation.playback;
-            animation.playing = false;
             animation.error = Some(error);
         }
     }

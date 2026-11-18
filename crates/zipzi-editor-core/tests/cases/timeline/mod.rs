@@ -5,4 +5,5 @@ mod common;
 mod curve_authoring;
 mod navigation_scrub;
 mod playback_clipboard;
+mod range_playback;
 mod runtime_isolation;

@@ -70,6 +70,7 @@ impl Timeline {
                             if !owner.editor.editing_context_token_valid(context) {
                                 return;
                             }
+                            owner.settle_animation_clock();
                             let result = owner
                                 .editor
                                 .set_animation_playback_speed(context.document, *speed);

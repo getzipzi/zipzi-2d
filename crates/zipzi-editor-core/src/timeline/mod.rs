@@ -11,6 +11,8 @@ pub(crate) use identity::TimelinePanels;
 pub use identity::*;
 mod clipboard;
 pub use clipboard::TimelinePasteTarget;
+mod loop_range;
+pub use loop_range::*;
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
@@ -121,6 +123,7 @@ pub enum AnimationPreviewMode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TimelineViewState {
+    loop_range: Option<TimelineLoopRange>,
     pub collapsed: HashSet<TimelineRowId>,
     pub search: String,
     pub filter: TimelineFilter,
@@ -140,6 +143,7 @@ pub struct TimelineViewState {
 impl Default for TimelineViewState {
     fn default() -> Self {
         Self {
+            loop_range: None,
             collapsed: HashSet::new(),
             search: String::new(),
             filter: TimelineFilter::Animated,
@@ -159,6 +163,10 @@ impl Default for TimelineViewState {
 }
 
 impl TimelineViewState {
+    pub fn loop_range(&self) -> Option<TimelineLoopRange> {
+        self.loop_range
+    }
+
     /// Keep the current zoom while bringing an explicitly located time into view.
     pub fn reveal_time(&mut self, time: f64) {
         let (left, right) = self.time_range;
@@ -252,8 +260,16 @@ pub(crate) struct TimelineSession {
 }
 impl TimelineSession {
     pub fn reconcile(&mut self, document: &crate::Document, active: Option<&str>) {
-        self.clips
-            .retain(|id, _| document.motion_definition(id).is_some());
+        self.clips.retain(|id, state| {
+            let Some(clip) = document.motion_definition(id) else {
+                return false;
+            };
+            state.view.loop_range = state
+                .view
+                .loop_range
+                .and_then(|range| range.intersect_duration(f64::from(clip.duration)));
+            true
+        });
         let active = active
             .filter(|id| document.motion_definition(id).is_some())
             .map(str::to_owned);
