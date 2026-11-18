@@ -1,9 +1,12 @@
 //! Range overlays and mouse shortcuts on the time ruler.
 use super::*;
+use gpui_kit::component::Icon;
 use zipzi_editor_core::{TimelineLoopRange, TimelineLoopRangeError};
 
-const RANGE_HIT_HEIGHT: f32 = 9.;
-const CLEAR_SIZE: f32 = 14.;
+const RANGE_MARK_HEIGHT: f32 = 6.;
+const CLEAR_SIZE: f32 = 12.;
+const RANGE_MARK_TOP: f32 = (CLEAR_SIZE - RANGE_MARK_HEIGHT) / 2.;
+const RANGE_HIT_HEIGHT: f32 = RANGE_MARK_TOP + RANGE_MARK_HEIGHT;
 
 #[derive(Default)]
 pub(super) struct LoopRuler {
@@ -213,7 +216,6 @@ impl Timeline {
                     .justify_center()
                     .bg(cx.theme().background)
                     .text_color(cx.theme().foreground)
-                    .text_xs()
                     .cursor(CursorStyle::PointingHand)
                     .role(Role::Button)
                     .aria_label(label.clone().into_owned())
@@ -234,7 +236,7 @@ impl Timeline {
                         gpui_kit::component::tooltip::Tooltip::new(label.clone().into_owned())
                             .build(window, cx)
                     })
-                    .child("×"),
+                    .child(Icon::new(IconName::X).size(compact::rem(10.))),
             )
         });
 
@@ -640,7 +642,13 @@ fn paint_range(
     if range.enabled {
         window.paint_quad(fill(area, color.opacity(0.12)));
     }
-    let rail = Bounds::new(area.origin, size(width, px(7. * geometry.scale)));
+    let rail = Bounds::new(
+        point(
+            area.left(),
+            bounds.top() + px(RANGE_MARK_TOP * geometry.scale),
+        ),
+        size(width, px(RANGE_MARK_HEIGHT * geometry.scale)),
+    );
     let style = if range.enabled {
         BorderStyle::Solid
     } else {

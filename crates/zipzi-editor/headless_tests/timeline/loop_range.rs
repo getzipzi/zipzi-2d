@@ -156,6 +156,7 @@ fn timeline_ruler_routes_loop_and_playhead_gestures_and_switches_playing_clocks(
         hover(w, at(0.43), c);
         assert!(w.find("timeline-loop-clear").visible());
         let clear = w.find("timeline-loop-clear").bounds().center();
+        assert_eq!(clear.y, ticks.top() + px(6.));
         hover(w, clear, c);
         assert!(w.find("timeline-loop-clear").visible());
         hover(w, point(clear.x, ticks.center().y), c);
