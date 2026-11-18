@@ -54,6 +54,14 @@ impl Commands<'_> {
                 }
                 E::TidyHandles { keys } => workspace.tidy_handles(document, &keys)?,
                 E::ScaleTime { duration } => workspace.scale_time(document, duration)?,
+                E::RetimeSelection {
+                    keys,
+                    events,
+                    fixed_end,
+                    moving_time,
+                } => {
+                    workspace.retime_selection(document, &keys, &events, fixed_end, moving_time)?
+                }
             }
             this.builder.replace_authored_motion(workspace.into_clip())
         })

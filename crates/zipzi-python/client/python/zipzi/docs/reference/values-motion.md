@@ -30,6 +30,7 @@ Import from `zipzi.values.motion` or `zipzi.values`; both expose the same classe
 - [zipzi.values.MotionCurveEditBezierHandleAligned](values-motion.md#zipzi-values-motioncurveeditbezierhandlealigned)
 - [zipzi.values.MotionCurveEditTidyHandles](values-motion.md#zipzi-values-motioncurveedittidyhandles)
 - [zipzi.values.MotionCurveEditScaleTime](values-motion.md#zipzi-values-motioncurveeditscaletime)
+- [zipzi.values.MotionCurveEditRetimeSelection](values-motion.md#zipzi-values-motioncurveeditretimeselection)
 - [zipzi.values.MotionEasingPreset](values-motion.md#zipzi-values-motioneasingpreset)
 - [zipzi.values.MotionEdit](values-motion.md#zipzi-values-motionedit)
 - [zipzi.values.MotionEditCreate](values-motion.md#zipzi-values-motioneditcreate)
@@ -65,6 +66,7 @@ Import from `zipzi.values.motion` or `zipzi.values`; both expose the same classe
 - [zipzi.values.MotionKeyRef](values-motion.md#zipzi-values-motionkeyref)
 - [zipzi.values.MotionPoint](values-motion.md#zipzi-values-motionpoint)
 - [zipzi.values.MotionRegistration](values-motion.md#zipzi-values-motionregistration)
+- [zipzi.values.MotionRetimeFixedEnd](values-motion.md#zipzi-values-motionretimefixedend)
 - [zipzi.values.MotionSegment](values-motion.md#zipzi-values-motionsegment)
 - [zipzi.values.MotionTrack](values-motion.md#zipzi-values-motiontrack)
 - [zipzi.values.MotionTrackTarget](values-motion.md#zipzi-values-motiontracktarget)
@@ -248,7 +250,7 @@ class MotionCurveEdit(Value)
 
 Key time order and Bezier roles use dedicated curve operations, never row sorting.
 
-Variants: [MotionCurveEditMoveKeys](values-motion.md#zipzi-values-motioncurveeditmovekeys), [MotionCurveEditInsertKey](values-motion.md#zipzi-values-motioncurveeditinsertkey), [MotionCurveEditDeleteKeys](values-motion.md#zipzi-values-motioncurveeditdeletekeys), [MotionCurveEditInterpolation](values-motion.md#zipzi-values-motioncurveeditinterpolation), [MotionCurveEditEasingPreset](values-motion.md#zipzi-values-motioncurveediteasingpreset), [MotionCurveEditFrameStep](values-motion.md#zipzi-values-motioncurveeditframestep), [MotionCurveEditBezierHandle](values-motion.md#zipzi-values-motioncurveeditbezierhandle), [MotionCurveEditBezierHandleAligned](values-motion.md#zipzi-values-motioncurveeditbezierhandlealigned), [MotionCurveEditTidyHandles](values-motion.md#zipzi-values-motioncurveedittidyhandles), [MotionCurveEditScaleTime](values-motion.md#zipzi-values-motioncurveeditscaletime)
+Variants: [MotionCurveEditMoveKeys](values-motion.md#zipzi-values-motioncurveeditmovekeys), [MotionCurveEditInsertKey](values-motion.md#zipzi-values-motioncurveeditinsertkey), [MotionCurveEditDeleteKeys](values-motion.md#zipzi-values-motioncurveeditdeletekeys), [MotionCurveEditInterpolation](values-motion.md#zipzi-values-motioncurveeditinterpolation), [MotionCurveEditEasingPreset](values-motion.md#zipzi-values-motioncurveediteasingpreset), [MotionCurveEditFrameStep](values-motion.md#zipzi-values-motioncurveeditframestep), [MotionCurveEditBezierHandle](values-motion.md#zipzi-values-motioncurveeditbezierhandle), [MotionCurveEditBezierHandleAligned](values-motion.md#zipzi-values-motioncurveeditbezierhandlealigned), [MotionCurveEditTidyHandles](values-motion.md#zipzi-values-motioncurveedittidyhandles), [MotionCurveEditScaleTime](values-motion.md#zipzi-values-motioncurveeditscaletime), [MotionCurveEditRetimeSelection](values-motion.md#zipzi-values-motioncurveeditretimeselection)
 
 <a id="zipzi-values-motioncurveeditmovekeys"></a>
 
@@ -421,6 +423,25 @@ ScaleTime variant of MotionCurveEdit.
 | `duration` | `float` | Required |  |
 
 Related: [zipzi.values.MotionCurveEdit](values-motion.md#zipzi-values-motioncurveedit)
+
+<a id="zipzi-values-motioncurveeditretimeselection"></a>
+
+## zipzi.values.MotionCurveEditRetimeSelection
+
+```python
+class MotionCurveEditRetimeSelection(MotionCurveEdit)
+```
+
+Rescale explicitly selected keys and events around one end of their original span.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `keys` | `tuple[MotionKeyRef, ...]` | Required |  |
+| `events` | `tuple[str, ...]` | Required |  |
+| `fixed_end` | `MotionRetimeFixedEnd` | Required |  |
+| `moving_time` | `float` | Required | Absolute clip-local seconds of the moved end. |
+
+Related: [zipzi.values.MotionCurveEdit](values-motion.md#zipzi-values-motioncurveedit), [zipzi.values.MotionKeyRef](values-motion.md#zipzi-values-motionkeyref), [zipzi.values.MotionRetimeFixedEnd](values-motion.md#zipzi-values-motionretimefixedend)
 
 <a id="zipzi-values-motioneasingpreset"></a>
 
@@ -1034,6 +1055,21 @@ model3 registration is separate from a clip: one file may appear in multiple gro
 | `extensions` | `Mapping[str, object]` | Required | Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed. |
 
 Related: [zipzi.values.AttachmentRef](values-resources.md#zipzi-values-attachmentref)
+
+<a id="zipzi-values-motionretimefixedend"></a>
+
+## zipzi.values.MotionRetimeFixedEnd
+
+```python
+class MotionRetimeFixedEnd(StrEnum)
+```
+
+MotionRetimeFixedEnd choices.
+
+| Member | Value | Description |
+| --- | --- | --- |
+| `EARLIEST` | `'earliest'` |  |
+| `LATEST` | `'latest'` |  |
 
 <a id="zipzi-values-motionsegment"></a>
 

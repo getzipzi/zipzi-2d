@@ -24,6 +24,7 @@ pub use manual_mesh_transfer::{
 mod motion_curve;
 pub use motion_curve::{
     MotionBezierHandle, MotionCurveEdit, MotionInterpolation, MotionKeyMove, MotionKeyRef,
+    MotionRetimeFixedEnd,
 };
 
 mod spatial;

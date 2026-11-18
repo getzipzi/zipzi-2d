@@ -1,5 +1,6 @@
 //! Value-only curve algorithms. Commands install the resulting clip through Builder.
 //! No source registry, Session, history or publication state is retained here.
+mod retiming;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use zipzi_core::document::MotionCurve;
@@ -22,6 +23,7 @@ use zipzi_contract::motion_curve::{MotionEasingPreset, MotionFrameStep};
 
 pub use zipzi_contract::kernel_commands::{
     MotionBezierHandle, MotionCurveEdit, MotionInterpolation, MotionKeyMove, MotionKeyRef,
+    MotionRetimeFixedEnd,
 };
 
 /// One independently owned clip, suitable for immutable preview snapshots.

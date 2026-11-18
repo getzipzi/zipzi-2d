@@ -111,6 +111,22 @@ pub enum MotionBezierHandle {
     Control2,
 }
 
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    zipzi_api_derive::ApiShape,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum MotionRetimeFixedEnd {
+    Earliest,
+    Latest,
+}
+
 /// Key time order and Bezier roles use dedicated curve operations, never row sorting.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, zipzi_api_derive::ApiShape)]
 #[serde(
@@ -162,6 +178,14 @@ pub enum MotionCurveEdit {
     },
     ScaleTime {
         duration: f32,
+    },
+    /// Rescale explicitly selected keys and events around one end of their original span.
+    RetimeSelection {
+        keys: Vec<MotionKeyRef>,
+        events: Vec<String>,
+        fixed_end: MotionRetimeFixedEnd,
+        /// Absolute clip-local seconds of the moved end.
+        moving_time: f64,
     },
 }
 

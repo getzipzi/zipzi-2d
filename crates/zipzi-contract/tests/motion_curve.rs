@@ -157,3 +157,22 @@ fn authored_intervals_roundtrip_modes_preset_sources_and_frame_steps() {
     )
     .is_err());
 }
+
+#[test]
+fn retime_selection_command_roundtrips_fixed_end_keys_and_events() {
+    use zipzi_contract::kernel_commands::{MotionCurveEdit, MotionRetimeFixedEnd};
+    let payload = serde_json::json!({
+        "kind": "retime_selection",
+        "value": {
+            "keys": [{"track_id": "track", "key_id": "key"}],
+            "events": ["cue"],
+            "fixed_end": "latest",
+            "moving_time": 0.4123456789
+        }
+    });
+    let edit: MotionCurveEdit = serde_json::from_value(payload.clone()).unwrap();
+    assert!(matches!(&edit, MotionCurveEdit::RetimeSelection {
+        fixed_end: MotionRetimeFixedEnd::Latest, keys, events, ..
+    } if keys.len() == 1 && events == &["cue"]));
+    assert_eq!(serde_json::to_value(edit).unwrap(), payload);
+}

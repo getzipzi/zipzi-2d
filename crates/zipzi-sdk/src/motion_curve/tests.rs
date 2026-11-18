@@ -1258,3 +1258,229 @@ fn restricted_conversion_checks_unselected_short_intervals_before_publishing() {
     };
     assert_eq!(sample(c.clip()), sample(&clip));
 }
+
+#[test]
+fn retiming_transforms_mixed_selection_and_rebuilds_only_affected_curves() {
+    let mut doc = session();
+    let mut clip = doc.motion(&id(3)).unwrap().clone();
+    clip.fps = 29.97;
+    clip.events.extend([
+        MotionEvent {
+            id: id(21),
+            time: 0.6875,
+            value: "coincident".into(),
+            extensions: Default::default(),
+        },
+        MotionEvent {
+            id: id(22),
+            time: 0.75,
+            value: "move with key".into(),
+            extensions: Default::default(),
+        },
+    ]);
+    let segments = Arc::make_mut(&mut clip.tracks[0].segments);
+    segments[0].curve = MotionCurve::Bezier {
+        control1: MotionPoint {
+            time: 0.0625,
+            value: 0.7,
+        },
+        control2: MotionPoint {
+            time: 0.1875,
+            value: 0.9,
+        },
+        preset: None,
+    };
+    segments[1].curve = MotionCurve::AutoSmooth {};
+    segments[1].frame_step = MotionFrameStep::EveryFrames { frames: 3 };
+    segments[2].curve = MotionCurve::InverseStepped {};
+    segments[3].curve = MotionCurve::Stepped {};
+    doc.replace_authored_motion(clip).unwrap();
+    let mut c = candidate(&doc);
+    c.retime_selection(
+        &doc,
+        &[reference(0, 1), reference(0, 2), reference(0, 3)],
+        &[id(20), id(22)],
+        MotionRetimeFixedEnd::Latest,
+        0.5,
+    )
+    .unwrap();
+    let before = doc.motion(&id(3)).unwrap();
+    let after = c.clip();
+    assert_eq!(after.duration, before.duration);
+    assert_eq!(after.fps, before.fps);
+    assert_eq!(after.tracks[1], before.tracks[1]);
+    assert_eq!(
+        after.tracks[0]
+            .keys()
+            .map(|key| key.time)
+            .collect::<Vec<_>>(),
+        [0., 0.5, 0.625, 0.75, 1.]
+    );
+    assert_eq!(
+        after.tracks[0].segments[0].curve,
+        MotionCurve::Bezier {
+            control1: MotionPoint {
+                time: 0.125,
+                value: 0.7
+            },
+            control2: MotionPoint {
+                time: 0.375,
+                value: 0.9
+            },
+            preset: None,
+        }
+    );
+    assert_eq!(
+        after.tracks[0].segments[1].curve,
+        MotionCurve::AutoSmooth {}
+    );
+    assert_eq!(
+        after.tracks[0].segments[1].frame_step,
+        MotionFrameStep::EveryFrames { frames: 3 }
+    );
+    assert!(matches!(
+        after.tracks[0].segments[2].curve,
+        MotionCurve::InverseStepped {}
+    ));
+    assert!(matches!(
+        after.tracks[0].segments[3].curve,
+        MotionCurve::Stepped {}
+    ));
+    assert_eq!(
+        after
+            .events
+            .iter()
+            .map(|event| event.time)
+            .collect::<Vec<_>>(),
+        [0.625, 0.6875, 0.75]
+    );
+
+    let mut events = candidate(&doc);
+    events
+        .retime_selection(
+            &doc,
+            &[],
+            &[id(20), id(22)],
+            MotionRetimeFixedEnd::Earliest,
+            0.6875,
+        )
+        .unwrap();
+    assert_eq!(
+        events
+            .clip()
+            .events
+            .iter()
+            .map(|e| (e.time, e.value.as_str()))
+            .collect::<Vec<_>>(),
+        [
+            (0.5, "cue"),
+            (0.6875, "coincident"),
+            (0.6875, "move with key")
+        ]
+    );
+    assert_eq!(events.clip().tracks, before.tracks);
+}
+
+#[test]
+fn retiming_preserves_restricted_preset_and_noop_and_rejects_f32_collisions() {
+    let mut doc = bezier_session(true);
+    let mut initial = candidate(&doc);
+    initial
+        .set_easing_preset(&doc, &[reference(0, 0)], MotionEasingPreset::CubicOut)
+        .unwrap();
+    doc.replace_authored_motion(initial.into_clip()).unwrap();
+    let mut c = candidate(&doc);
+    let keys = [reference(0, 0), reference(0, 4)];
+    c.retime_selection(&doc, &keys, &[], MotionRetimeFixedEnd::Earliest, 0.8)
+        .unwrap();
+    let track = &c.clip().tracks[0];
+    let [control1, control2] = MotionEasingPreset::CubicOut
+        .mapped_controls(track.initial.point(), track.segments[0].end().point())
+        .unwrap();
+    assert_eq!(
+        track.segments[0].curve,
+        MotionCurve::Bezier {
+            control1,
+            control2,
+            preset: Some(MotionEasingPreset::CubicOut),
+        }
+    );
+    let before = c.clip().clone();
+    c.retime_selection(
+        &doc,
+        &keys,
+        &[],
+        MotionRetimeFixedEnd::Earliest,
+        f64::from(0.8f32),
+    )
+    .unwrap();
+    assert_eq!(*c.clip(), before);
+
+    let mut c = candidate(&doc);
+    let before = c.clip().clone();
+    let retime = c.retime_selection(
+        &doc,
+        &[reference(1, 2), reference(1, 3), reference(1, 4)],
+        &[],
+        MotionRetimeFixedEnd::Earliest,
+        f64::from(0.5f32.next_up()),
+    );
+    assert_eq!(retime.unwrap_err().code, "MOTION_KEY_COLLISION");
+    assert_eq!(*c.clip(), before);
+    assert_eq!(
+        c.retime_selection(
+            &doc,
+            &[reference(1, 2)],
+            &[id(20)],
+            MotionRetimeFixedEnd::Earliest,
+            0.8
+        )
+        .unwrap_err()
+        .code,
+        "MOTION_RETIME_SPAN",
+    );
+}
+
+#[test]
+fn retiming_rejects_protected_neighbor_and_event_atomically_through_the_command() {
+    use crate::{AuthoringSession, ResourceView, Snapshot};
+    use zipzi_core::document::ObjectEditorState;
+    for (locked, events) in [(id(103), vec![]), (id(20), vec![id(20)])] {
+        let mut doc = session();
+        let mut flags = doc.editor_state().clone();
+        flags.objects.insert(
+            locked.clone(),
+            ObjectEditorState {
+                locked: true,
+                ..Default::default()
+            },
+        );
+        doc.set_editor_state(flags).unwrap();
+        let session = AuthoringSession::new(
+            Snapshot::new(doc.freeze().unwrap().state, ResourceView::default()).unwrap(),
+        );
+        let before = session.snapshot().content_id();
+        let mut draft = session.begin_draft();
+        let keys = if events.is_empty() {
+            vec![reference(0, 1), reference(0, 2)]
+        } else {
+            vec![reference(0, 1)]
+        };
+        let status = draft
+            .batch(draft.source(), |commands| {
+                commands.edit_motion_curve(
+                    &id(3),
+                    MotionCurveEdit::RetimeSelection {
+                        keys,
+                        events,
+                        fixed_end: MotionRetimeFixedEnd::Earliest,
+                        moving_time: 0.625,
+                    },
+                )
+            })
+            .unwrap_err();
+        assert_eq!(status.code, "OBJECT_LOCKED");
+        assert!(status.to_string().contains(&locked));
+        assert_eq!(session.snapshot().content_id(), before);
+    }
+}

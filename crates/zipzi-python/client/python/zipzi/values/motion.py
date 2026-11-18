@@ -204,6 +204,19 @@ class MotionCurveEditScaleTime(MotionCurveEdit):
     _variant = 'scale_time'
     duration: float
 
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MotionCurveEditRetimeSelection(MotionCurveEdit):
+    """Rescale explicitly selected keys and events around one end of their original span.
+
+    Fields:
+    moving_time: Absolute clip-local seconds of the moved end.
+    """
+    _variant = 'retime_selection'
+    keys: tuple[MotionKeyRef, ...]
+    events: tuple[str, ...]
+    fixed_end: MotionRetimeFixedEnd
+    moving_time: float
+
 class MotionEasingPreset(StrEnum):
     """Source of explicit Bezier controls. Absence of a source means Custom; imported
     or manually edited controls must not be matched back to a preset by tolerance.
@@ -649,6 +662,12 @@ class MotionRegistration(Value):
     sound: resources.AttachmentRef | None = None
     extensions: Mapping[str, object]
 
+class MotionRetimeFixedEnd(StrEnum):
+    """MotionRetimeFixedEnd choices.
+    """
+    EARLIEST = 'earliest'
+    LATEST = 'latest'
+
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionSegment(Value):
     """An interval from the preceding key to its stable endpoint. Settings belong to
@@ -745,16 +764,16 @@ __all__ = [
     'MotionCurveBezier', 'MotionCurveStepped', 'MotionCurveInverseStepped', 'MotionCurveEdit',
     'MotionCurveEditMoveKeys', 'MotionCurveEditInsertKey', 'MotionCurveEditDeleteKeys', 'MotionCurveEditInterpolation',
     'MotionCurveEditEasingPreset', 'MotionCurveEditFrameStep', 'MotionCurveEditBezierHandle', 'MotionCurveEditBezierHandleAligned',
-    'MotionCurveEditTidyHandles', 'MotionCurveEditScaleTime', 'MotionEasingPreset', 'MotionEdit',
-    'MotionEditCreate', 'MotionEditCreateGroup', 'MotionEditRenameGroup', 'MotionEditReorderGroups',
-    'MotionEditRegister', 'MotionEditPatchRegistration', 'MotionEditMoveRegistrations', 'MotionEditDuplicateRegistrations',
-    'MotionEditDeleteRegistrations', 'MotionEditDissolveGroup', 'MotionEditDeleteGroup', 'MotionEditDuplicateGroup',
-    'MotionEditDuplicateClip', 'MotionEditDeleteClip', 'MotionEditReorderTracks', 'MotionEditCreateTrack',
-    'MotionEditSetTrackTarget', 'MotionEditMoveTracks', 'MotionEditDeleteTracks', 'MotionEditTransferKeys',
-    'MotionEditSetEvent', 'MotionEditDeleteEvents', 'MotionEditMoveEvents', 'MotionEvent',
-    'MotionFrameStep', 'MotionFrameStepOff', 'MotionFrameStepEveryFrames', 'MotionInterpolation',
-    'MotionKey', 'MotionKeyMove', 'MotionKeyRef', 'MotionPoint',
-    'MotionRegistration', 'MotionSegment', 'MotionTrack', 'MotionTrackTarget',
-    'MotionTrackTargetUnspecified', 'MotionTrackTargetModel', 'MotionTrackTargetParameter', 'MotionTrackTargetPartOpacity',
-    'MotionTrackTargetUnresolved',
+    'MotionCurveEditTidyHandles', 'MotionCurveEditScaleTime', 'MotionCurveEditRetimeSelection', 'MotionEasingPreset',
+    'MotionEdit', 'MotionEditCreate', 'MotionEditCreateGroup', 'MotionEditRenameGroup',
+    'MotionEditReorderGroups', 'MotionEditRegister', 'MotionEditPatchRegistration', 'MotionEditMoveRegistrations',
+    'MotionEditDuplicateRegistrations', 'MotionEditDeleteRegistrations', 'MotionEditDissolveGroup', 'MotionEditDeleteGroup',
+    'MotionEditDuplicateGroup', 'MotionEditDuplicateClip', 'MotionEditDeleteClip', 'MotionEditReorderTracks',
+    'MotionEditCreateTrack', 'MotionEditSetTrackTarget', 'MotionEditMoveTracks', 'MotionEditDeleteTracks',
+    'MotionEditTransferKeys', 'MotionEditSetEvent', 'MotionEditDeleteEvents', 'MotionEditMoveEvents',
+    'MotionEvent', 'MotionFrameStep', 'MotionFrameStepOff', 'MotionFrameStepEveryFrames',
+    'MotionInterpolation', 'MotionKey', 'MotionKeyMove', 'MotionKeyRef',
+    'MotionPoint', 'MotionRegistration', 'MotionRetimeFixedEnd', 'MotionSegment',
+    'MotionTrack', 'MotionTrackTarget', 'MotionTrackTargetUnspecified', 'MotionTrackTargetModel',
+    'MotionTrackTargetParameter', 'MotionTrackTargetPartOpacity', 'MotionTrackTargetUnresolved',
 ]

@@ -7969,6 +7969,58 @@
           "form": "record",
           "name": "scale_time",
           "rust_name": "ScaleTime"
+        },
+        {
+          "doc": "Rescale explicitly selected keys and events around one end of their original span.",
+          "fields": [
+            {
+              "doc": "",
+              "name": "keys",
+              "rust_name": "keys",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "MotionKeyRef"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "events",
+              "rust_name": "events",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "fixed_end",
+              "rust_name": "fixed_end",
+              "shape": {
+                "kind": "ref",
+                "name": "MotionRetimeFixedEnd"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Absolute clip-local seconds of the moved end.",
+              "name": "moving_time",
+              "rust_name": "moving_time",
+              "shape": {
+                "kind": "f64"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "retime_selection",
+          "rust_name": "RetimeSelection"
         }
       ]
     },
@@ -9237,6 +9289,26 @@
       "name": "zipzi_contract::document::MotionRegistration",
       "transparent": false,
       "tuple": false
+    },
+    "MotionRetimeFixedEnd": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::kernel_commands::MotionRetimeFixedEnd",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "earliest",
+          "rust_name": "Earliest"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "latest",
+          "rust_name": "Latest"
+        }
+      ]
     },
     "MotionSegment": {
       "doc": "An interval from the preceding key to its stable endpoint. Settings belong to\nthe outgoing interval of the preceding key, not to the endpoint identity.",
