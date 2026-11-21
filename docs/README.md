@@ -19,8 +19,8 @@
 - [Runtime R5 / Python P5 animation authoring](archive/plans/sdk-runtime/python2-r5-authoring.md): typed edits, records, SDK plans and addresses; Preview, spatial/GPU observation, fair scheduling and Editor playback isolation are delivered; [R7 acceptance](archive/plans/sdk-runtime/python2-r7-closeout.md) records final workflows, distribution and performance
 - [Editor application](../crates/zipzi-editor/README.md), [editing core](../crates/zipzi-editor-core/README.md) and [render adapter](../crates/zipzi-editor-render/README.md)
 - [Editor Glue 工具实施方案](archive/plans/editor-glue-tool.md): 连接点／权重连续编辑、原子补点绑定及接缝属性；核心、macOS UI 与原生 Metal 截图已验收
-- [动画曲线配置与帧步进方案](plans/animation-curve-authoring.md): 已实现时间线配置入口、五种插值、Bezier 缓动预设、区间级 Frame Step、持久化与 motion3／CAN3 导出验收
-- [时间轴区间循环预览与局部时间伸缩实施方案](plans/timeline-range-loop-and-retiming.md)记录初始设计、实际交付的标尺操作、多轨伸缩算法和验收场景。
+- [动画曲线配置与帧步进方案](archive/plans/animation-curve-authoring.md): 已实现时间线配置入口、五种插值、Bezier 缓动预设、区间级 Frame Step、持久化与 motion3／CAN3 导出验收
+- [时间轴区间循环预览与局部时间伸缩实施方案](archive/plans/timeline-range-loop-and-retiming.md)记录初始设计、实际交付的标尺操作、多轨伸缩算法和验收场景。
 - [`.zipzi` 原生工程格式设计](plans/native-project-format.md): 单文件容器、原子保存、资源工作集、SDK 生命周期与跨平台文件打开；设计提案，尚未实现
 - [Authoring 新内核重写方案](archive/plans/authoring-architecture.md)涵盖所有权、任务协议、API 与旧实现删除清单。[各阶段实施记录](archive/plans/authoring-architecture.md#实施记录)包含验证范围和提交，[阶段 6 对照实验](archive/plans/authoring-architecture/phase-6.md)记录优化基线。
 - [Warp Deformer 交互与属性面板方案](archive/plans/warp-deformer-interaction.md): 画布变换、Warp／Rotation 属性透出、Bezier 整形、子对象保形编辑与原始形状恢复

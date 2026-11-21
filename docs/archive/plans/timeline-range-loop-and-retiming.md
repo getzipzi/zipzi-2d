@@ -6,7 +6,7 @@
 
 动画师要把一次转头从 12 帧压到 8 帧，同时看清转头前的预备动作和转头后的停顿。完成这件事应当只需三步：在标尺上圈定要反复观看的范围，选中头部、眼睛及相关事件并拖短，再从同一范围播放。**观看范围由标尺决定，修改对象由显式选区决定**。这样可以在预览中保留动作前后的上下文，也能让作为对照的身体轨道保留原来的节奏。
 
-现有编辑器支持整段循环、多轨关键帧平移、整段动作时间缩放和区间曲线配置。本轮增加两个桌面操作，均可从关键帧总览或曲线视图进入。[播放控件](../../crates/zipzi-editor/src/panels/timeline/transport.rs) · [时间轴编辑命令](../../crates/zipzi-editor-core/src/timeline/editing.rs) · [曲线与帧步进语义](../../crates/zipzi-editor/README.md#animation-interval-curves)
+现有编辑器支持整段循环、多轨关键帧平移、整段动作时间缩放和区间曲线配置。本轮增加两个桌面操作，均可从关键帧总览或曲线视图进入。[播放控件](../../../crates/zipzi-editor/src/panels/timeline/transport.rs) · [时间轴编辑命令](../../../crates/zipzi-editor-core/src/timeline/editing.rs) · [曲线与帧步进语义](../../../crates/zipzi-editor/README.md#animation-interval-curves)
 
 ## 1. 区间循环预览
 
@@ -39,40 +39,40 @@
 
 ### 会话与时钟
 
-在每个 `TimelineClipState` 的视图状态中增加可选循环范围，包含起点秒、终点秒和启用标志。现有 `time_range` 表示屏幕可见时间，继续供缩放与平移使用。通过 `TimelineSession::reconcile` 在动作删除时清理、投影时长变化时裁剪。由 EditorCore 提供设置、开关和清除入口，统一校验 binding、动作、有限端点、帧吸附和有效跨度。端点转为求值使用的 f32 后仍须可区分。初始无范围；关闭保留两端，清除移除整个值。[Timeline 会话](../../crates/zipzi-editor-core/src/timeline/mod.rs) · [面板绑定](../../crates/zipzi-editor-core/src/timeline/identity.rs)
+在每个 `TimelineClipState` 的视图状态中增加可选循环范围，包含起点秒、终点秒和启用标志。现有 `time_range` 表示屏幕可见时间，继续供缩放与平移使用。通过 `TimelineSession::reconcile` 在动作删除时清理、投影时长变化时裁剪。由 EditorCore 提供设置、开关和清除入口，统一校验 binding、动作、有限端点、帧吸附和有效跨度。端点转为求值使用的 f32 后仍须可区分。初始无范围；关闭保留两端，清除移除整个值。[Timeline 会话](../../../crates/zipzi-editor-core/src/timeline/mod.rs) · [面板绑定](../../../crates/zipzi-editor-core/src/timeline/identity.rs)
 
-在 `toggle_animation` 进入区间播放时，记录本次播放起点、未折返的累计播放秒数，以及完整效果当前 SDK 动作周期索引（初次播放取 0）。桌面帧回调已有 `Instant` 锚点，区间路径用 f64 累计经过的秒数，速度只乘一次。令 `A`、`B` 为端点，`L = B − A`，`p = 开播位置 − A + 累计播放秒数`。每次请求的区间轮次为 `floor(p / L)`，局部采样位置为 `A + p.rem_euclid(L)`。用同一精度计算两者，在转成 f32 时将区间内因舍入等于 B 的值限制为 B 的前一可表示值。保留跨多轮的余量；变速先结算旧速度，再重建墙钟锚点。暂停沿用最近呈现的位置，继续播放从该位置重新起算。单独的手动物理试算时钟沿用原路径。[桌面帧回调](../../crates/zipzi-editor/src/animation.rs) · [播放与暂停](../../crates/zipzi-editor-core/src/animation/playback.rs)
+在 `toggle_animation` 进入区间播放时，记录本次播放起点、未折返的累计播放秒数，以及完整效果当前 SDK 动作周期索引（初次播放取 0）。桌面帧回调已有 `Instant` 锚点，区间路径用 f64 累计经过的秒数，速度只乘一次。令 `A`、`B` 为端点，`L = B − A`，`p = 开播位置 − A + 累计播放秒数`。每次请求的区间轮次为 `floor(p / L)`，局部采样位置为 `A + p.rem_euclid(L)`。用同一精度计算两者，在转成 f32 时将区间内因舍入等于 B 的值限制为 B 的前一可表示值。保留跨多轮的余量；变速先结算旧速度，再重建墙钟锚点。暂停沿用最近呈现的位置，继续播放从该位置重新起算。单独的手动物理试算时钟沿用原路径。[桌面帧回调](../../../crates/zipzi-editor/src/animation.rs) · [播放与暂停](../../../crates/zipzi-editor-core/src/animation/playback.rs)
 
 ### 姿态、事件与迟到帧
 
-1. **计算姿态。** 仅动作模式向 `MotionEditingPreview` 传局部时间。完整效果以开播时记录的 SDK 动作周期和局部时间调用 `canonical_motion_seek_time`，使用现有动作注册、表情调度、物理参数及随机种子构造请求。区间每回绕一次仍取同一 SDK 周期。复用 `advance_to_with_progress` 的正向推进与反向 checkpoint seek。这样第 5 轮的同一姿态有明确的直接定位对照，保留资源的额外循环尾帧语义。[局部时间换算](../../crates/zipzi-animation/src/motion.rs) · [编辑器求值器](../../crates/zipzi-editor-core/src/animation/evaluation.rs) · [SDK 回放](../../crates/zipzi-animation/src/motion_preview.rs)
-2. **接收画面。** 给区间请求携带播放代次和逻辑进度（轮次、局部时间）。请求去重须区分“下一轮的同一时刻”。区间播放中以同代次内的请求序号和逻辑进度判断新旧；完整效果原有的 SDK 绝对时间单调条件会挡住回绕后的第一帧。修改范围、重新开播、切动作或切模式时用现有 barrier 淘汰旧请求。普通回绕允许流水线继续推进，避免一帧长的循环在慢机器上持续取消计算。CPU 结果、各 viewport 的 GPU 呈现与错误回调均检查代次；姿态缓存命中时赋予当前请求身份。[身份与呈现](../../crates/zipzi-editor-core/src/animation/provenance.rs) · [请求去重](../../crates/zipzi-editor-core/src/animation/playback.rs)
-3. **结算事件。** 现有事件行直接读画面快照的 `fired_events`。完整效果区间播放改由 EditorCore 在首次接纳新呈现进度时，按文档内事件时刻计算“上次呈现之后、本次呈现及以前”的经过记录。开播首个位置计一次；暂停后原地续播跳过刚呈现过的起点事件。跨界按旧轮余段、经过的完整轮、新轮前段依序处理，每轮含 A、排除 B，同刻事件按原顺序。把区间内的显示结果交给事件行；仅动作、静态定位及暂停重绘均无新经过事件。事件游标按播放会话维护，双视口呈现同一请求只结算一次。长时间掉帧时以“完整轮数 × 区间事件序列”表示重复部分，计数精确，提示按需展开，内存开销与经过轮数解耦。[事件行](../../crates/zipzi-editor/src/panels/timeline/controls.rs) · [呈现快照接收](../../crates/zipzi-editor-core/src/animation/provenance.rs)
+1. **计算姿态。** 仅动作模式向 `MotionEditingPreview` 传局部时间。完整效果以开播时记录的 SDK 动作周期和局部时间调用 `canonical_motion_seek_time`，使用现有动作注册、表情调度、物理参数及随机种子构造请求。区间每回绕一次仍取同一 SDK 周期。复用 `advance_to_with_progress` 的正向推进与反向 checkpoint seek。这样第 5 轮的同一姿态有明确的直接定位对照，保留资源的额外循环尾帧语义。[局部时间换算](../../../crates/zipzi-animation/src/motion.rs) · [编辑器求值器](../../../crates/zipzi-editor-core/src/animation/evaluation.rs) · [SDK 回放](../../../crates/zipzi-animation/src/motion_preview.rs)
+2. **接收画面。** 给区间请求携带播放代次和逻辑进度（轮次、局部时间）。请求去重须区分“下一轮的同一时刻”。区间播放中以同代次内的请求序号和逻辑进度判断新旧；完整效果原有的 SDK 绝对时间单调条件会挡住回绕后的第一帧。修改范围、重新开播、切动作或切模式时用现有 barrier 淘汰旧请求。普通回绕允许流水线继续推进，避免一帧长的循环在慢机器上持续取消计算。CPU 结果、各 viewport 的 GPU 呈现与错误回调均检查代次；姿态缓存命中时赋予当前请求身份。[身份与呈现](../../../crates/zipzi-editor-core/src/animation/provenance.rs) · [请求去重](../../../crates/zipzi-editor-core/src/animation/playback.rs)
+3. **结算事件。** 现有事件行直接读画面快照的 `fired_events`。完整效果区间播放改由 EditorCore 在首次接纳新呈现进度时，按文档内事件时刻计算“上次呈现之后、本次呈现及以前”的经过记录。开播首个位置计一次；暂停后原地续播跳过刚呈现过的起点事件。跨界按旧轮余段、经过的完整轮、新轮前段依序处理，每轮含 A、排除 B，同刻事件按原顺序。把区间内的显示结果交给事件行；仅动作、静态定位及暂停重绘均无新经过事件。事件游标按播放会话维护，双视口呈现同一请求只结算一次。长时间掉帧时以“完整轮数 × 区间事件序列”表示重复部分，计数精确，提示按需展开，内存开销与经过轮数解耦。[事件行](../../../crates/zipzi-editor/src/panels/timeline/controls.rs) · [呈现快照接收](../../../crates/zipzi-editor-core/src/animation/provenance.rs)
 
 ## 4. 局部伸缩的实现
 
 ### 一个编辑命令完成全部变换
 
-沿用 `MotionCurveEdit` 的共享契约，新增 `RetimeSelection { keys, events, fixed_end, moving_time }`。键使用 `MotionKeyRef`，事件使用动作内的稳定 ID，固定端用枚举区分最早／最晚，移动端用动作局部秒。Editor 将鼠标位置或目标时长转换成已吸附的移动端；SDK 从 Draft 基线的实际对象重新求出原跨度与锚点。命令可以处理纯关键帧、纯事件或混合选区，门槛均为至少两个不同的原时刻。由 `Commands::edit_motion_curve` 分派给 `CurveWorkspace`，一次安装候选 clip。共享契约变更同步现有 Python 生成物。[契约](../../crates/zipzi-contract/src/kernel_commands.rs) · [命令分派](../../crates/zipzi-sdk/src/authoring/commands/motions.rs) · [生成入口](../../crates/zipzi-python/README.md)
+沿用 `MotionCurveEdit` 的共享契约，新增 `RetimeSelection { keys, events, fixed_end, moving_time }`。键使用 `MotionKeyRef`，事件使用动作内的稳定 ID，固定端用枚举区分最早／最晚，移动端用动作局部秒。Editor 将鼠标位置或目标时长转换成已吸附的移动端；SDK 从 Draft 基线的实际对象重新求出原跨度与锚点。命令可以处理纯关键帧、纯事件或混合选区，门槛均为至少两个不同的原时刻。由 `Commands::edit_motion_curve` 分派给 `CurveWorkspace`，一次安装候选 clip。共享契约变更同步现有 Python 生成物。[契约](../../../crates/zipzi-contract/src/kernel_commands.rs) · [命令分派](../../../crates/zipzi-sdk/src/authoring/commands/motions.rs) · [生成入口](../../../crates/zipzi-python/README.md)
 
 SDK 按以下顺序处理一个候选：
 
 1. 从原 clip 按 ID 定位选中对象，检查重复引用、缺失对象和只读目标。读取原时刻求两端，校验移动端、跨度和比例。原位直接返回原内容，保留导入子帧；UI 起拖后回到原像素或输入原时长也走此路径。
 2. 按第 2 节公式用 f64 计算新时刻，仅在写回时转 f32。固定端直接取原值，移动端直接取已校验的目标值。分轨检查最终次序，使用 `validate_motion_interval_times` 比对变换后每一对相邻键，包括未选邻键。只对实际移动的键与事件要求落在名义时长之内，保留原工程内合法的导入尾点。局部伸缩以 clip 的既有时长、FPS 与源范围元数据为边界，走现有模型校验。
-3. 对每个受影响的手动段，设新旧区间分别为 `[s′, e′]`、`[s, e]`。Custom 控制点按 `u = (h − s) / (e − s)`、`h′ = s′ + u × (e′ − s′)` 改写时间，控制点纵值取原值。带有效预设的段调用 `mapped_controls` 从新端点还原预设，受限 Bezier 复用已有的三等分时间规则。保留 Step、Inverse Step、Auto Smooth 的类型和各段 N，交给现有编译器重算。普通 `move_keys` 对两个手柄分别加端点位移且可清除预设，局部伸缩需单独实现上述段变换。[曲线算法](../../crates/zipzi-sdk/src/motion_curve.rs)
-4. 检查受影响区间两端、单键轨、事件与父对象的锁定，以及改动时间的非单调段。按新时刻稳定排序事件；时间相同的事件保留原序。通过校验后经 `replace_authored_motion` 发布到 Draft。任何错误返回对应 ID，整组放弃。保留源对象身份与区间配置，只写受影响的记录。[区间锁与时间校验](../../crates/zipzi-core/src/document/motions.rs) · [Builder 写入](../../crates/zipzi-core/src/state/motions.rs)
+3. 对每个受影响的手动段，设新旧区间分别为 `[s′, e′]`、`[s, e]`。Custom 控制点按 `u = (h − s) / (e − s)`、`h′ = s′ + u × (e′ − s′)` 改写时间，控制点纵值取原值。带有效预设的段调用 `mapped_controls` 从新端点还原预设，受限 Bezier 复用已有的三等分时间规则。保留 Step、Inverse Step、Auto Smooth 的类型和各段 N，交给现有编译器重算。普通 `move_keys` 对两个手柄分别加端点位移且可清除预设，局部伸缩需单独实现上述段变换。[曲线算法](../../../crates/zipzi-sdk/src/motion_curve.rs)
+4. 检查受影响区间两端、单键轨、事件与父对象的锁定，以及改动时间的非单调段。按新时刻稳定排序事件；时间相同的事件保留原序。通过校验后经 `replace_authored_motion` 发布到 Draft。任何错误返回对应 ID，整组放弃。保留源对象身份与区间配置，只写受影响的记录。[区间锁与时间校验](../../../crates/zipzi-core/src/document/motions.rs) · [Builder 写入](../../../crates/zipzi-core/src/state/motions.rs)
 
 ### 候选手势与提交
 
-在 `TimelineCommand` 增加对应命令。起拖时由 `begin_timeline_edit_for` 绑定面板实例、固定端和原选区 ID，记录基线版本。每个目标以同一基线求值；通过 HostedDraft 封装 Runtime 已有的 `preview_from_baseline` 执行一次伸缩。合法候选复用现有投影更新与画布预览。非法位置可以暂留上次合法画面，但要即时标明当前目标非法；随后拖回合法区可继续。释放时按 **MouseUp 的最终坐标重新验证**，合法才提交，非法、Escape、失去绑定或上下文过期都撤销候选。现有通用 `release_pointer` 会直接结束手势，伸缩要在进入该分支前处理。数值输入复用同一命令与校验，Enter 或合法失焦提交，非法失焦恢复基线。[Timeline Draft](../../crates/zipzi-editor-core/src/timeline/editing.rs) · [HostedDraft](../../crates/zipzi-editor-core/src/runtime_host.rs) · [指针释放](../../crates/zipzi-editor/src/panels/timeline/input.rs)
+在 `TimelineCommand` 增加对应命令。起拖时由 `begin_timeline_edit_for` 绑定面板实例、固定端和原选区 ID，记录基线版本。每个目标以同一基线求值；通过 HostedDraft 封装 Runtime 已有的 `preview_from_baseline` 执行一次伸缩。合法候选复用现有投影更新与画布预览。非法位置可以暂留上次合法画面，但要即时标明当前目标非法；随后拖回合法区可继续。释放时按 **MouseUp 的最终坐标重新验证**，合法才提交，非法、Escape、失去绑定或上下文过期都撤销候选。现有通用 `release_pointer` 会直接结束手势，伸缩要在进入该分支前处理。数值输入复用同一命令与校验，Enter 或合法失焦提交，非法失焦恢复基线。[Timeline Draft](../../../crates/zipzi-editor-core/src/timeline/editing.rs) · [HostedDraft](../../../crates/zipzi-editor-core/src/runtime_host.rs) · [指针释放](../../../crates/zipzi-editor/src/panels/timeline/input.rs)
 
 ## 5. 桌面接入
 
 | 入口 | 改动与完成条件 |
 | --- | --- |
-| 标尺与播放控件 | 在普通标尺上方设置独立命中区域，复用标尺的时间坐标和横向平移。空白处可双向拖出范围，端点拖动只改该端；Escape 恢复手势前的范围。播放控件提供开关、清除和帧／秒端点输入，窄面板共用同一组动作。[视图布局](../../crates/zipzi-editor/src/panels/timeline/view.rs) · [标尺绘制](../../crates/zipzi-editor/src/panels/timeline/drawing.rs) · [播放工具栏](../../crates/zipzi-editor/src/panels/timeline/transport.rs) |
-| 总览与曲线图 | “伸缩选区时间”作用于当前显式选区；进入后只在选区横向两端绘制与命中的伸缩手柄。普通键、曲线切线、框选、平移与标尺定位均保留自己的命中区域。拖动和数值输入共享候选，显示固定端、原／新时长、禁用或冲突原因。窄面板从“更多工具”进入。[图表输入](../../crates/zipzi-editor/src/panels/timeline/input.rs) · [工具菜单](../../crates/zipzi-editor/src/panels/timeline/controls.rs) |
-| 生命周期和文案 | 复用 timeline binding、捕获及取消机制清理面板隐藏、实例重建和切文档时的草稿。三种界面语言同步控件名、读屏标签、“终点不含”和错误提示。区间范围只占编辑器会话，伸缩使用现有键、事件与曲线字段，保存重开沿用当前原生格式。[生命周期](../../crates/zipzi-editor/src/panels/timeline/lifecycle.rs) · [界面翻译](../../crates/zipzi-editor/assets/locales) |
+| 标尺与播放控件 | 在普通标尺上方设置独立命中区域，复用标尺的时间坐标和横向平移。空白处可双向拖出范围，端点拖动只改该端；Escape 恢复手势前的范围。播放控件提供开关、清除和帧／秒端点输入，窄面板共用同一组动作。[视图布局](../../../crates/zipzi-editor/src/panels/timeline/view.rs) · [标尺绘制](../../../crates/zipzi-editor/src/panels/timeline/drawing.rs) · [播放工具栏](../../../crates/zipzi-editor/src/panels/timeline/transport.rs) |
+| 总览与曲线图 | “伸缩选区时间”作用于当前显式选区；进入后只在选区横向两端绘制与命中的伸缩手柄。普通键、曲线切线、框选、平移与标尺定位均保留自己的命中区域。拖动和数值输入共享候选，显示固定端、原／新时长、禁用或冲突原因。窄面板从“更多工具”进入。[图表输入](../../../crates/zipzi-editor/src/panels/timeline/input.rs) · [工具菜单](../../../crates/zipzi-editor/src/panels/timeline/controls.rs) |
+| 生命周期和文案 | 复用 timeline binding、捕获及取消机制清理面板隐藏、实例重建和切文档时的草稿。三种界面语言同步控件名、读屏标签、“终点不含”和错误提示。区间范围只占编辑器会话，伸缩使用现有键、事件与曲线字段，保存重开沿用当前原生格式。[生命周期](../../../crates/zipzi-editor/src/panels/timeline/lifecycle.rs) · [界面翻译](../../../crates/zipzi-editor/assets/locales) |
 
 ## 6. 交付顺序与验证
 
@@ -83,7 +83,7 @@ SDK 按以下顺序处理一个候选：
 | 3 · 伸缩命令 | 完成契约、SDK 单事务变换及生成物。本阶段可与阶段 1、2 独立开发。 | SDK 覆盖两端固定、单侧相邻段、预设与受限 Bezier、同刻事件、f32 碰撞及无操作；检查契约往返、生成漂移。对应下表用例 3–6。 |
 | 4 · 伸缩交互与联合验收 | 将命令接入时间轴候选、手柄和时长输入，串通两项功能。 | UI 验证有效位置拖到非法位置后直接松手、失焦、Escape、一步撤销。用合成工程实际执行“设范围 → 伸缩 → 回放 → 保存重开”，核对数据、画面和历史。 |
 
-开发时从仓库根目录运行对应阶段的门禁。测试分别放在已有 SDK 曲线、EditorCore timeline 集成和 Editor headless timeline 测试组；新增用例名称应落入下面的过滤范围，并在测试输出中核对命中数。联合验收把上述合成工程接入现有 [Timeline 原生验收入口](../../crates/zipzi-editor/tests/timeline_acceptance.rs)，在 macOS／Metal 上实际操作生产面板。把合成场景放在可选授权模型的跳过分支之前，单独报告场景是否执行。
+开发时从仓库根目录运行对应阶段的门禁。测试分别放在已有 SDK 曲线、EditorCore timeline 集成和 Editor headless timeline 测试组；新增用例名称应落入下面的过滤范围，并在测试输出中核对命中数。联合验收把上述合成工程接入现有 [Timeline 原生验收入口](../../../crates/zipzi-editor/tests/timeline_acceptance.rs)，在 macOS／Metal 上实际操作生产面板。把合成场景放在可选授权模型的跳过分支之前，单独报告场景是否执行。
 
 ```sh
 # 阶段 1、2、4
