@@ -258,3 +258,85 @@ fn clipping_retains_supported_layer_and_group_color_blends() {
         assert_pixel(&render(&bundle), 4, expected);
     }
 }
+
+#[test]
+fn moving_preserved_bitmap_mask_reveals_original_pixels() {
+    for (default, gray) in [(0., 255u8), (255., 0u8)] {
+        let mut layer = raster("eye", [128, 64, 200, 255]);
+        layer.additional_info.mask = Some(LayerMaskData {
+            image_data: Some(PixelData {
+                width: 4,
+                height: 8,
+                data: [gray, gray, gray, 255].repeat(32),
+            }),
+            default_color: Some(default),
+            ..Default::default()
+        });
+        let psd = Psd {
+            width: 8.,
+            height: 8.,
+            color_mode: Some(ColorMode::Rgb),
+            bits_per_channel: Some(8.),
+            children: Some(vec![layer]),
+            ..Default::default()
+        };
+        let mut bundle =
+            zipzi_psd::import_psd_with_masks(&ag_psd::write_psd(&psd, &Default::default()), true)
+                .unwrap();
+        let eye = bundle
+            .document
+            .mesh_order()
+            .iter()
+            .map(|id| bundle.document.mesh(id).unwrap())
+            .find(|m| m.name == "eye")
+            .unwrap();
+        let color = [128, 64, 200, 255];
+        let before = render(&bundle);
+        let (inside, outside) = if default == 0. {
+            (color, [0; 4])
+        } else {
+            ([0; 4], color)
+        };
+        assert_pixel(&before, 2, inside);
+        assert_pixel(&before, 6, outside);
+        let mut mask = bundle.document.mesh(&eye.masks[0]).unwrap().clone();
+        let mut builder = bundle.document.builder();
+        for p in &mut mask.base_positions {
+            p.x += 4.;
+        }
+        builder.replace_mesh(mask).unwrap();
+        bundle.document = builder.freeze().unwrap().state;
+        let moved = render(&bundle);
+        assert_pixel(&moved, 2, outside);
+        assert_pixel(&moved, 6, inside);
+    }
+}
+
+#[test]
+fn psd_slice_can_clamp_or_repeat_across_its_edge() {
+    let mut layer = raster("neck", [0; 4]);
+    for row in layer
+        .image_data
+        .as_mut()
+        .unwrap()
+        .data
+        .chunks_exact_mut(8 * 4)
+    {
+        row[..4].copy_from_slice(&[255, 0, 0, 255]);
+    }
+    let mut bundle = import(vec![layer]);
+    let mut mesh = bundle
+        .document
+        .mesh(&bundle.document.mesh_order()[0])
+        .unwrap()
+        .clone();
+    assert_eq!(mesh.texture_repeat, Some(false));
+    mesh.uvs.fill(Vec2::new(1.0625, 0.5));
+    for (repeat, expected) in [(false, [0; 4]), (true, [255, 0, 0, 255])] {
+        mesh.texture_repeat = Some(repeat);
+        let mut builder = bundle.document.builder();
+        builder.replace_mesh(mesh.clone()).unwrap();
+        bundle.document = builder.freeze().unwrap().state;
+        assert_pixel(&render(&bundle), 4, expected);
+    }
+}

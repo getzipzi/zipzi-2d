@@ -9,6 +9,96 @@ from . import common as common
 from . import expressions as expressions
 from . import physics as physics
 
+class ObservationContentIdentity(Value):
+    """A source content identity includes its representation. A PNG byte digest
+    and a domain-separated straight RGBA8 pixel digest are not interchangeable.
+    """
+    _type = 'ObservationContentIdentity'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ObservationContentIdentityPngSha256(ObservationContentIdentity):
+    """Digest of the encoded source PNG bytes.
+
+    Fields:
+    hash: SHA256 of encoded source PNG bytes; verification is a separate state.
+    """
+    _variant = 'png_sha256'
+    hash: str
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ObservationContentIdentityRgba8Sha256(ObservationContentIdentity):
+    """Domain-separated digest of source dimensions and straight RGBA8 pixels.
+
+    Fields:
+    hash: Domain-separated hash including dimensions and pixel conventions.
+    """
+    _variant = 'rgba8_sha256'
+    hash: str
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ObservationTexturePlan(Value):
+    """Feasible deterministic CPU plan. Clients cannot submit this as a trusted
+    execution plan. Mipmap bytes exclude the base level and are logical bytes,
+    not GPU allocation measurements.
+
+    Fields:
+    policy: Requested policy; equivalent actual pixels may have different policies.
+    effective_max_rgba_bytes: Requested FitBudget bound or the host base RGBA limit for Original.
+    longest_edge_limit: Maximum permitted longest edge; None only for an empty reference set.
+    source_rgba_bytes: Logical RGBA bytes of referenced source images, excluding unused assets.
+    render_rgba_bytes: Logical RGBA bytes of planned base levels.
+    estimated_mipmap_bytes: Sum of every non-base mip level, halving each axis down to 1x1.
+    resized_count: Number of assets with changed base dimensions.
+    planning_version: Version of reference collection, integer scaling and search semantics.
+    mipmap_version: Version of mip dimensions and byte-count semantics.
+    textures: Complete reference set and targets sorted by asset ID.
+    """
+    _type = 'ObservationTexturePlan'
+    policy: ObservationTexturePolicy
+    effective_max_rgba_bytes: int
+    longest_edge_limit: int | None = None
+    source_rgba_bytes: int
+    render_rgba_bytes: int
+    estimated_mipmap_bytes: int
+    resized_count: int
+    planning_version: int
+    mipmap_version: int
+    textures: tuple[ObservationTextureTarget, ...]
+
+class ObservationTexturePlanning(Value):
+    """A valid policy can be statically infeasible. Retain source dimensions for
+    diagnosis instead of treating a budget shortfall as malformed input.
+    """
+    _type = 'ObservationTexturePlanning'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ObservationTexturePlanningReady(ObservationTexturePlanning):
+    """A feasible metadata plan; GPU device limits have not been checked.
+
+    Fields:
+    plan: Feasible CPU dimensions; device limits remain unverified.
+    """
+    _variant = 'ready'
+    plan: ObservationTexturePlan
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ObservationTexturePlanningInsufficientBudget(ObservationTexturePlanning):
+    """The requested budget cannot accommodate the referenced textures.
+
+    Fields:
+    policy: Requested policy.
+    effective_max_rgba_bytes: Effective base RGBA bound.
+    source_rgba_bytes: Total logical source bytes, without decoding.
+    minimum_required_rgba_bytes: Source bytes for Original, or four bytes per texture for FitBudget.
+    textures: Source metadata in asset ID order; no target plan exists.
+    """
+    _variant = 'insufficient_budget'
+    policy: ObservationTexturePolicy
+    effective_max_rgba_bytes: int
+    source_rgba_bytes: int
+    minimum_required_rgba_bytes: int
+    textures: tuple[ObservationTextureSource, ...]
+
 class ObservationTexturePolicy(Value):
     """Explicit base-level texture policy. Budgets count logical straight RGBA8
     bytes per referenced asset ID, independently of physical buffer sharing.
@@ -30,6 +120,45 @@ class ObservationTexturePolicyFitBudget(ObservationTexturePolicy):
     """
     _variant = 'fit_budget'
     max_rgba_bytes: int
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ObservationTextureSize(Value):
+    """Pixel dimensions; zero axes are invalid resource metadata.
+
+    Fields:
+    width: Width in pixels.
+    height: Height in pixels.
+    """
+    _type = 'ObservationTextureSize'
+    width: int
+    height: int
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ObservationTextureSource(Value):
+    """Metadata-only source description. A declared identity has not been verified
+    by estimation; Source freezes the document, not external file bytes.
+
+    Fields:
+    asset_id: Stable image asset ID, counted once across all batch frames.
+    source_size: Declared source dimensions, without opening or decoding the image.
+    source_content_identity: Declared representation-specific identity, if available in metadata.
+    """
+    _type = 'ObservationTextureSource'
+    asset_id: str
+    source_size: ObservationTextureSize
+    source_content_identity: ObservationContentIdentity | None = None
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ObservationTextureTarget(Value):
+    """Source metadata and planned rendering dimensions for one referenced texture.
+
+    Fields:
+    source: Declared source metadata; the executor must validate it again.
+    render_size: Planned base-level rendering dimensions.
+    """
+    _type = 'ObservationTextureTarget'
+    source: ObservationTextureSource
+    render_size: ObservationTextureSize
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationView(Value):
@@ -197,8 +326,10 @@ class TopologyThresholds(Value):
     max_edge_stretch: float = field(default_factory=lambda: _default(TopologyThresholds, 'max_edge_stretch'))
 
 __all__ = [
-    'ObservationTexturePolicy', 'ObservationTexturePolicyOriginal', 'ObservationTexturePolicyFitBudget', 'ObservationView',
-    'ParameterActivation', 'SampleInput', 'SampleInputParameters', 'SampleInputAnimation',
-    'SampleRequest', 'SpatialQuery', 'SpatialQueryBounds', 'SpatialQueryHits',
-    'TopologyOverlay', 'TopologyThresholds',
+    'ObservationContentIdentity', 'ObservationContentIdentityPngSha256', 'ObservationContentIdentityRgba8Sha256', 'ObservationTexturePlan',
+    'ObservationTexturePlanning', 'ObservationTexturePlanningReady', 'ObservationTexturePlanningInsufficientBudget', 'ObservationTexturePolicy',
+    'ObservationTexturePolicyOriginal', 'ObservationTexturePolicyFitBudget', 'ObservationTextureSize', 'ObservationTextureSource',
+    'ObservationTextureTarget', 'ObservationView', 'ParameterActivation', 'SampleInput',
+    'SampleInputParameters', 'SampleInputAnimation', 'SampleRequest', 'SpatialQuery',
+    'SpatialQueryBounds', 'SpatialQueryHits', 'TopologyOverlay', 'TopologyThresholds',
 ]

@@ -160,6 +160,9 @@ pub struct Mesh {
     pub base_positions: Vec<Vec2>,
     /// Texture UV pairs ordered by vertex_ids; keep one UV for each position.
     pub uvs: Vec<Vec2>,
+    /// Material UV addressing: true repeats, false clamps to the edge. Omitted uses the renderer's legacy policy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub texture_repeat: Option<bool>,
     /// Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
     /// array offsets.
     pub triangles: Vec<[VertexId; 3]>,
@@ -202,6 +205,7 @@ impl Default for Mesh {
             vertex_ids: Vec::new(),
             base_positions: Vec::new(),
             uvs: Vec::new(),
+            texture_repeat: None,
             triangles: Vec::new(),
             meshing: None,
             runtime_id: String::new(),

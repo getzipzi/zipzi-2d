@@ -89,7 +89,7 @@ FAMILIES = (
     ("EditorState", "scene"),
     ("CursorPreview", "scene"),
     ("ObjectEditorState", "scene"),
-    ("DeformerOriginalAction", "scene"),
+    ("DeformerOriginal", "scene"),
 )
 
 

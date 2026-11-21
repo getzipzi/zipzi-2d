@@ -221,3 +221,34 @@ fn observed_texture_plan_matches_render_and_result_retains_its_lease() {
         version
     );
 }
+
+#[test]
+fn texture_preflight_exposes_host_limit_and_fit_sizes() {
+    use zipzi_contract::kernel_wire::Query;
+    let (mut rt, client, version) = fixture(
+        RuntimeLimits {
+            observation_texture_rgba_bytes: 16,
+            ..Default::default()
+        },
+        true,
+    );
+    let query = |rt: &Runtime, policy| {
+        rt.query(
+            client,
+            QuerySource::Published(version),
+            Query::ObservationTextures { policy },
+        )
+        .unwrap()["value"]
+            .clone()
+    };
+    let over = query(&rt, ObservationTexturePolicy::default());
+    assert_eq!(over["minimum_required_rgba_bytes"], 64);
+    assert_eq!(over["effective_max_rgba_bytes"], 16);
+    assert_eq!(over["textures"][0]["asset_id"], id(2));
+    let fitted = query(&rt, fit(16));
+    assert_eq!(fitted["plan"]["textures"][0]["render_size"]["width"], 2);
+    rt.set_observation_texture_budget(64.try_into().unwrap());
+    let original = query(&rt, ObservationTexturePolicy::default());
+    assert_eq!(original["plan"]["render_rgba_bytes"], 64);
+    assert_eq!(rt.outstanding_jobs(), 0);
+}

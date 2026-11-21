@@ -215,7 +215,8 @@ impl WgpuRenderer {
                         t.view,
                         None,
                         None,
-                        textures.repeats(&d.texture_asset_id),
+                        d.texture_repeat
+                            .unwrap_or_else(|| textures.repeats(&d.texture_asset_id)),
                         self.pipelines
                             .mask
                             .get(FaceMode::for_draw(d.double_sided, &uniform)),
@@ -598,7 +599,8 @@ impl FrameEncoder<'_, '_> {
                             .expect("validated textures")
                             .view,
                         u,
-                        self.textures.repeats(&d.texture_asset_id),
+                        d.texture_repeat
+                            .unwrap_or_else(|| self.textures.repeats(&d.texture_asset_id)),
                         d.double_sided,
                         d.blend_mode,
                         d.raw_blend_mode,

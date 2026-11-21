@@ -227,6 +227,7 @@ Authored drawable mesh with stable vertex identities, geometry and resource refe
 | `vertex_ids` | `tuple[int, ...]` | Required | Stable u32 vertex IDs in the same order as positions and UVs; IDs need not be contiguous. |
 | `base_positions` | `tuple[common.Vec2, ...]` | Required | Absolute base-shape XY positions in the mesh authoring space, ordered by vertex_ids. |
 | `uvs` | `tuple[common.Vec2, ...]` | Required | Texture UV pairs ordered by vertex_ids; keep one UV for each position. |
+| `texture_repeat` | `bool \| None` | `null` (`None`) | Material UV addressing: true repeats, false clamps to the edge. Omitted uses the renderer's legacy policy. |
 | `triangles` | `tuple[tuple[int, ...], ...]` | Required | Triangle triples of stable vertex IDs; preserve winding and do not substitute position-<br>array offsets. |
 | `meshing` | `MeshMeshing \| None` | `null` (`None`) | Optional single-region modeling topology in UV space; independent of posed positions. |
 | `runtime_id` | `str` | Required | External format/runtime identifier retained for import/export; not the document object ID. |

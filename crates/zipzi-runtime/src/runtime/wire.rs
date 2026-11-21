@@ -20,6 +20,10 @@ impl Runtime {
             ..self.limits.clone()
         }
     }
+    /// Set the base-level observation budget for newly admitted requests.
+    pub fn set_observation_texture_budget(&mut self, bytes: std::num::NonZeroU64) {
+        self.limits.observation_texture_rgba_bytes = bytes.get();
+    }
     pub fn project_io(&self) -> &ProjectIo {
         &self.project_io
     }
@@ -145,7 +149,12 @@ impl Runtime {
             }
             QuerySource::Draft(expected) => self.read_draft(client, expected)?,
         };
-        crate::query::read(&snapshot, query, self.limits.result_bytes.min(1 << 20))
+        crate::query::read(
+            &snapshot,
+            query,
+            self.limits.result_bytes.min(1 << 20),
+            self.limits.observation_texture_rgba_bytes,
+        )
     }
     pub fn cancel_host_jobs(&mut self) {
         for j in self

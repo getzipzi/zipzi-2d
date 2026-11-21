@@ -12,13 +12,13 @@ const MOTION: &str = "00000000-0000-4000-8000-000000000c03";
 const TRACK: &str = "/document/animation_assets/motions/0/tracks/0";
 
 #[test]
-fn v22_motion_keeps_key_identity_playback_and_export_through_v23_save() {
+fn v22_motion_keeps_key_identity_playback_and_export_through_current_save() {
     let original = project_json(V22);
     let document = load_native(V22).unwrap();
     let saved = native_bytes(&document);
     let upgraded = project_json(&saved);
     assert_eq!(original["format_version"], 22);
-    assert_eq!(upgraded["format_version"], 23);
+    assert_eq!(upgraded["format_version"], 24);
     let before = original.pointer(TRACK).unwrap();
     let after = upgraded.pointer(TRACK).unwrap();
     assert_eq!(before["id"], after["id"]);
@@ -105,7 +105,7 @@ fn historical_v22_projects_upgrade_in_place_with_identical_resources() {
         .unwrap();
         let mut expected = project_json(&original);
         assert_eq!(expected["format_version"], 22);
-        expected["format_version"] = 23.into();
+        expected["format_version"] = 24.into();
         let saved = fs::read(&path).unwrap();
         let actual = project_json(&saved);
         assert_eq!(actual, expected, "{name}");
@@ -146,7 +146,7 @@ fn each_native_version_enforces_its_own_segment_schema() {
             "INVALID_PROJECT"
         );
     }
-    for version in [21, 24] {
+    for version in [21, 25] {
         let mut unsupported = original.clone();
         unsupported["format_version"] = version.into();
         assert_eq!(
@@ -188,5 +188,43 @@ fn v22_opaque_provenance_survives_edits_and_restoration() {
             .unwrap_err()
             .code,
         "OPAQUE_NAMESPACE_CHANGED"
+    );
+}
+
+#[test]
+fn v23_meshes_retain_legacy_sampling_and_v24_preserves_explicit_addressing() {
+    let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures/observe_inspection/projects/pixel-binding.zipzi");
+    let archive = fs::read(source).unwrap();
+    let mut wire = project_json(&archive);
+    wire["format_version"] = 23.into();
+    let path = tempfile::tempdir().unwrap();
+    let file = path.path().join("sampling.zipzi");
+    fs::write(&file, replace_project_json(&archive, &wire)).unwrap();
+    let io = ProjectIo::new(path.path().join("cache"), ResourceStore::default());
+    let old = io.load(&file, || true).unwrap();
+    let id = old.document.mesh_order()[0].clone();
+    let mut mesh = old.document.mesh(&id).unwrap().clone();
+    assert_eq!(mesh.texture_repeat, None);
+    let mut builder = old.document.builder();
+    mesh.texture_repeat = Some(false);
+    builder.replace_mesh(mesh).unwrap();
+    let updated = builder.freeze().unwrap().state;
+    io.save(
+        &updated,
+        &old.resources,
+        &file,
+        Some(&old.metadata.fingerprint),
+        || true,
+    )
+    .unwrap();
+    assert_eq!(
+        project_json(&fs::read(&file).unwrap())["format_version"],
+        24
+    );
+    let reopened = io.load(&file, || true).unwrap();
+    assert_eq!(
+        reopened.document.mesh(&id).unwrap().texture_repeat,
+        Some(false)
     );
 }

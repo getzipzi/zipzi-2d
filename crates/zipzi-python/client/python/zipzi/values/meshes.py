@@ -147,6 +147,7 @@ class Mesh(Value):
     vertex_ids: Stable u32 vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
     base_positions: Absolute base-shape XY positions in the mesh authoring space, ordered by vertex_ids.
     uvs: Texture UV pairs ordered by vertex_ids; keep one UV for each position.
+    texture_repeat: Material UV addressing: true repeats, false clamps to the edge. Omitted uses the renderer's legacy policy.
     triangles: Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
     array offsets.
     meshing: Optional single-region modeling topology in UV space; independent of posed positions.
@@ -171,6 +172,7 @@ class Mesh(Value):
     vertex_ids: tuple[int, ...]
     base_positions: tuple[common.Vec2, ...]
     uvs: tuple[common.Vec2, ...]
+    texture_repeat: bool | None = None
     triangles: tuple[tuple[int, ...], ...]
     meshing: MeshMeshing | None = None
     runtime_id: str

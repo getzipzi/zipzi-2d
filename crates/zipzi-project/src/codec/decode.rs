@@ -88,6 +88,7 @@ pub(super) fn mesh_from_wire(mesh: &MeshWire, masks: Vec<String>) -> Result<Mesh
         meshing: mesh.meshing.clone(),
         draw_order: mesh.properties.draw_order,
         raw_blend_mode: mesh.properties.raw_blend_mode,
+        texture_repeat: mesh.properties.texture_repeat,
         appearance: mesh.properties.appearance.clone().into(),
         blend_mode,
         enabled: mesh.properties.enabled,

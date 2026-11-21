@@ -95,7 +95,9 @@ impl WgpuRenderer {
                         view: t.view.clone(),
                         revision: textures.revision(&d.texture_asset_id),
                         geometry: self.geometry[i].as_ref().map_or(0, |g| g.revision),
-                        repeat: textures.repeats(&d.texture_asset_id),
+                        repeat: d
+                            .texture_repeat
+                            .unwrap_or_else(|| textures.repeats(&d.texture_asset_id)),
                         double_sided: d.double_sided,
                     });
                 }

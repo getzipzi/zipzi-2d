@@ -112,6 +112,7 @@ class ImportFormat(StrEnum):
     MODEL3 = 'model3'
     PSD = 'psd'
     CUBISM = 'cubism'
+    PSD_EDITABLE_MASKS = 'psd_editable_masks'
 
 class Operation(Value):
     """Operation variants; inspect subclasses for constructors.
@@ -478,6 +479,13 @@ class QuerySummary(Query):
     _variant = 'summary'
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class QueryObservationTextures(Query):
+    """Plan referenced texture dimensions and RGBA storage against the current host limit without rendering.
+    """
+    _variant = 'observation_textures'
+    policy: sampling.ObservationTexturePolicy = field(default_factory=lambda: _default(QueryObservationTextures, 'policy'))
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class QueryMetadata(Query):
     """Document-level settings and organization, without geometry or image bytes.
     """
@@ -516,5 +524,5 @@ __all__ = [
     'OperationReleaseJob', 'OperationSubscribe', 'OperationEvents', 'OperationReleaseClient',
     'OperationRequestStatus', 'OperationEditorMeshGenerate', 'OperationOpenProjects', 'OperationShowWindow',
     'ProjectFingerprint', 'Query', 'QueryCollectionCapabilities', 'QuerySummary',
-    'QueryMetadata', 'QueryObjects', 'QueryCollection',
+    'QueryObservationTextures', 'QueryMetadata', 'QueryObjects', 'QueryCollection',
 ]

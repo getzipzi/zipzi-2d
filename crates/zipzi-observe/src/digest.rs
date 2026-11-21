@@ -148,7 +148,7 @@ impl ResolvedObservation {
             "mipmap_version": self.texture_report.mipmap_version,
             "source_alpha_sampling_version": crate::alpha::SOURCE_ALPHA_SAMPLING_VERSION,
         });
-        request["texture_sampling"] = "linear_mipmap_linear_repeat".into();
+        request["texture_sampling"] = "linear_mipmap_linear_material_or_repeat".into();
         request["mipmap_generation"] = "area_box_v2".into();
         canonical_json(&request, &mut bytes)?;
         Ok(zipzi_project::content_sha256(&bytes))

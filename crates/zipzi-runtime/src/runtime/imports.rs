@@ -41,8 +41,9 @@ pub(crate) fn prepare(
                 result.diagnostics,
             )
         }
-        ImportFormat::Psd => {
-            let (imported, report) = importer.import_psd(&path)?;
+        ImportFormat::Psd | ImportFormat::PsdEditableMasks => {
+            let (imported, report) = importer
+                .import_psd_with_masks(&path, matches!(format, ImportFormat::PsdEditableMasks))?;
             (imported, report.warnings, vec![])
         }
         ImportFormat::Cubism => (importer.import_cubism_authoring(&path)?, vec![], vec![]),

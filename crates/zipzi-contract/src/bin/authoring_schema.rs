@@ -9,6 +9,8 @@ fn main() {
             "operation":zipzi_contract::kernel_wire::Operation::api_shape(),
             "source":zipzi_contract::kernel::QuerySource::api_shape(),
             "query":zipzi_contract::kernel_wire::Query::api_shape(),
+            "transform":zipzi_contract::model::Transform::api_shape(),
+            "observation_texture_planning":zipzi_contract::observation::ObservationTexturePlanning::api_shape(),
             "asset":zipzi_contract::kernel::AssetRecord::api_shape(),
         }))
         .unwrap()

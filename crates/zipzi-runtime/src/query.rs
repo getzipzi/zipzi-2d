@@ -291,6 +291,7 @@ pub(crate) fn read(
     snapshot: &SourcedSnapshot,
     query: Query,
     max_bytes: usize,
+    texture_budget: u64,
 ) -> Result<Value, Status> {
     let s = snapshot.snapshot.document();
     let mut remaining = max_bytes;
@@ -300,6 +301,14 @@ pub(crate) fn read(
         }
         Query::Summary => {
             json!({"id":s.id(),"setup":s.setup(),"meshes":s.mesh_order().len(),"parameters":s.parameter_order().len(),"assets":s.asset_order().len()})
+        }
+        Query::ObservationTextures { policy } => {
+            let sources = zipzi_observe::planning::texture_sources(s)
+                .and_then(|sources| {
+                    zipzi_observe::planning::plan_textures(sources, policy, texture_budget)
+                })
+                .map_err(|e| error(&e.code, &e.message))?;
+            bounded(&sources, &mut remaining)?
         }
         Query::Metadata => {
             #[derive(Serialize)]

@@ -6,8 +6,12 @@ from .._errors import SdkFailure, unwrap
 
 class LocalBackend:
     connection_info = None
-    def __init__(self) -> None:
-        try: self._native = import_module('zipzi_native._native')._Runtime()
+    def __init__(self, *, observation_texture_rgba_bytes: int | None = None) -> None:
+        try:
+            native = import_module('zipzi_native._native')
+            self._native = native._Runtime() if observation_texture_rgba_bytes is None else native._Runtime(
+                observation_texture_rgba_bytes=observation_texture_rgba_bytes
+            )
         except ImportError as e: raise SdkFailure('LOCAL_BACKEND_MISSING','Install matching zipzi-native') from e
         if self._native.contract != CONTRACT:
             self._native.close()

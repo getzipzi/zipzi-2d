@@ -31,8 +31,8 @@ def main() -> None:
                 format_data["document_sha256"] != hashlib.sha256(original_json).hexdigest()):
             raise ValueError("Expected a native v1 project")
         input_data = json.loads(original_json)
-        if input_data["format"] != "zipzi-project" or input_data["format_version"] not in (22, 23):
-            raise ValueError("Expected native document v22 or v23")
+        if input_data["format"] != "zipzi-project" or input_data["format_version"] not in (22, 23, 24):
+            raise ValueError("Expected native document v22 through v24")
         assets = {name: archive.read(name) for name in archive.namelist()
                   if name.startswith("assets/") and not name.endswith("/")}
         if any(name != f"assets/{hashlib.sha256(data).hexdigest()}.png"

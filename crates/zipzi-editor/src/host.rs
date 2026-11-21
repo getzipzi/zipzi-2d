@@ -64,6 +64,12 @@ impl DesktopHost {
                 let headroom = available.saturating_sub(total / 16);
                 usize::try_from(headroom).unwrap_or(usize::MAX)
             }));
+        if let Some(value) = std::env::var_os("ZIPZI_OBSERVATION_TEXTURE_BYTES") {
+            match value.to_str().and_then(|n| n.parse::<std::num::NonZeroU64>().ok()) {
+                Some(bytes) => runtime.write().set_observation_texture_budget(bytes),
+                None => eprintln!("ZIPZI_OBSERVATION_TEXTURE_BYTES must be a positive byte count; using the default"),
+            }
+        }
         match zipzi_editor_core::platform_paths::cache_directory()
             .and_then(|root| runtime.configure_project_cache(root.join("projects")))
         {

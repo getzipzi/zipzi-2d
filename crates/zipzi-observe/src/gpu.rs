@@ -436,7 +436,7 @@ impl Observer {
         ] {
             digest.update(value.to_bits().to_le_bytes());
         }
-        digest.update(b"source-texture:linear-mipmap-linear-repeat");
+        digest.update(b"source-texture:linear-mipmap-linear-material-or-repeat");
         digest.update(crate::preparation::AREA_FILTER_VERSION.to_le_bytes());
         digest.update(crate::planning::MIPMAP_VERSION.to_le_bytes());
         digest.update(crate::alpha::SOURCE_ALPHA_SAMPLING_VERSION.to_le_bytes());

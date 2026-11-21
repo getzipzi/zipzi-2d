@@ -604,3 +604,30 @@ fn unified_field_patch_paths_match_local_patches_and_share_untouched_rigs() {
         );
     }
 }
+
+#[test]
+fn dictionary_diagnostic_identifies_bad_entry_and_missing_native_group() {
+    let s = session(2, 3);
+    for (bad_id, reason) in [
+        ("Rig0".into(), "external_id"),
+        (fid(2000), "duplicate"),
+        ("typo".into(), "unknown"),
+    ] {
+        let mut candidate = asset(2, 3);
+        candidate.data.meta.dictionary[0].id = bad_id;
+        let mut draft = s.begin_draft();
+        let error = draft
+            .batch(draft.source(), |edit| edit.replace_physics(Some(candidate)))
+            .unwrap_err();
+        assert_eq!(error.code, "INVALID_PHYSICS_DICTIONARY");
+        assert!(
+            error.message.contains(reason) && error.message.contains(&fid(1000)),
+            "{}",
+            error.message
+        );
+        let index = if reason == "duplicate" { 1 } else { 0 };
+        assert!(error
+            .message
+            .contains(&format!("PhysicsDictionary[{index}].Id")));
+    }
+}

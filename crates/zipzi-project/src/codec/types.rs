@@ -38,6 +38,8 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Present<T> {
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct MeshPropertiesWire {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) texture_repeat: Option<bool>,
     pub(super) part_id: String,
     pub(super) deformer_id: String,
     pub(super) appearance: AppearanceWire,

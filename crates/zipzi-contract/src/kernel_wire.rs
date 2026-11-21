@@ -20,6 +20,8 @@ pub enum ImportFormat {
     Model3,
     Psd,
     Cubism,
+    /// PSD artwork with editable bitmap-mask meshes and original layer pixels.
+    PsdEditableMasks,
 }
 
 /// Stable collection selector, interpreted only within its accompanying QuerySource.
@@ -52,6 +54,11 @@ pub enum Query {
         target: CollectionTarget,
     },
     Summary,
+    /// Plan referenced texture dimensions and RGBA storage against the current host limit without rendering.
+    ObservationTextures {
+        #[serde(default)]
+        policy: crate::observation::ObservationTexturePolicy,
+    },
     /// Document-level settings and organization, without geometry or image bytes.
     Metadata,
     Objects {

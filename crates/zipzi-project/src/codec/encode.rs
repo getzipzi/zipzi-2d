@@ -48,6 +48,7 @@ pub(super) fn encode_wire(document: &impl super::view::EncodeModel) -> Result<Pr
                 inverted_mask: m.inverted_mask,
                 masks: m.masks.clone(),
                 raw_blend_mode: m.raw_blend_mode,
+                texture_repeat: m.texture_repeat,
                 draw_order: m.draw_order,
             },
         });

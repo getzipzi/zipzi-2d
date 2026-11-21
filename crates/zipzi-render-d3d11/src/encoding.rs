@@ -451,6 +451,7 @@ pub(crate) fn encode(
                         Program::Mask,
                     );
                     draw.double_sided = mesh.double_sided;
+                    draw.repeat = mesh.texture_repeat.unwrap_or(true);
                     encoder.draw(&draw)?;
                 }
             }
@@ -481,6 +482,7 @@ pub(crate) fn encode(
                 draw.data[3] = mesh.screen_color;
                 draw.data[6][0] = mesh.opacity;
                 draw.double_sided = mesh.double_sided;
+                draw.repeat = mesh.texture_repeat.unwrap_or(true);
                 masks.apply(
                     &mut draw,
                     &renderer.masks,

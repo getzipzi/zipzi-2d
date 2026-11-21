@@ -178,7 +178,7 @@ fn nonempty_cdi_survives_native_save_and_reopen() {
     let bytes = native_bytes(&candidate);
     let saved = project_json(&bytes);
     assert_eq!(saved["format"], "zipzi-project");
-    assert_eq!(saved["format_version"], 23);
+    assert_eq!(saved["format_version"], 24);
     assert!(saved["document"]["display_info"]["extensions"]["Future"].is_object());
     let reopened = load_native(&bytes).unwrap();
     assert_eq!(project_json(&native_bytes(&reopened)), saved);
@@ -369,7 +369,7 @@ fn current_format_is_strict_and_legacy_versions_cannot_smuggle_display_info() {
     let source = document();
     let bytes = native_bytes(&source);
     let mut wire = project_json(&bytes);
-    assert_eq!(wire["format_version"], 23);
+    assert_eq!(wire["format_version"], 24);
     assert!(wire["document"]["display_info"].is_object());
     for (value, expected_code) in [
         (Value::Null, "UNSUPPORTED_VERSION"),

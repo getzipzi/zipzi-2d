@@ -20,6 +20,8 @@ pub struct RuntimeLimits {
     pub events_per_session: usize,
     pub task_bytes: usize,
     pub result_bytes: usize,
+    /// Maximum decoded base-level texture bytes per observation; independent of PNG result bytes.
+    pub observation_texture_rgba_bytes: u64,
 }
 impl Default for RuntimeLimits {
     fn default() -> Self {
@@ -35,6 +37,7 @@ impl Default for RuntimeLimits {
             // 1 GiB of admitted workspace just to reopen their saved document.
             task_bytes: 2 * 1024 * 1024 * 1024,
             result_bytes: 64 * 1024 * 1024,
+            observation_texture_rgba_bytes: 64 << 20,
         }
     }
 }

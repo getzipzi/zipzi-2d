@@ -297,21 +297,50 @@ impl Runtime {
             request.mapping().map_err(observation_error)?;
             let captured = self.capture(client, source)?;
             sampling_admission(&captured)?;
-            let sources = zipzi_observe::planning::texture_sources(captured.snapshot.document())
-                .map_err(observation_error)?;
-            let planning =
-                zipzi_observe::planning::plan_textures(sources, view.texture_policy, 64 << 20)
-                    .map_err(observation_error)?;
-            let zipzi_contract::observation::ObservationTexturePlanning::Ready { plan } = planning
-            else {
-                return Err(error(
-                    "RESOURCE_LIMIT",
-                    "Observation texture budget is insufficient",
-                ));
+            let document = captured.snapshot.document();
+            let sources =
+                zipzi_observe::planning::texture_sources(document).map_err(observation_error)?;
+            let texture_budget = self.limits.observation_texture_rgba_bytes;
+            let planning = zipzi_observe::planning::plan_textures(
+                sources,
+                view.texture_policy,
+                texture_budget,
+            )
+            .map_err(observation_error)?;
+            use zipzi_contract::observation::ObservationTexturePlanning;
+            let plan = match planning {
+                ObservationTexturePlanning::Ready { plan } => plan,
+                ObservationTexturePlanning::InsufficientBudget {
+                    minimum_required_rgba_bytes,
+                    effective_max_rgba_bytes,
+                    textures,
+                    ..
+                } => {
+                    let largest = textures.iter().max_by_key(|t| {
+                        u64::from(t.source_size.width) * u64::from(t.source_size.height)
+                    });
+                    return Err(error("RESOURCE_LIMIT", &format!(
+                        "Observation requires {minimum_required_rgba_bytes} base RGBA bytes, budget {effective_max_rgba_bytes}; largest asset {}. Query ObservationTextures for per-asset sizes.",
+                        largest.map_or("(none)", |t|t.asset_id.as_str())
+                    )));
+                }
             };
+            let texture_addressing: std::collections::BTreeMap<_, _> = document
+                .mesh_order()
+                .iter()
+                .filter_map(|id| {
+                    document
+                        .mesh(id)?
+                        .texture_repeat
+                        .map(|repeat| (id.clone(), if repeat { "repeat" } else { "clamp_to_edge" }))
+                })
+                .collect();
             let limit = self.limits.result_bytes.min(64 << 20);
-            let workspace_bytes = 256usize
-                .saturating_mul(1 << 20)
+            let workspace_bytes = (256usize << 20)
+                .saturating_add(
+                    usize::try_from(plan.render_rgba_bytes.saturating_sub(64 << 20))
+                        .unwrap_or(usize::MAX),
+                )
                 .saturating_add(view.width as usize * view.height as usize * 32);
             self.request_read(client, source, TaskBudget { workspace_bytes, result_bytes: limit }, move |snapshot, cancel| {
                 let mut animation = preview(&snapshot, &input)?;
@@ -327,13 +356,13 @@ impl Runtime {
                         let SampleInput::Parameters { values } = &input else { unreachable!() };
                         ObservationInput::capture_from_snapshot_with_quality(&snapshot, &values[index], request.needs_quality()).map_err(observation_error)?
                     };
-                    let limits = zipzi_observe::ObservationCaptureLimits { max_frames: 1, max_rgba_bytes: 64 << 20, png: zipzi_core::image::PngDecodeLimits { max_encoded_bytes: 64 << 20, max_workspace_bytes: 256 << 20 } };
+                    let limits = zipzi_observe::ObservationCaptureLimits { max_frames: 1, max_rgba_bytes: texture_budget, png: zipzi_core::image::PngDecodeLimits { max_encoded_bytes: 64 << 20, max_workspace_bytes: 256 << 20 } };
                     let resolved = ResolvedObservation::capture_many_with_plan(vec![captured], &plan, limits, request.needs_quality(), &cancel.conversion_control()).map_err(observation_error)?;
                     let frame = observer.render(&resolved[0], request.clone()).map_err(observation_error)?;
                     cancel.check()?;
                     let png = frame.png_bytes().map_err(observation_error)?;
                     let mut header = Bytes::new(1 << 20);
-                    header.json(&serde_json::json!({"source":source,"content":snapshot.snapshot.content_id(),"index":index,"width":frame.width,"height":frame.height,"png_bytes":png.len(),"input_sha256":frame.input_sha256,"scene_digest":resolved[0].scene_digest(),"parameters":frame.parameters,"quality":frame.quality,"adapter_name":frame.adapter_name,"adapter_backend":frame.adapter_backend,"texture_report":if index == 0 { Some(resolved[0].texture_report()) } else { None },"view":{"roi":[frame.view.visible_roi.x0,frame.view.visible_roi.y0,frame.view.visible_roi.x1,frame.view.visible_roi.y1],"scale":frame.view.scale,"offset":frame.view.offset},"drawable_bounds":frame.drawable_bounds.iter().map(|b| serde_json::json!({"id":b.id,"visible":b.visible,"bounds":b.bounds})).collect::<Vec<_>>()}))?;
+                    header.json(&serde_json::json!({"source":source,"content":snapshot.snapshot.content_id(),"index":index,"width":frame.width,"height":frame.height,"png_bytes":png.len(),"input_sha256":frame.input_sha256,"scene_digest":resolved[0].scene_digest(),"parameters":frame.parameters,"quality":frame.quality,"adapter_name":frame.adapter_name,"adapter_backend":frame.adapter_backend,"texture_addressing":(index == 0).then_some(&texture_addressing),"texture_report":if index == 0 { Some(resolved[0].texture_report()) } else { None },"view":{"roi":[frame.view.visible_roi.x0,frame.view.visible_roi.y0,frame.view.visible_roi.x1,frame.view.visible_roi.y1],"scale":frame.view.scale,"offset":frame.view.offset},"drawable_bounds":frame.drawable_bounds.iter().map(|b| serde_json::json!({"id":b.id,"visible":b.visible,"bounds":b.bounds})).collect::<Vec<_>>()}))?;
                     out.raw(&(header.data.len() as u32).to_be_bytes())?;
                     out.raw(&header.data)?;
                     out.raw(&png)?;

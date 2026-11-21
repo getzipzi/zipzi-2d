@@ -90,6 +90,14 @@ def documented_example(name, arguments):
 
 
 class Values(unittest.TestCase):
+    def test_physics_extensions_preserve_unknown_fields_and_typed_edits(self):
+        entry = v.PhysicsDictionaryEntry.from_wire({"Id": "original", "Name": "Hair", "vendor": [3]})
+        self.assertEqual(dict(entry.extensions), {"vendor": (3,)})
+        self.assertEqual(replace(entry, Id="edited").to_wire(),
+                         {"Id": "edited", "Name": "Hair", "vendor": [3]})
+        with self.assertRaisesRegex(ValueError, "declared field Id"):
+            replace(entry, extensions={"Id": "stale"}).to_wire()
+
     def test_installed_reference_is_complete_and_readable_offline(self):
         from importlib.resources import files
         from types import ModuleType

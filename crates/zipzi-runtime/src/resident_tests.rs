@@ -182,7 +182,7 @@ fn metadata_query_bounds_all_roots_and_preserves_source() {
         )
         .unwrap();
     let snapshot = r.read_snapshot(c, s).unwrap();
-    let response = crate::query::read(&snapshot, Query::Metadata, length).unwrap();
+    let response = crate::query::read(&snapshot, Query::Metadata, length, 64 << 20).unwrap();
     assert_eq!(response["value"], expected);
     assert_eq!(
         response["source"],
@@ -193,7 +193,12 @@ fn metadata_query_bounds_all_roots_and_preserves_source() {
         serde_json::to_value(snapshot.snapshot.content_id()).unwrap()
     );
     assert_eq!(
-        code(crate::query::read(&snapshot, Query::Metadata, length - 1)),
+        code(crate::query::read(
+            &snapshot,
+            Query::Metadata,
+            length - 1,
+            64 << 20
+        )),
         "RESOURCE_LIMIT"
     );
 }

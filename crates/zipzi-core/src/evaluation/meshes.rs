@@ -26,6 +26,7 @@ pub(super) fn evaluate(
         d.texture_asset_id.clear();
         d.texture_asset_id.push_str(mesh.texture_asset_id.as_str());
         d.blend_mode = mesh.blend_mode;
+        d.texture_repeat = mesh.texture_repeat;
         d.double_sided = mesh.double_sided;
         d.inverted_mask = mesh.inverted_mask;
         d.masks.clone_from(&mesh.masks);

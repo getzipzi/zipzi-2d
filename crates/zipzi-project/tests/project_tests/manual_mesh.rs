@@ -45,7 +45,7 @@ fn manual_mesh_json_preserves_structure_and_exact_faces() {
     let text = fixture_bytes(&d);
     assert_eq!(project_json(&text), project_json(&resaved_native(&text)));
     let mut wire: serde_json::Value = project_json(&text);
-    assert_eq!(wire["format_version"], 23);
+    assert_eq!(wire["format_version"], 24);
     wire["document"]["meshes"][0]["meshing"]["constraints"][0]["endpoints"] =
         serde_json::json!([2, 12]);
     assert!(load_native(&replace_project_json(&text, &wire)).is_err());

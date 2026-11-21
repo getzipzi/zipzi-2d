@@ -23,11 +23,13 @@ Signatures use `v` for `zipzi.values`, `r` for `zipzi.results`, and `WireMap` fo
 ## zipzi.local
 
 ```python
-def local() -> Runtime:
+def local(*, observation_texture_rgba_bytes: int | None=None) -> Runtime:
     ...
 ```
 
-Create an owned native host. Closing it releases its sessions without saving.
+Create an owned native host, optionally setting its observation texture budget in bytes.
+
+The default base RGBA budget is 64 MiB. Closing the host releases its sessions without saving.
 
 Related: [zipzi.Runtime](runtime.md#zipzi-runtime)
 

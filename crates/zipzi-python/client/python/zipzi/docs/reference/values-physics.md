@@ -229,11 +229,11 @@ Related: [zipzi.values.PhysicsMeta](values-physics.md#zipzi-values-physicsmeta),
 class PhysicsDictionaryEntry(Value)
 ```
 
-Exported Physics rig identity and display label.
+Physics rig identity and display label.
 
 | Field | Type | Constructor default (wire JSON) | Description |
 | --- | --- | --- | --- |
-| `Id` | `str` | Required | Stable identity in the owning authoring domain; exported metadata IDs retain their source text. |
+| `Id` | `str` | Required | In a native PhysicsAsset dictionary, use PhysicsSetting.id (the document UUID).<br>Import/export converts this reference to the external physics identifier. |
 | `Name` | `str` | Required | Human-readable display or registration name; distinct from persistent object identity. |
 | `extensions` | `Mapping[str, object]` | Required | Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed. |
 
@@ -519,7 +519,7 @@ Physics format metadata, effective forces, rig dictionary and validated counts.
 | `TotalOutputCount` | `int` | Required | Exported count of Physics outputs, maintained by native validation. |
 | `VertexCount` | `int` | Required | Exported count of Physics nodes, maintained by native validation. |
 | `EffectiveForces` | `PhysicsForces` | Required | Native effective gravity and wind vectors. |
-| `PhysicsDictionary` | `tuple[PhysicsDictionaryEntry, ...]` | Required | Ordered exported Physics rig ID/name metadata. |
+| `PhysicsDictionary` | `tuple[PhysicsDictionaryEntry, ...]` | Required | Ordered rig labels. In native PhysicsAsset records, each Id references a PhysicsSetting.id UUID. |
 | `Fps` | `float \| None` | `null` (`None`) | Optional Physics fixed-step frequency in frames per second; None or zero follows the evaluation delta. |
 | `extensions` | `Mapping[str, object]` | Required | Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed. |
 

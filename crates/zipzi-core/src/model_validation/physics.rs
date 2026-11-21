@@ -60,13 +60,48 @@ impl Model<'_> {
                 return status;
             }
         }
-        let dictionary: HashSet<_> = asset.data.meta.dictionary.iter().map(|d| &d.id).collect();
-        if dictionary.len() != asset.data.meta.dictionary.len()
-            || dictionary != asset.data.settings.iter().map(|g| &g.id).collect()
-        {
+        let mut remaining: HashSet<_> = asset.data.settings.iter().map(|g| g.id.as_str()).collect();
+        for (index, entry) in asset.data.meta.dictionary.iter().enumerate() {
+            if !remaining.remove(entry.id.as_str()) {
+                let reason = if asset.data.settings.iter().any(|g| g.id == entry.id) {
+                    "duplicate group UUID".into()
+                } else if let Some(rig) = asset
+                    .data
+                    .settings
+                    .iter()
+                    .find(|g| g.external_id == entry.id)
+                {
+                    format!("external_id supplied; use PhysicsSetting.id {}", rig.id)
+                } else {
+                    "unknown group UUID".into()
+                };
+                let present: HashSet<_> = asset
+                    .data
+                    .meta
+                    .dictionary
+                    .iter()
+                    .map(|d| d.id.as_str())
+                    .collect();
+                let missing = asset
+                    .data
+                    .settings
+                    .iter()
+                    .find(|g| !present.contains(g.id.as_str()))
+                    .map(|g| format!("; missing entry for PhysicsSetting.id {}", g.id))
+                    .unwrap_or_default();
+                return Status::error(
+                    "INVALID_PHYSICS_DICTIONARY",
+                    format!(
+                        "PhysicsDictionary[{index}].Id '{}': {reason}{missing}",
+                        entry.id
+                    ),
+                );
+            }
+        }
+        if let Some(id) = remaining.iter().min() {
             return Status::error(
                 "INVALID_PHYSICS_DICTIONARY",
-                "dictionary must match native groups",
+                format!("PhysicsDictionary missing entry for PhysicsSetting.id {id}"),
             );
         }
         let mut meta = asset.data.meta.clone();

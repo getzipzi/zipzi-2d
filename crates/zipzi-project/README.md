@@ -58,10 +58,11 @@ case-alias, lock and replacement tests always execute.
 ## Native project container
 
 `ProjectIo` opens native ZIP container v1 with document identifier
-`zipzi-project` and document versions 22 and 23. Opening v22 converts its four
+`zipzi-project` and document versions 22 through 24. Opening v22 converts its four
 motion segment kinds in memory, preserving key IDs, explicit Bezier controls,
 and imported motion3 provenance. Frame stepping defaults to Off. Save and
-Save As atomically write document v23. The compatibility gate is
+Save As atomically write document v24, which supports per-mesh texture addressing.
+Meshes without an override retain the legacy sampler behavior. The compatibility gate is
 `cargo test --locked -p zipzi-project --test native_compatibility`.
 An optional `preview.png` and `format.json.preview` descriptor carry a static
 RGBA8 image (maximum 1024 × 1024) and SHA-256. This does not change the container

@@ -8,9 +8,19 @@ Import from `zipzi.values.sampling` or `zipzi.values`; both expose the same clas
 
 [Shared value methods](value-codec.md)
 
+- [zipzi.values.ObservationContentIdentity](values-sampling.md#zipzi-values-observationcontentidentity)
+- [zipzi.values.ObservationContentIdentityPngSha256](values-sampling.md#zipzi-values-observationcontentidentitypngsha256)
+- [zipzi.values.ObservationContentIdentityRgba8Sha256](values-sampling.md#zipzi-values-observationcontentidentityrgba8sha256)
+- [zipzi.values.ObservationTexturePlan](values-sampling.md#zipzi-values-observationtextureplan)
+- [zipzi.values.ObservationTexturePlanning](values-sampling.md#zipzi-values-observationtextureplanning)
+- [zipzi.values.ObservationTexturePlanningReady](values-sampling.md#zipzi-values-observationtextureplanningready)
+- [zipzi.values.ObservationTexturePlanningInsufficientBudget](values-sampling.md#zipzi-values-observationtextureplanninginsufficientbudget)
 - [zipzi.values.ObservationTexturePolicy](values-sampling.md#zipzi-values-observationtexturepolicy)
 - [zipzi.values.ObservationTexturePolicyOriginal](values-sampling.md#zipzi-values-observationtexturepolicyoriginal)
 - [zipzi.values.ObservationTexturePolicyFitBudget](values-sampling.md#zipzi-values-observationtexturepolicyfitbudget)
+- [zipzi.values.ObservationTextureSize](values-sampling.md#zipzi-values-observationtexturesize)
+- [zipzi.values.ObservationTextureSource](values-sampling.md#zipzi-values-observationtexturesource)
+- [zipzi.values.ObservationTextureTarget](values-sampling.md#zipzi-values-observationtexturetarget)
 - [zipzi.values.ObservationView](values-sampling.md#zipzi-values-observationview)
 - [zipzi.values.ParameterActivation](values-sampling.md#zipzi-values-parameteractivation)
 - [zipzi.values.SampleInput](values-sampling.md#zipzi-values-sampleinput)
@@ -22,6 +32,127 @@ Import from `zipzi.values.sampling` or `zipzi.values`; both expose the same clas
 - [zipzi.values.SpatialQueryHits](values-sampling.md#zipzi-values-spatialqueryhits)
 - [zipzi.values.TopologyOverlay](values-sampling.md#zipzi-values-topologyoverlay)
 - [zipzi.values.TopologyThresholds](values-sampling.md#zipzi-values-topologythresholds)
+
+<a id="zipzi-values-observationcontentidentity"></a>
+
+## zipzi.values.ObservationContentIdentity
+
+```python
+class ObservationContentIdentity(Value)
+```
+
+A source content identity includes its representation. A PNG byte digest
+and a domain-separated straight RGBA8 pixel digest are not interchangeable.
+
+Variants: [ObservationContentIdentityPngSha256](values-sampling.md#zipzi-values-observationcontentidentitypngsha256), [ObservationContentIdentityRgba8Sha256](values-sampling.md#zipzi-values-observationcontentidentityrgba8sha256)
+
+<a id="zipzi-values-observationcontentidentitypngsha256"></a>
+
+## zipzi.values.ObservationContentIdentityPngSha256
+
+```python
+class ObservationContentIdentityPngSha256(ObservationContentIdentity)
+```
+
+Digest of the encoded source PNG bytes.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `hash` | `str` | Required | SHA256 of encoded source PNG bytes; verification is a separate state. |
+
+Related: [zipzi.values.ObservationContentIdentity](values-sampling.md#zipzi-values-observationcontentidentity)
+
+<a id="zipzi-values-observationcontentidentityrgba8sha256"></a>
+
+## zipzi.values.ObservationContentIdentityRgba8Sha256
+
+```python
+class ObservationContentIdentityRgba8Sha256(ObservationContentIdentity)
+```
+
+Domain-separated digest of source dimensions and straight RGBA8 pixels.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `hash` | `str` | Required | Domain-separated hash including dimensions and pixel conventions. |
+
+Related: [zipzi.values.ObservationContentIdentity](values-sampling.md#zipzi-values-observationcontentidentity)
+
+<a id="zipzi-values-observationtextureplan"></a>
+
+## zipzi.values.ObservationTexturePlan
+
+```python
+class ObservationTexturePlan(Value)
+```
+
+Feasible deterministic CPU plan. Clients cannot submit this as a trusted
+execution plan. Mipmap bytes exclude the base level and are logical bytes,
+not GPU allocation measurements.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `policy` | `ObservationTexturePolicy` | Required | Requested policy; equivalent actual pixels may have different policies. |
+| `effective_max_rgba_bytes` | `int` | Required | Requested FitBudget bound or the host base RGBA limit for Original. |
+| `longest_edge_limit` | `int \| None` | `null` (`None`) | Maximum permitted longest edge; None only for an empty reference set. |
+| `source_rgba_bytes` | `int` | Required | Logical RGBA bytes of referenced source images, excluding unused assets. |
+| `render_rgba_bytes` | `int` | Required | Logical RGBA bytes of planned base levels. |
+| `estimated_mipmap_bytes` | `int` | Required | Sum of every non-base mip level, halving each axis down to 1x1. |
+| `resized_count` | `int` | Required | Number of assets with changed base dimensions. |
+| `planning_version` | `int` | Required | Version of reference collection, integer scaling and search semantics. |
+| `mipmap_version` | `int` | Required | Version of mip dimensions and byte-count semantics. |
+| `textures` | `tuple[ObservationTextureTarget, ...]` | Required | Complete reference set and targets sorted by asset ID. |
+
+Related: [zipzi.values.ObservationTexturePolicy](values-sampling.md#zipzi-values-observationtexturepolicy), [zipzi.values.ObservationTextureTarget](values-sampling.md#zipzi-values-observationtexturetarget)
+
+<a id="zipzi-values-observationtextureplanning"></a>
+
+## zipzi.values.ObservationTexturePlanning
+
+```python
+class ObservationTexturePlanning(Value)
+```
+
+A valid policy can be statically infeasible. Retain source dimensions for
+diagnosis instead of treating a budget shortfall as malformed input.
+
+Variants: [ObservationTexturePlanningReady](values-sampling.md#zipzi-values-observationtextureplanningready), [ObservationTexturePlanningInsufficientBudget](values-sampling.md#zipzi-values-observationtextureplanninginsufficientbudget)
+
+<a id="zipzi-values-observationtextureplanningready"></a>
+
+## zipzi.values.ObservationTexturePlanningReady
+
+```python
+class ObservationTexturePlanningReady(ObservationTexturePlanning)
+```
+
+A feasible metadata plan; GPU device limits have not been checked.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `plan` | `ObservationTexturePlan` | Required | Feasible CPU dimensions; device limits remain unverified. |
+
+Related: [zipzi.values.ObservationTexturePlan](values-sampling.md#zipzi-values-observationtextureplan), [zipzi.values.ObservationTexturePlanning](values-sampling.md#zipzi-values-observationtextureplanning)
+
+<a id="zipzi-values-observationtextureplanninginsufficientbudget"></a>
+
+## zipzi.values.ObservationTexturePlanningInsufficientBudget
+
+```python
+class ObservationTexturePlanningInsufficientBudget(ObservationTexturePlanning)
+```
+
+The requested budget cannot accommodate the referenced textures.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `policy` | `ObservationTexturePolicy` | Required | Requested policy. |
+| `effective_max_rgba_bytes` | `int` | Required | Effective base RGBA bound. |
+| `source_rgba_bytes` | `int` | Required | Total logical source bytes, without decoding. |
+| `minimum_required_rgba_bytes` | `int` | Required | Source bytes for Original, or four bytes per texture for FitBudget. |
+| `textures` | `tuple[ObservationTextureSource, ...]` | Required | Source metadata in asset ID order; no target plan exists. |
+
+Related: [zipzi.values.ObservationTexturePlanning](values-sampling.md#zipzi-values-observationtextureplanning), [zipzi.values.ObservationTexturePolicy](values-sampling.md#zipzi-values-observationtexturepolicy), [zipzi.values.ObservationTextureSource](values-sampling.md#zipzi-values-observationtexturesource)
 
 <a id="zipzi-values-observationtexturepolicy"></a>
 
@@ -63,6 +194,57 @@ Deterministically downsample referenced base textures to fit a logical RGBA8 bud
 | `max_rgba_bytes` | `int` | Required | Positive integer no greater than the host's base RGBA limit. |
 
 Related: [zipzi.values.ObservationTexturePolicy](values-sampling.md#zipzi-values-observationtexturepolicy)
+
+<a id="zipzi-values-observationtexturesize"></a>
+
+## zipzi.values.ObservationTextureSize
+
+```python
+class ObservationTextureSize(Value)
+```
+
+Pixel dimensions; zero axes are invalid resource metadata.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `width` | `int` | Required | Width in pixels. |
+| `height` | `int` | Required | Height in pixels. |
+
+<a id="zipzi-values-observationtexturesource"></a>
+
+## zipzi.values.ObservationTextureSource
+
+```python
+class ObservationTextureSource(Value)
+```
+
+Metadata-only source description. A declared identity has not been verified
+by estimation; Source freezes the document, not external file bytes.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `asset_id` | `str` | Required | Stable image asset ID, counted once across all batch frames. |
+| `source_size` | `ObservationTextureSize` | Required | Declared source dimensions, without opening or decoding the image. |
+| `source_content_identity` | `ObservationContentIdentity \| None` | `null` (`None`) | Declared representation-specific identity, if available in metadata. |
+
+Related: [zipzi.values.ObservationContentIdentity](values-sampling.md#zipzi-values-observationcontentidentity), [zipzi.values.ObservationTextureSize](values-sampling.md#zipzi-values-observationtexturesize)
+
+<a id="zipzi-values-observationtexturetarget"></a>
+
+## zipzi.values.ObservationTextureTarget
+
+```python
+class ObservationTextureTarget(Value)
+```
+
+Source metadata and planned rendering dimensions for one referenced texture.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `source` | `ObservationTextureSource` | Required | Declared source metadata; the executor must validate it again. |
+| `render_size` | `ObservationTextureSize` | Required | Planned base-level rendering dimensions. |
+
+Related: [zipzi.values.ObservationTextureSize](values-sampling.md#zipzi-values-observationtexturesize), [zipzi.values.ObservationTextureSource](values-sampling.md#zipzi-values-observationtexturesource)
 
 <a id="zipzi-values-observationview"></a>
 

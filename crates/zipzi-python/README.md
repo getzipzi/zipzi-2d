@@ -110,3 +110,37 @@ The source gate rebuilds the native adapter and private IPC fixture and checks
 generated types. The Connected gate uses an isolated installed wheel. The
 optional Editor host runs the same Connected lifecycle cases in the production
 desktop process.
+
+For PSD artwork with independently editable bitmap masks, choose
+`v.ImportFormat.PSD_EDITABLE_MASKS`. New PSD meshes use edge clamping.
+Set `Mesh.texture_repeat=True` for tiled materials and `False` for cutouts.
+Older meshes with no override retain the original sampling policy.
+
+Use `v.ObservationTexturePlanning.from_wire(session.query(v.QueryObservationTextures()).value)`
+to inspect the host budget and referenced asset dimensions before rendering.
+Pass `policy=v.ObservationTexturePolicyFitBudget(max_rgba_bytes=...)` to the
+query to see the prospective render dimensions. To raise the host budget,
+use `zipzi.local(observation_texture_rgba_bytes=...)` or start the desktop
+Editor with `ZIPZI_OBSERVATION_TEXTURE_BYTES` set to a positive byte count.
+Existing resource and device limits still apply. The first observation packet
+reports material overrides by mesh ID in `texture_addressing` (omitted entries
+use repeat).
+
+Transform object and collection queries support `snapshot.records(v.Transform)`.
+For a `v.TransformDataWarp`, `transform.data.value.points` contains the
+row-major lattice in the deformation parent's coordinate space.
+
+```python
+page = session.query(v.QueryCollection(kind=v.ObjectKind.TRANSFORM, offset=0, limit=20))
+for transform in page.records(v.Transform):
+    if isinstance(transform.data, v.TransformDataWarp):
+        warp = transform.data.value
+        for row in range(warp.rows + 1):
+            for column in range(warp.columns + 1):
+                point = warp.points[row * (warp.columns + 1) + column]
+                print(transform.id, row, column, point.x, point.y)
+```
+
+In a native physics asset, construct dictionary entries with
+`v.PhysicsDictionaryEntry(Id=setting.id, Name="Hair", extensions={})`.
+The external physics identifier is available separately as `setting.external_id`.

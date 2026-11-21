@@ -86,7 +86,16 @@ pub struct PixelImportBundle {
 /// Parse an 8-bit RGB PSD. Raster layers become cropped PNGs and rectangular
 /// meshes; groups become Parts. Layers are ordered from back to front.
 pub fn import_psd(bytes: &[u8]) -> Result<ImportBundle, ImportError> {
-    let builder = parse_psd(bytes, true, DECODED_WARNING_BYTES)?;
+    import_psd_with_masks(bytes, false)
+}
+
+/// Keep user bitmap masks as independently editable native mask meshes when requested.
+/// The regular PSD entry point retains its baked-alpha behavior.
+pub fn import_psd_with_masks(
+    bytes: &[u8],
+    preserve_masks: bool,
+) -> Result<ImportBundle, ImportError> {
+    let builder = parse_psd_limited(bytes, true, DECODED_WARNING_BYTES, None, preserve_masks)?;
     Ok(ImportBundle {
         document: builder
             .document
@@ -123,7 +132,7 @@ pub fn import_psd_pixels_with_limit(
     bytes: &[u8],
     limit: usize,
 ) -> Result<PixelImportBundle, ImportError> {
-    let builder = parse_psd_limited(bytes, false, DECODED_WARNING_BYTES, Some(limit))?;
+    let builder = parse_psd_limited(bytes, false, DECODED_WARNING_BYTES, Some(limit), false)?;
     Ok(PixelImportBundle {
         document: builder
             .document
@@ -141,13 +150,14 @@ fn parse_psd(
     encode_pngs: bool,
     decoded_warning_bytes: usize,
 ) -> Result<Builder, ImportError> {
-    parse_psd_limited(bytes, encode_pngs, decoded_warning_bytes, None)
+    parse_psd_limited(bytes, encode_pngs, decoded_warning_bytes, None, false)
 }
 fn parse_psd_limited(
     bytes: &[u8],
     encode_pngs: bool,
     decoded_warning_bytes: usize,
     decoded_limit: Option<usize>,
+    preserve_masks: bool,
 ) -> Result<Builder, ImportError> {
     preflight(bytes)?;
     mask_preflight::check(bytes)?;
@@ -200,6 +210,7 @@ fn parse_psd_limited(
         assets: Vec::new(),
         pixels: Vec::new(),
         encode_pngs,
+        preserve_masks,
         report: ImportReport {
             width,
             height,
@@ -310,6 +321,7 @@ struct Builder {
     assets: Vec<PngAsset>,
     pixels: Vec<PixelAsset>,
     encode_pngs: bool,
+    preserve_masks: bool,
     report: ImportReport,
     fingerprint: [u8; 32],
     next_id: usize,
@@ -323,6 +335,36 @@ impl Builder {
         let id = stable_id(&self.fingerprint, kind, self.next_id);
         self.next_id += 1;
         id
+    }
+
+    fn store_image(&mut self, name: &str, image: PixelData) -> Result<String, ImportError> {
+        let asset_id = self.id("asset");
+        let source = format!("assets/{asset_id}.png");
+        let png = self.encode_pngs.then(|| encode_png(&image)).transpose()?;
+        let result = self.document.create_asset(AssetRecord {
+            id: asset_id.clone(),
+            name: name.into(),
+            content: AssetContent::Unresolved {
+                source: source.clone(),
+            },
+        });
+        check(result)?;
+        if let Some(bytes) = png {
+            self.assets.push(PngAsset {
+                id: asset_id.clone(),
+                source,
+                bytes,
+            });
+        } else {
+            self.pixels.push(PixelAsset {
+                id: asset_id.clone(),
+                width: image.width,
+                height: image.height,
+                rgba: image.data,
+            });
+        }
+
+        Ok(asset_id)
     }
 
     fn mesh_runtime_id(&mut self, name: &str, mesh_id: &str) -> String {
@@ -554,8 +596,19 @@ impl Builder {
                 format!("{name}: invalid RGBA pixel count"),
             ));
         }
+        let mut editable_mask = None;
         if let Some(mask) = &layer.additional_info.mask {
-            if bitmap_mask::apply(&mut image, mask, left, top, name)? {
+            if self.preserve_masks {
+                let bitmap = bitmap_mask::Bitmap::read(mask, left, top, name)?;
+                let (id, inverted) =
+                    self.create_bitmap_mask(&bitmap, name, parent_id, [left, top, right, bottom])?;
+                let active = mask.disabled != Some(true);
+                let state = if active { "enabled" } else { "disabled" };
+                self.report.warnings.push(format!(
+                    "{name}: retained editable bitmap mask {id} ({state})"
+                ));
+                editable_mask = Some((id, inverted, active));
+            } else if bitmap_mask::apply(&mut image, mask, left, top, name)? {
                 self.report.warnings.push(format!(
                     "{name}: bitmap layer mask is baked into texture alpha and is no longer independently editable"
                 ));
@@ -597,32 +650,7 @@ impl Builder {
                 .warnings
                 .push(format!("{name}: editable source data is rasterized"));
         }
-        let asset_id = self.id("asset");
-        let source = format!("assets/{asset_id}.png");
-        let png = self.encode_pngs.then(|| encode_png(&image)).transpose()?;
-        let result = self.document.create_asset(AssetRecord {
-            id: asset_id.clone(),
-            name: name.into(),
-            content: AssetContent::Unresolved {
-                source: source.clone(),
-            },
-        });
-        check(result)?;
-        if let Some(bytes) = png {
-            self.assets.push(PngAsset {
-                id: asset_id.clone(),
-                source,
-                bytes,
-            });
-        } else {
-            self.pixels.push(PixelAsset {
-                id: asset_id.clone(),
-                width: image.width,
-                height: image.height,
-                rgba: image.data,
-            });
-        }
-
+        let asset_id = self.store_image(name, image)?;
         let mesh_id = self.id("mesh");
         let runtime_id = self.mesh_runtime_id(name, &mesh_id);
         let origin = self.document.setup().source_canvas.unwrap().origin;
@@ -632,6 +660,7 @@ impl Builder {
             runtime_id,
             name: name.into(),
             texture_asset_id: asset_id.into(),
+            texture_repeat: Some(false),
             part_id: parent_id.into(),
             vertex_ids: vec![1, 2, 3, 4],
             base_positions: vec![
@@ -656,6 +685,14 @@ impl Builder {
             enabled: layer.hidden != Some(true),
             // Source-atop blends clipped color while retaining the base alpha,
             // including its opacity, without applying the texture alpha twice.
+            masks: editable_mask
+                .as_ref()
+                .filter(|(_, _, active)| *active)
+                .map(|(id, _, _)| vec![id.clone()])
+                .unwrap_or_default(),
+            inverted_mask: editable_mask
+                .as_ref()
+                .is_some_and(|(_, inverted, _)| *inverted),
             raw_blend_mode: clipping_base.map(|_| extended_color_mode(blend_mode) | (1 << 8)),
             ..Mesh::default()
         };

@@ -11,10 +11,16 @@ Import from `zipzi.values.scene` or `zipzi.values`; both expose the same classes
 - [zipzi.values.Canvas](values-scene.md#zipzi-values-canvas)
 - [zipzi.values.CursorPreviewAxis](values-scene.md#zipzi-values-cursorpreviewaxis)
 - [zipzi.values.CursorPreviewBinding](values-scene.md#zipzi-values-cursorpreviewbinding)
+- [zipzi.values.DeformerOriginal](values-scene.md#zipzi-values-deformeroriginal)
 - [zipzi.values.DeformerOriginalAction](values-scene.md#zipzi-values-deformeroriginalaction)
 - [zipzi.values.DeformerOriginalActionUpdate](values-scene.md#zipzi-values-deformeroriginalactionupdate)
 - [zipzi.values.DeformerOriginalActionRestore](values-scene.md#zipzi-values-deformeroriginalactionrestore)
 - [zipzi.values.DeformerOriginalActionAutoUpdate](values-scene.md#zipzi-values-deformeroriginalactionautoupdate)
+- [zipzi.values.DeformerOriginalShape](values-scene.md#zipzi-values-deformeroriginalshape)
+- [zipzi.values.DeformerOriginalShapeWarp](values-scene.md#zipzi-values-deformeroriginalshapewarp)
+- [zipzi.values.DeformerOriginalShapeRotation](values-scene.md#zipzi-values-deformeroriginalshaperotation)
+- [zipzi.values.DeformerOriginalSnapshot](values-scene.md#zipzi-values-deformeroriginalsnapshot)
+- [zipzi.values.DeformerOriginalSource](values-scene.md#zipzi-values-deformeroriginalsource)
 - [zipzi.values.EditorState](values-scene.md#zipzi-values-editorstate)
 - [zipzi.values.ExportSettings](values-scene.md#zipzi-values-exportsettings)
 - [zipzi.values.ModelSetup](values-scene.md#zipzi-values-modelsetup)
@@ -27,6 +33,10 @@ Import from `zipzi.values.scene` or `zipzi.values`; both expose the same classes
 - [zipzi.values.SceneReferenceUnspecified](values-scene.md#zipzi-values-scenereferenceunspecified)
 - [zipzi.values.SceneReferenceResolved](values-scene.md#zipzi-values-scenereferenceresolved)
 - [zipzi.values.SceneReferenceUnresolved](values-scene.md#zipzi-values-scenereferenceunresolved)
+- [zipzi.values.Transform](values-scene.md#zipzi-values-transform)
+- [zipzi.values.TransformData](values-scene.md#zipzi-values-transformdata)
+- [zipzi.values.TransformDataWarp](values-scene.md#zipzi-values-transformdatawarp)
+- [zipzi.values.TransformDataRotation](values-scene.md#zipzi-values-transformdatarotation)
 - [zipzi.values.TransformId](values-scene.md#zipzi-values-transformid)
 - [zipzi.values.WarpAuthoringSettings](values-scene.md#zipzi-values-warpauthoringsettings)
 - [zipzi.values.WarpBezier](values-scene.md#zipzi-values-warpbezier)
@@ -94,6 +104,25 @@ Editor-only mapping from one mouse axis to a model parameter.
 
 Related: [zipzi.values.CursorPreviewAxis](values-scene.md#zipzi-values-cursorpreviewaxis)
 
+<a id="zipzi-values-deformeroriginal"></a>
+
+## zipzi.values.DeformerOriginal
+
+```python
+class DeformerOriginal(Value)
+```
+
+Persistent original-shape snapshot and first-key capture policy.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `auto_update` | `bool` | Required | Update once when the first ordinary keyform is created. Manual update disables this. |
+| `first_key_seen` | `bool` | Required | Persistent transition marker; deleting/recreating a binding does not replace the baseline again. |
+| `snapshot` | `DeformerOriginalSnapshot \| None` | `null` (`None`) | None means no original has been recorded, for example an imported object. |
+| `capture_error` | `str \| None` | `null` (`None`) | Native error code if automatic capture was unavailable; None after successful capture. |
+
+Related: [zipzi.values.DeformerOriginalSnapshot](values-scene.md#zipzi-values-deformeroriginalsnapshot)
+
 <a id="zipzi-values-deformeroriginalaction"></a>
 
 ## zipzi.values.DeformerOriginalAction
@@ -149,6 +178,84 @@ Change the future first-key capture policy.
 | `enabled` | `bool` | Required | Changes the future first-key policy without changing geometry or immediately replacing the snapshot. |
 
 Related: [zipzi.values.DeformerOriginalAction](values-scene.md#zipzi-values-deformeroriginalaction)
+
+<a id="zipzi-values-deformeroriginalshape"></a>
+
+## zipzi.values.DeformerOriginalShape
+
+```python
+class DeformerOriginalShape(Value)
+```
+
+Independent canvas-space Warp or Rotation original shape.
+
+Variants: [DeformerOriginalShapeWarp](values-scene.md#zipzi-values-deformeroriginalshapewarp), [DeformerOriginalShapeRotation](values-scene.md#zipzi-values-deformeroriginalshaperotation)
+
+<a id="zipzi-values-deformeroriginalshapewarp"></a>
+
+## zipzi.values.DeformerOriginalShapeWarp
+
+```python
+class DeformerOriginalShapeWarp(DeformerOriginalShape)
+```
+
+Store a baked Warp lattice and controller in canvas space.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `warp` | `WarpTransform` | Required | Baked Warp lattice and optional controller in canvas coordinates, X right/Y up. |
+| `controller_canvas_exact` | `bool` | Required | False when a nonlinear captured parent cannot preserve a cubic controller as cubics. |
+
+Related: [zipzi.values.DeformerOriginalShape](values-scene.md#zipzi-values-deformeroriginalshape), [zipzi.values.WarpTransform](values-scene.md#zipzi-values-warptransform)
+
+<a id="zipzi-values-deformeroriginalshaperotation"></a>
+
+## zipzi.values.DeformerOriginalShapeRotation
+
+```python
+class DeformerOriginalShapeRotation(DeformerOriginalShape)
+```
+
+Store a Rotation pose in canvas space.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `pose` | `RotationPose` | Required | Canvas origin, absolute direction (including reference angle), inherited scale and reflections. |
+
+Related: [zipzi.values.DeformerOriginalShape](values-scene.md#zipzi-values-deformeroriginalshape), [zipzi.values.RotationPose](values-scene.md#zipzi-values-rotationpose)
+
+<a id="zipzi-values-deformeroriginalsnapshot"></a>
+
+## zipzi.values.DeformerOriginalSnapshot
+
+```python
+class DeformerOriginalSnapshot(Value)
+```
+
+Captured original shape and the event that produced it.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `source` | `DeformerOriginalSource` | Required | Creation, first ordinary keyform transition, or explicit manual update. |
+| `shape` | `DeformerOriginalShape` | Required | Independent canvas-space shape; does not reference undo history or binding samples. |
+
+Related: [zipzi.values.DeformerOriginalShape](values-scene.md#zipzi-values-deformeroriginalshape), [zipzi.values.DeformerOriginalSource](values-scene.md#zipzi-values-deformeroriginalsource)
+
+<a id="zipzi-values-deformeroriginalsource"></a>
+
+## zipzi.values.DeformerOriginalSource
+
+```python
+class DeformerOriginalSource(StrEnum)
+```
+
+How a stored original deformer shape was captured.
+
+| Member | Value | Description |
+| --- | --- | --- |
+| `CREATED` | `'created'` | Captured at deformer creation. |
+| `FIRST_KEY` | `'first_key'` | Captured when the first ordinary keyform was created. |
+| `MANUAL` | `'manual'` | Captured by an explicit update. |
 
 <a id="zipzi-values-editorstate"></a>
 
@@ -347,6 +454,76 @@ Preserve an external runtime identifier that has not resolved to a document obje
 | `runtime_id` | `str` | Required | External format/runtime identifier retained for import/export; not the document<br>object ID. |
 
 Related: [zipzi.values.SceneReference](values-scene.md#zipzi-values-scenereference)
+
+<a id="zipzi-values-transform"></a>
+
+## zipzi.values.Transform
+
+```python
+class Transform(Value)
+```
+
+Document deformation transform with independent organization and deformation parents.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `id` | `str` | Required | Stable document object ID used by references; it is distinct from the exported runtime_id. |
+| `runtime_id` | `str` | Required | External format/runtime identifier retained for import/export; not the document object ID. |
+| `name` | `str` | Required | Human-readable display name; use the stable ID for identity because names can change. |
+| `part_id` | `PartId \| None` | `null` (`None`) | Organizational Part owner ID; independent of the deformation parent. None selects the<br>root/unassigned container. |
+| `parent_id` | `TransformId \| None` | `null` (`None`) | Parent object ID in this hierarchy; independent of storage and drawing order. None<br>selects the root/unassigned container. |
+| `data` | `TransformData` | Required | Typed Warp or Rotation deformation definition; its variant determines lattice versus<br>rotation-pose interpretation. |
+| `enabled` | `bool` | Required | Whether this object participates in evaluation; editor hiding is a separate state. |
+| `appearance` | `common.Appearance` | Required | Opacity and multiply/screen color factors for this object or shape. |
+| `warp_authoring` | `WarpAuthoringSettings \| None` | `null` (`None`) | Persistent Warp editing policy; never used for runtime deformation evaluation. |
+| `rotation_scale_unit` | `float \| None` | `null` (`None`) | Unit multiplier already applied to an imported Rotation's scale channel.<br>Retains its BlendShape clamp limits and export units without multiplying<br>the pose again. None uses native authoring units (1). |
+| `original_shape` | `DeformerOriginal \| None` | `null` (`None`) | Independent original shape and its first-key update policy, retained only by native projects. |
+
+Related: [zipzi.values.Appearance](values-common.md#zipzi-values-appearance), [zipzi.values.DeformerOriginal](values-scene.md#zipzi-values-deformeroriginal), [zipzi.values.PartId](values-scene.md#zipzi-values-partid), [zipzi.values.TransformData](values-scene.md#zipzi-values-transformdata), [zipzi.values.TransformId](values-scene.md#zipzi-values-transformid), [zipzi.values.WarpAuthoringSettings](values-scene.md#zipzi-values-warpauthoringsettings)
+
+<a id="zipzi-values-transformdata"></a>
+
+## zipzi.values.TransformData
+
+```python
+class TransformData(Value)
+```
+
+Typed Warp or Rotation deformation definition.
+
+Variants: [TransformDataWarp](values-scene.md#zipzi-values-transformdatawarp), [TransformDataRotation](values-scene.md#zipzi-values-transformdatarotation)
+
+<a id="zipzi-values-transformdatawarp"></a>
+
+## zipzi.values.TransformDataWarp
+
+```python
+class TransformDataWarp(TransformData)
+```
+
+Use a Warp lattice definition.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `value` | `WarpTransform` | Required | Warp deformation definition with its baked lattice and optional authoring controller. |
+
+Related: [zipzi.values.TransformData](values-scene.md#zipzi-values-transformdata), [zipzi.values.WarpTransform](values-scene.md#zipzi-values-warptransform)
+
+<a id="zipzi-values-transformdatarotation"></a>
+
+## zipzi.values.TransformDataRotation
+
+```python
+class TransformDataRotation(TransformData)
+```
+
+Use a Rotation definition.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `value` | `RotationTransform` | Required | Rotation deformation definition with its reference angle and base pose. |
+
+Related: [zipzi.values.RotationTransform](values-scene.md#zipzi-values-rotationtransform), [zipzi.values.TransformData](values-scene.md#zipzi-values-transformdata)
 
 <a id="zipzi-values-transformid"></a>
 

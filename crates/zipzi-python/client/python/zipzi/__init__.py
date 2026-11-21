@@ -32,11 +32,14 @@ from ._errors import (
 )
 
 
-def local() -> Runtime:
-    """Create an owned native host. Closing it releases its sessions without saving."""
+def local(*, observation_texture_rgba_bytes: int | None = None) -> Runtime:
+    """Create an owned native host, optionally setting its observation texture budget in bytes.
+
+    The default base RGBA budget is 64 MiB. Closing the host releases its sessions without saving.
+    """
     from .backends.local import LocalBackend
 
-    return Runtime(LocalBackend())
+    return Runtime(LocalBackend(observation_texture_rgba_bytes=observation_texture_rgba_bytes))
 
 
 def connect(

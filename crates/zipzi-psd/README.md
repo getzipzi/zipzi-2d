@@ -15,8 +15,8 @@ modes and group hierarchy are retained. Clipping layers use isolated offscreen
 groups; exporting them requires MOC3 5.3. The importer does not infer a rig,
 parameters or deformers.
 
-Normal, multiply and linear dodge blend modes are supported. Bitmap masks on
-raster layers are baked into texture alpha, with a warning that the mask is no
+Normal, multiply and linear dodge blend modes are supported. By default, bitmap
+masks on raster layers are baked into texture alpha, with a warning that the mask is no
 longer independently editable. Grayscale coverage, mask offsets (including
 layer-relative coordinates), the default color outside the mask, density and
 disabled masks are supported. Layer opacity remains separate from the baked alpha.
@@ -35,3 +35,15 @@ through AuthoringSession. Import failure performs no active-session mutation.
 ```sh
 cargo test --locked -p zipzi-psd
 ```
+
+For editable user masks, use `import_psd_with_masks(bytes, true)` or Python
+`session.import_project(path, v.ImportFormat.PSD_EDITABLE_MASKS)`. Each mask
+becomes a zero-opacity native mesh named after the layer with a `(Bitmap Mask)`
+suffix. Its texture stores grayscale in RGB and clipping coverage in alpha.
+The artwork retains its original RGBA. Read or replace either image using its
+asset ID; edit the mask mesh positions to move the mask. Disable clipping by
+clearing the artwork's `masks`, and restore the source mesh ID to re-enable it.
+An initially disabled PSD mask retains its source mesh without an active link.
+White outside coverage uses an inverted mask. Fractional outside coverage has
+a constant border extending over the imported canvas and layer. These native
+meshes can be saved and reopened or rigged independently.

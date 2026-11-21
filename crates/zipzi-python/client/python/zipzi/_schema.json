@@ -3156,6 +3156,60 @@
       "transparent": false,
       "tuple": false
     },
+    "DeformerOriginal": {
+      "doc": "Persistent original-shape snapshot and first-key capture policy.",
+      "fields": [
+        {
+          "doc": "Update once when the first ordinary keyform is created. Manual update disables this.",
+          "name": "auto_update",
+          "rust_name": "auto_update",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Persistent transition marker; deleting/recreating a binding does not replace the baseline again.",
+          "name": "first_key_seen",
+          "rust_name": "first_key_seen",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "None means no original has been recorded, for example an imported object.",
+          "name": "snapshot",
+          "rust_name": "snapshot",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "DeformerOriginalSnapshot"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Native error code if automatic capture was unavailable; None after successful capture.",
+          "name": "capture_error",
+          "rust_name": "capture_error",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::DeformerOriginal",
+      "transparent": false,
+      "tuple": false
+    },
     "DeformerOriginalAction": {
       "content": null,
       "doc": "Capture, restore or configure the original deformer shape.",
@@ -3203,6 +3257,119 @@
           "form": "record",
           "name": "auto_update",
           "rust_name": "AutoUpdate"
+        }
+      ]
+    },
+    "DeformerOriginalShape": {
+      "content": null,
+      "doc": "Independent canvas-space Warp or Rotation original shape.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::DeformerOriginalShape",
+      "tag": "kind",
+      "variants": [
+        {
+          "doc": "Store a baked Warp lattice and controller in canvas space.",
+          "fields": [
+            {
+              "doc": "Baked Warp lattice and optional controller in canvas coordinates, X right/Y up.",
+              "name": "warp",
+              "rust_name": "warp",
+              "shape": {
+                "kind": "ref",
+                "name": "WarpTransform"
+              },
+              "skip": false
+            },
+            {
+              "doc": "False when a nonlinear captured parent cannot preserve a cubic controller as cubics.",
+              "name": "controller_canvas_exact",
+              "rust_name": "controller_canvas_exact",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "warp",
+          "rust_name": "Warp"
+        },
+        {
+          "doc": "Store a Rotation pose in canvas space.",
+          "fields": [
+            {
+              "doc": "Canvas origin, absolute direction (including reference angle), inherited scale and reflections.",
+              "name": "pose",
+              "rust_name": "pose",
+              "shape": {
+                "kind": "ref",
+                "name": "RotationPose"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "rotation",
+          "rust_name": "Rotation"
+        }
+      ]
+    },
+    "DeformerOriginalSnapshot": {
+      "doc": "Captured original shape and the event that produced it.",
+      "fields": [
+        {
+          "doc": "Creation, first ordinary keyform transition, or explicit manual update.",
+          "name": "source",
+          "rust_name": "source",
+          "shape": {
+            "kind": "ref",
+            "name": "DeformerOriginalSource"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Independent canvas-space shape; does not reference undo history or binding samples.",
+          "name": "shape",
+          "rust_name": "shape",
+          "shape": {
+            "kind": "ref",
+            "name": "DeformerOriginalShape"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::DeformerOriginalSnapshot",
+      "transparent": false,
+      "tuple": false
+    },
+    "DeformerOriginalSource": {
+      "content": null,
+      "doc": "How a stored original deformer shape was captured.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::DeformerOriginalSource",
+      "tag": null,
+      "variants": [
+        {
+          "doc": "Captured at deformer creation.",
+          "fields": [],
+          "form": "unit",
+          "name": "created",
+          "rust_name": "Created"
+        },
+        {
+          "doc": "Captured when the first ordinary keyform was created.",
+          "fields": [],
+          "form": "unit",
+          "name": "first_key",
+          "rust_name": "FirstKey"
+        },
+        {
+          "doc": "Captured by an explicit update.",
+          "fields": [],
+          "form": "unit",
+          "name": "manual",
+          "rust_name": "Manual"
         }
       ]
     },
@@ -6087,6 +6254,13 @@
           "form": "unit",
           "name": "cubism",
           "rust_name": "Cubism"
+        },
+        {
+          "doc": "PSD artwork with editable bitmap-mask meshes and original layer pixels.",
+          "fields": [],
+          "form": "unit",
+          "name": "psd_editable_masks",
+          "rust_name": "PsdEditableMasks"
         }
       ]
     },
@@ -6399,6 +6573,19 @@
               "name": "Vec2"
             },
             "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Material UV addressing: true repeats, false clamps to the edge. Omitted uses the renderer's legacy policy.",
+          "name": "texture_repeat",
+          "rust_name": "texture_repeat",
+          "shape": {
+            "item": {
+              "kind": "bool"
+            },
+            "kind": "optional"
           },
           "skip": false
         },
@@ -9971,6 +10158,242 @@
         }
       ]
     },
+    "ObservationContentIdentity": {
+      "content": null,
+      "doc": "A source content identity includes its representation. A PNG byte digest\nand a domain-separated straight RGBA8 pixel digest are not interchangeable.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::observation::ObservationContentIdentity",
+      "tag": "kind",
+      "variants": [
+        {
+          "doc": "Digest of the encoded source PNG bytes.",
+          "fields": [
+            {
+              "doc": "SHA256 of encoded source PNG bytes; verification is a separate state.",
+              "name": "hash",
+              "rust_name": "hash",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "png_sha256",
+          "rust_name": "PngSha256"
+        },
+        {
+          "doc": "Domain-separated digest of source dimensions and straight RGBA8 pixels.",
+          "fields": [
+            {
+              "doc": "Domain-separated hash including dimensions and pixel conventions.",
+              "name": "hash",
+              "rust_name": "hash",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "rgba8_sha256",
+          "rust_name": "Rgba8Sha256"
+        }
+      ]
+    },
+    "ObservationTexturePlan": {
+      "doc": "Feasible deterministic CPU plan. Clients cannot submit this as a trusted\nexecution plan. Mipmap bytes exclude the base level and are logical bytes,\nnot GPU allocation measurements.",
+      "fields": [
+        {
+          "doc": "Requested policy; equivalent actual pixels may have different policies.",
+          "name": "policy",
+          "rust_name": "policy",
+          "shape": {
+            "kind": "ref",
+            "name": "ObservationTexturePolicy"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Requested FitBudget bound or the host base RGBA limit for Original.",
+          "name": "effective_max_rgba_bytes",
+          "rust_name": "effective_max_rgba_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Maximum permitted longest edge; None only for an empty reference set.",
+          "name": "longest_edge_limit",
+          "rust_name": "longest_edge_limit",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Logical RGBA bytes of referenced source images, excluding unused assets.",
+          "name": "source_rgba_bytes",
+          "rust_name": "source_rgba_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Logical RGBA bytes of planned base levels.",
+          "name": "render_rgba_bytes",
+          "rust_name": "render_rgba_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Sum of every non-base mip level, halving each axis down to 1x1.",
+          "name": "estimated_mipmap_bytes",
+          "rust_name": "estimated_mipmap_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Number of assets with changed base dimensions.",
+          "name": "resized_count",
+          "rust_name": "resized_count",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Version of reference collection, integer scaling and search semantics.",
+          "name": "planning_version",
+          "rust_name": "planning_version",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Version of mip dimensions and byte-count semantics.",
+          "name": "mipmap_version",
+          "rust_name": "mipmap_version",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Complete reference set and targets sorted by asset ID.",
+          "name": "textures",
+          "rust_name": "textures",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "ObservationTextureTarget"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::observation::ObservationTexturePlan",
+      "transparent": false,
+      "tuple": false
+    },
+    "ObservationTexturePlanning": {
+      "content": null,
+      "doc": "A valid policy can be statically infeasible. Retain source dimensions for\ndiagnosis instead of treating a budget shortfall as malformed input.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::observation::ObservationTexturePlanning",
+      "tag": "kind",
+      "variants": [
+        {
+          "doc": "A feasible metadata plan; GPU device limits have not been checked.",
+          "fields": [
+            {
+              "doc": "Feasible CPU dimensions; device limits remain unverified.",
+              "name": "plan",
+              "rust_name": "plan",
+              "shape": {
+                "kind": "ref",
+                "name": "ObservationTexturePlan"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "ready",
+          "rust_name": "Ready"
+        },
+        {
+          "doc": "The requested budget cannot accommodate the referenced textures.",
+          "fields": [
+            {
+              "doc": "Requested policy.",
+              "name": "policy",
+              "rust_name": "policy",
+              "shape": {
+                "kind": "ref",
+                "name": "ObservationTexturePolicy"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Effective base RGBA bound.",
+              "name": "effective_max_rgba_bytes",
+              "rust_name": "effective_max_rgba_bytes",
+              "shape": {
+                "kind": "u64"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Total logical source bytes, without decoding.",
+              "name": "source_rgba_bytes",
+              "rust_name": "source_rgba_bytes",
+              "shape": {
+                "kind": "u64"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Source bytes for Original, or four bytes per texture for FitBudget.",
+              "name": "minimum_required_rgba_bytes",
+              "rust_name": "minimum_required_rgba_bytes",
+              "shape": {
+                "kind": "u64"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Source metadata in asset ID order; no target plan exists.",
+              "name": "textures",
+              "rust_name": "textures",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "ObservationTextureSource"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "insufficient_budget",
+          "rust_name": "InsufficientBudget"
+        }
+      ]
+    },
     "ObservationTexturePolicy": {
       "content": null,
       "doc": "Explicit base-level texture policy. Budgets count logical straight RGBA8\nbytes per referenced asset ID, independently of physical buffer sharing.",
@@ -10003,6 +10426,104 @@
           "rust_name": "FitBudget"
         }
       ]
+    },
+    "ObservationTextureSize": {
+      "doc": "Pixel dimensions; zero axes are invalid resource metadata.",
+      "fields": [
+        {
+          "doc": "Width in pixels.",
+          "name": "width",
+          "rust_name": "width",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Height in pixels.",
+          "name": "height",
+          "rust_name": "height",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::observation::ObservationTextureSize",
+      "transparent": false,
+      "tuple": false
+    },
+    "ObservationTextureSource": {
+      "doc": "Metadata-only source description. A declared identity has not been verified\nby estimation; Source freezes the document, not external file bytes.",
+      "fields": [
+        {
+          "doc": "Stable image asset ID, counted once across all batch frames.",
+          "name": "asset_id",
+          "rust_name": "asset_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Declared source dimensions, without opening or decoding the image.",
+          "name": "source_size",
+          "rust_name": "source_size",
+          "shape": {
+            "kind": "ref",
+            "name": "ObservationTextureSize"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Declared representation-specific identity, if available in metadata.",
+          "name": "source_content_identity",
+          "rust_name": "source_content_identity",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "ObservationContentIdentity"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::observation::ObservationTextureSource",
+      "transparent": false,
+      "tuple": false
+    },
+    "ObservationTextureTarget": {
+      "doc": "Source metadata and planned rendering dimensions for one referenced texture.",
+      "fields": [
+        {
+          "doc": "Declared source metadata; the executor must validate it again.",
+          "name": "source",
+          "rust_name": "source",
+          "shape": {
+            "kind": "ref",
+            "name": "ObservationTextureSource"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Planned base-level rendering dimensions.",
+          "name": "render_size",
+          "rust_name": "render_size",
+          "shape": {
+            "kind": "ref",
+            "name": "ObservationTextureSize"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::observation::ObservationTextureTarget",
+      "transparent": false,
+      "tuple": false
     },
     "ObservationView": {
       "doc": "Output dimensions and Y-up model-space region for GPU observation.",
@@ -12502,10 +13023,10 @@
       "tuple": false
     },
     "PhysicsDictionaryEntry": {
-      "doc": "Exported Physics rig identity and display label.",
+      "doc": "Physics rig identity and display label.",
       "fields": [
         {
-          "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+          "doc": "In a native PhysicsAsset dictionary, use PhysicsSetting.id (the document UUID).\nImport/export converts this reference to the external physics identifier.",
           "name": "Id",
           "rust_name": "id",
           "shape": {
@@ -13182,7 +13703,7 @@
           "skip": false
         },
         {
-          "doc": "Ordered exported Physics rig ID/name metadata.",
+          "doc": "Ordered rig labels. In native PhysicsAsset records, each Id references a PhysicsSetting.id UUID.",
           "name": "PhysicsDictionary",
           "rust_name": "dictionary",
           "shape": {
@@ -15298,6 +15819,27 @@
           "form": "unit",
           "name": "summary",
           "rust_name": "Summary"
+        },
+        {
+          "doc": "Plan referenced texture dimensions and RGBA storage against the current host limit without rendering.",
+          "fields": [
+            {
+              "default": {
+                "kind": "original"
+              },
+              "doc": "",
+              "name": "policy",
+              "rust_name": "policy",
+              "shape": {
+                "kind": "ref",
+                "name": "ObservationTexturePolicy"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "observation_textures",
+          "rust_name": "ObservationTextures"
         },
         {
           "doc": "Document-level settings and organization, without geometry or image bytes.",
@@ -19578,6 +20120,185 @@
       "name": "zipzi_contract::authoring::TopologyThresholds",
       "transparent": false,
       "tuple": false
+    },
+    "Transform": {
+      "doc": "Document deformation transform with independent organization and deformation parents.",
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+          "name": "runtime_id",
+          "rust_name": "runtime_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Organizational Part owner ID; independent of the deformation parent. None selects the\nroot/unassigned container.",
+          "name": "part_id",
+          "rust_name": "part_id",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "PartId"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.",
+          "name": "parent_id",
+          "rust_name": "parent_id",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "TransformId"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Typed Warp or Rotation deformation definition; its variant determines lattice versus\nrotation-pose interpretation.",
+          "name": "data",
+          "rust_name": "data",
+          "shape": {
+            "kind": "ref",
+            "name": "TransformData"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+          "name": "enabled",
+          "rust_name": "enabled",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Opacity and multiply/screen color factors for this object or shape.",
+          "name": "appearance",
+          "rust_name": "appearance",
+          "shape": {
+            "kind": "ref",
+            "name": "Appearance"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Persistent Warp editing policy; never used for runtime deformation evaluation.",
+          "name": "warp_authoring",
+          "rust_name": "warp_authoring",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "WarpAuthoringSettings"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Unit multiplier already applied to an imported Rotation's scale channel.\nRetains its BlendShape clamp limits and export units without multiplying\nthe pose again. None uses native authoring units (1).",
+          "name": "rotation_scale_unit",
+          "rust_name": "rotation_scale_unit",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Independent original shape and its first-key update policy, retained only by native projects.",
+          "name": "original_shape",
+          "rust_name": "original_shape",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "DeformerOriginal"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::Transform",
+      "transparent": false,
+      "tuple": false
+    },
+    "TransformData": {
+      "content": null,
+      "doc": "Typed Warp or Rotation deformation definition.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::TransformData",
+      "tag": null,
+      "variants": [
+        {
+          "doc": "Use a Warp lattice definition.",
+          "fields": [
+            {
+              "doc": "Warp deformation definition with its baked lattice and optional authoring controller.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "WarpTransform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Warp",
+          "rust_name": "Warp"
+        },
+        {
+          "doc": "Use a Rotation definition.",
+          "fields": [
+            {
+              "doc": "Rotation deformation definition with its reference angle and base pose.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "RotationTransform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Rotation",
+          "rust_name": "Rotation"
+        }
+      ]
     },
     "TransformId": {
       "doc": "Persistent scene object identifier.",

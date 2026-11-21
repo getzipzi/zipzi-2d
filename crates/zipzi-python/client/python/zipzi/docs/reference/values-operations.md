@@ -72,6 +72,7 @@ Import from `zipzi.values.operations` or `zipzi.values`; both expose the same cl
 - [zipzi.values.Query](values-operations.md#zipzi-values-query)
 - [zipzi.values.QueryCollectionCapabilities](values-operations.md#zipzi-values-querycollectioncapabilities)
 - [zipzi.values.QuerySummary](values-operations.md#zipzi-values-querysummary)
+- [zipzi.values.QueryObservationTextures](values-operations.md#zipzi-values-queryobservationtextures)
 - [zipzi.values.QueryMetadata](values-operations.md#zipzi-values-querymetadata)
 - [zipzi.values.QueryObjects](values-operations.md#zipzi-values-queryobjects)
 - [zipzi.values.QueryCollection](values-operations.md#zipzi-values-querycollection)
@@ -290,6 +291,7 @@ ImportFormat choices.
 | `MODEL3` | `'model3'` |  |
 | `PSD` | `'psd'` |  |
 | `CUBISM` | `'cubism'` |  |
+| `PSD_EDITABLE_MASKS` | `'psd_editable_masks'` | PSD artwork with editable bitmap-mask meshes and original layer pixels. |
 
 <a id="zipzi-values-operation"></a>
 
@@ -1045,7 +1047,7 @@ class Query(Value)
 
 Query variants; inspect subclasses for constructors.
 
-Variants: [QueryCollectionCapabilities](values-operations.md#zipzi-values-querycollectioncapabilities), [QuerySummary](values-operations.md#zipzi-values-querysummary), [QueryMetadata](values-operations.md#zipzi-values-querymetadata), [QueryObjects](values-operations.md#zipzi-values-queryobjects), [QueryCollection](values-operations.md#zipzi-values-querycollection)
+Variants: [QueryCollectionCapabilities](values-operations.md#zipzi-values-querycollectioncapabilities), [QuerySummary](values-operations.md#zipzi-values-querysummary), [QueryObservationTextures](values-operations.md#zipzi-values-queryobservationtextures), [QueryMetadata](values-operations.md#zipzi-values-querymetadata), [QueryObjects](values-operations.md#zipzi-values-queryobjects), [QueryCollection](values-operations.md#zipzi-values-querycollection)
 
 <a id="zipzi-values-querycollectioncapabilities"></a>
 
@@ -1074,6 +1076,22 @@ class QuerySummary(Query)
 Summary variant of Query.
 
 Related: [zipzi.values.Query](values-operations.md#zipzi-values-query)
+
+<a id="zipzi-values-queryobservationtextures"></a>
+
+## zipzi.values.QueryObservationTextures
+
+```python
+class QueryObservationTextures(Query)
+```
+
+Plan referenced texture dimensions and RGBA storage against the current host limit without rendering.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `policy` | `sampling.ObservationTexturePolicy` | `{"kind": "original"}` |  |
+
+Related: [zipzi.values.ObservationTexturePolicy](values-sampling.md#zipzi-values-observationtexturepolicy), [zipzi.values.Query](values-operations.md#zipzi-values-query)
 
 <a id="zipzi-values-querymetadata"></a>
 

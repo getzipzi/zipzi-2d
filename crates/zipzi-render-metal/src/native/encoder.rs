@@ -349,7 +349,9 @@ impl FrameEncoder<'_, '_> {
             destination,
             &self.renderer.meshes[index],
             &uniform,
-            self.textures.repeats(&drawable.texture_asset_id),
+            drawable
+                .texture_repeat
+                .unwrap_or_else(|| self.textures.repeats(&drawable.texture_asset_id)),
             drawable.double_sided,
             clear,
         );

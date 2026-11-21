@@ -94,10 +94,13 @@ def _record(cls: Any, s: dict[str, Any], value: Any) -> Any:
     if not isinstance(value, Mapping):
         raise TypeError("Expected object for " + cls.__name__)
     args = {}
-    for f in _fields(s):
+    fields = _fields(s)
+    for f in fields:
         key = f["name"]
         if f.get("flatten"):
-            args[_name(f)] = decode(f["shape"], value)
+            declared = {field["name"] for field in fields if not field.get("flatten")}
+            extras = {k: v for k, v in cast(Mapping[str, Any], value).items() if k not in declared}
+            args[_name(f)] = decode(f["shape"], extras)
         elif key in value:
             args[_name(f)] = decode(f["shape"], value[key])
     return cls(**args)
@@ -256,6 +259,10 @@ class Value:
         for f in _fields(fields):
             value = encode(getattr(self, _name(f)))
             if f.get("flatten"):
+                declared = {field["name"] for field in _fields(fields) if not field.get("flatten")}
+                shadowed = declared.intersection(value)
+                if shadowed:
+                    raise ValueError("Extension shadows declared field " + min(shadowed))
                 data.update(value)
             else:
                 data[f["name"]] = value

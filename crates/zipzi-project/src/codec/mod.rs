@@ -1,4 +1,4 @@
-const CURRENT_DOCUMENT_VERSION: u64 = 23;
+const CURRENT_DOCUMENT_VERSION: u64 = 24;
 
 mod decode;
 mod encode;

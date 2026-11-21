@@ -275,6 +275,7 @@ impl<'a> Moc3DecoderContext<'a> {
 
             let base = &keyforms[0];
             check_status!(self.doc.create_mesh(Mesh {
+                texture_repeat: None,
                 id: id.clone(),
                 name: if runtime_id.is_empty() {
                     format!("ArtMesh{m}")

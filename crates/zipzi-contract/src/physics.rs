@@ -47,10 +47,11 @@ pub struct PhysicsForces {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
-/// Exported Physics rig identity and display label.
+/// Physics rig identity and display label.
 pub struct PhysicsDictionaryEntry {
     #[serde(rename = "Id")]
-    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+    /// In a native PhysicsAsset dictionary, use PhysicsSetting.id (the document UUID).
+    /// Import/export converts this reference to the external physics identifier.
     pub id: String,
     #[serde(rename = "Name")]
     /// Human-readable display or registration name; distinct from persistent object identity.
@@ -87,7 +88,7 @@ pub struct PhysicsMeta {
     /// Native effective gravity and wind vectors.
     pub forces: PhysicsForces,
     #[serde(rename = "PhysicsDictionary")]
-    /// Ordered exported Physics rig ID/name metadata.
+    /// Ordered rig labels. In native PhysicsAsset records, each Id references a PhysicsSetting.id UUID.
     pub dictionary: Vec<PhysicsDictionaryEntry>,
     #[serde(rename = "Fps", default, skip_serializing_if = "Option::is_none")]
     /// Optional Physics fixed-step frequency in frames per second; None or zero follows the evaluation delta.

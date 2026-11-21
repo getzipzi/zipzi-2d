@@ -11,7 +11,7 @@ use std::{
 use zipzi_core::document::{valid_attachment_path, PackageAttachment};
 use zipzi_core::{state::DocumentState, Status};
 use zipzi_moc3::{import_from_bare_moc3, import_from_model3_json, ImportReport};
-use zipzi_psd::{import_psd, ImportReport as PsdImportReport};
+use zipzi_psd::{import_psd_with_masks, ImportReport as PsdImportReport};
 
 impl ProjectImporter {
     pub fn import_model3(
@@ -759,7 +759,17 @@ impl ProjectImporter {
 
     /// Decode and capture PSD artwork without owning or publishing a live model.
     pub fn import_psd(&self, source: &Path) -> Result<(ImportedProject, PsdImportReport), Status> {
-        let bundle = read_psd_bundle(source)?;
+        self.import_psd_with_masks(source, false)
+    }
+
+    pub fn import_psd_with_masks(
+        &self,
+        source: &Path,
+        preserve_masks: bool,
+    ) -> Result<(ImportedProject, PsdImportReport), Status> {
+        let bytes = read_psd_bytes(source)?;
+        let bundle = import_psd_with_masks(&bytes, preserve_masks)
+            .map_err(|error| Status::error(error.code, error.message))?;
         let mut builder = bundle.document.builder();
         let mut images = Vec::new();
         for asset in bundle.assets {
@@ -785,11 +795,6 @@ impl ProjectImporter {
             bundle.report,
         ))
     }
-}
-
-fn read_psd_bundle(source: &Path) -> Result<zipzi_psd::ImportBundle, Status> {
-    let bytes = read_psd_bytes(source)?;
-    import_psd(&bytes).map_err(|error| Status::error(error.code, error.message))
 }
 
 pub(super) fn read_psd_bytes(source: &Path) -> Result<Vec<u8>, Status> {

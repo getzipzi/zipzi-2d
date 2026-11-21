@@ -203,7 +203,7 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
 
     let encoded = fixture_bytes(&doc);
     let wire: serde_json::Value = project_json(&encoded);
-    assert_eq!(wire["format_version"], 23);
+    assert_eq!(wire["format_version"], 24);
     for field in [
         "blend_key_tables",
         "blend_constraints",
@@ -335,7 +335,7 @@ fn disabled_offscreen_roundtrips_and_legacy_defaults_to_enabled() {
     doc = prepare(&doc, |builder| builder.create_offscreen(offscreen.clone()));
     let encoded = fixture_bytes(&doc);
     let wire: serde_json::Value = project_json(&encoded);
-    assert_eq!(wire["format_version"], 23);
+    assert_eq!(wire["format_version"], 24);
     assert!(wire["document"]["offscreens"][0].get("enabled").is_none());
     assert!(
         load_native(&encoded)
@@ -349,7 +349,7 @@ fn disabled_offscreen_roundtrips_and_legacy_defaults_to_enabled() {
     doc = prepare(&doc, |builder| builder.replace_offscreen(offscreen.clone()));
     let encoded = fixture_bytes(&doc);
     let mut wire: serde_json::Value = project_json(&encoded);
-    assert_eq!(wire["format_version"], 23);
+    assert_eq!(wire["format_version"], 24);
     assert_eq!(wire["document"]["offscreens"][0]["enabled"], false);
     assert_eq!(
         load_native(&encoded).unwrap().offscreen(&id(10)),
@@ -375,7 +375,7 @@ fn test_project_v4_preserves_repeat_parameter() {
 
     let encoded = fixture_bytes(&doc);
     let wire: serde_json::Value = project_json(&encoded);
-    assert_eq!(wire["format_version"], 23);
+    assert_eq!(wire["format_version"], 24);
     assert_eq!(wire["document"]["parameters"][0]["repeat"], true);
 
     let decoded = load_native(&encoded).expect("decode_project failed");

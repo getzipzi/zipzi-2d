@@ -104,10 +104,11 @@ class PhysicsDefinition(Value):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsDictionaryEntry(Value):
-    """Exported Physics rig identity and display label.
+    """Physics rig identity and display label.
 
     Fields:
-    Id: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
+    Id: In a native PhysicsAsset dictionary, use PhysicsSetting.id (the document UUID).
+    Import/export converts this reference to the external physics identifier.
     Name: Human-readable display or registration name; distinct from persistent object identity.
     extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
     """
@@ -329,7 +330,7 @@ class PhysicsMeta(Value):
     TotalOutputCount: Exported count of Physics outputs, maintained by native validation.
     VertexCount: Exported count of Physics nodes, maintained by native validation.
     EffectiveForces: Native effective gravity and wind vectors.
-    PhysicsDictionary: Ordered exported Physics rig ID/name metadata.
+    PhysicsDictionary: Ordered rig labels. In native PhysicsAsset records, each Id references a PhysicsSetting.id UUID.
     Fps: Optional Physics fixed-step frequency in frames per second; None or zero follows the evaluation delta.
     extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
     """

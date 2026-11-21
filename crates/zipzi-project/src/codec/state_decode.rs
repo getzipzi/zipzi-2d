@@ -21,7 +21,7 @@ pub(crate) struct DecodedState {
 pub(crate) fn decode_state(text: &str) -> Result<DecodedState, Status> {
     match super::decode::document_version(text)? {
         22 => decode_wire::<super::v22::V22Motion>(text),
-        super::CURRENT_DOCUMENT_VERSION => decode_wire::<MotionClip>(text),
+        23 | super::CURRENT_DOCUMENT_VERSION => decode_wire::<MotionClip>(text),
         _ => Err(Status::error(
             "UNSUPPORTED_VERSION",
             "Unsupported project document version",

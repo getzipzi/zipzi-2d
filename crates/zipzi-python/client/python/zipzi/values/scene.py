@@ -50,6 +50,22 @@ class CursorPreviewBinding(Value):
     influence_percent: float
     reversed: bool
 
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeformerOriginal(Value):
+    """Persistent original-shape snapshot and first-key capture policy.
+
+    Fields:
+    auto_update: Update once when the first ordinary keyform is created. Manual update disables this.
+    first_key_seen: Persistent transition marker; deleting/recreating a binding does not replace the baseline again.
+    snapshot: None means no original has been recorded, for example an imported object.
+    capture_error: Native error code if automatic capture was unavailable; None after successful capture.
+    """
+    _type = 'DeformerOriginal'
+    auto_update: bool
+    first_key_seen: bool
+    snapshot: DeformerOriginalSnapshot | None = None
+    capture_error: str | None = None
+
 class DeformerOriginalAction(Value):
     """Capture, restore or configure the original deformer shape.
     """
@@ -80,6 +96,52 @@ class DeformerOriginalActionAutoUpdate(DeformerOriginalAction):
     """
     _variant = 'auto_update'
     enabled: bool
+
+class DeformerOriginalShape(Value):
+    """Independent canvas-space Warp or Rotation original shape.
+    """
+    _type = 'DeformerOriginalShape'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeformerOriginalShapeWarp(DeformerOriginalShape):
+    """Store a baked Warp lattice and controller in canvas space.
+
+    Fields:
+    warp: Baked Warp lattice and optional controller in canvas coordinates, X right/Y up.
+    controller_canvas_exact: False when a nonlinear captured parent cannot preserve a cubic controller as cubics.
+    """
+    _variant = 'warp'
+    warp: WarpTransform
+    controller_canvas_exact: bool
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeformerOriginalShapeRotation(DeformerOriginalShape):
+    """Store a Rotation pose in canvas space.
+
+    Fields:
+    pose: Canvas origin, absolute direction (including reference angle), inherited scale and reflections.
+    """
+    _variant = 'rotation'
+    pose: RotationPose
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeformerOriginalSnapshot(Value):
+    """Captured original shape and the event that produced it.
+
+    Fields:
+    source: Creation, first ordinary keyform transition, or explicit manual update.
+    shape: Independent canvas-space shape; does not reference undo history or binding samples.
+    """
+    _type = 'DeformerOriginalSnapshot'
+    source: DeformerOriginalSource
+    shape: DeformerOriginalShape
+
+class DeformerOriginalSource(StrEnum):
+    """How a stored original deformer shape was captured.
+    """
+    CREATED = 'created'
+    FIRST_KEY = 'first_key'
+    MANUAL = 'manual'
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class EditorState(Value):
@@ -240,6 +302,66 @@ class SceneReferenceUnresolved(SceneReference):
     runtime_id: str
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class Transform(Value):
+    """Document deformation transform with independent organization and deformation parents.
+
+    Fields:
+    id: Stable document object ID used by references; it is distinct from the exported runtime_id.
+    runtime_id: External format/runtime identifier retained for import/export; not the document object ID.
+    name: Human-readable display name; use the stable ID for identity because names can change.
+    part_id: Organizational Part owner ID; independent of the deformation parent. None selects the
+    root/unassigned container.
+    parent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None
+    selects the root/unassigned container.
+    data: Typed Warp or Rotation deformation definition; its variant determines lattice versus
+    rotation-pose interpretation.
+    enabled: Whether this object participates in evaluation; editor hiding is a separate state.
+    appearance: Opacity and multiply/screen color factors for this object or shape.
+    warp_authoring: Persistent Warp editing policy; never used for runtime deformation evaluation.
+    rotation_scale_unit: Unit multiplier already applied to an imported Rotation's scale channel.
+    Retains its BlendShape clamp limits and export units without multiplying
+    the pose again. None uses native authoring units (1).
+    original_shape: Independent original shape and its first-key update policy, retained only by native projects.
+    """
+    _type = 'Transform'
+    id: str
+    runtime_id: str
+    name: str
+    part_id: PartId | None = None
+    parent_id: TransformId | None = None
+    data: TransformData
+    enabled: bool
+    appearance: common.Appearance
+    warp_authoring: WarpAuthoringSettings | None = None
+    rotation_scale_unit: float | None = None
+    original_shape: DeformerOriginal | None = None
+
+class TransformData(Value):
+    """Typed Warp or Rotation deformation definition.
+    """
+    _type = 'TransformData'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class TransformDataWarp(TransformData):
+    """Use a Warp lattice definition.
+
+    Fields:
+    value: Warp deformation definition with its baked lattice and optional authoring controller.
+    """
+    _variant = 'Warp'
+    value: WarpTransform
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class TransformDataRotation(TransformData):
+    """Use a Rotation definition.
+
+    Fields:
+    value: Rotation deformation definition with its reference angle and base pose.
+    """
+    _variant = 'Rotation'
+    value: RotationTransform
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class TransformId(Value):
     """Persistent scene object identifier.
 
@@ -362,12 +484,14 @@ class WarpTransform(Value):
     points: tuple[common.Vec2, ...]
 
 __all__ = [
-    'Canvas', 'CursorPreviewAxis', 'CursorPreviewBinding', 'DeformerOriginalAction',
-    'DeformerOriginalActionUpdate', 'DeformerOriginalActionRestore', 'DeformerOriginalActionAutoUpdate', 'EditorState',
-    'ExportSettings', 'ModelSetup', 'ObjectEditorState', 'Part',
-    'PartId', 'RotationPose', 'RotationTransform', 'SceneReference',
-    'SceneReferenceUnspecified', 'SceneReferenceResolved', 'SceneReferenceUnresolved', 'TransformId',
-    'WarpAuthoringSettings', 'WarpBezier', 'WarpBezierControlPatch', 'WarpBezierEditMode',
-    'WarpBezierGrid', 'WarpBezierNode', 'WarpPointPatch', 'WarpShapeAction',
-    'WarpTransform',
+    'Canvas', 'CursorPreviewAxis', 'CursorPreviewBinding', 'DeformerOriginal',
+    'DeformerOriginalAction', 'DeformerOriginalActionUpdate', 'DeformerOriginalActionRestore', 'DeformerOriginalActionAutoUpdate',
+    'DeformerOriginalShape', 'DeformerOriginalShapeWarp', 'DeformerOriginalShapeRotation', 'DeformerOriginalSnapshot',
+    'DeformerOriginalSource', 'EditorState', 'ExportSettings', 'ModelSetup',
+    'ObjectEditorState', 'Part', 'PartId', 'RotationPose',
+    'RotationTransform', 'SceneReference', 'SceneReferenceUnspecified', 'SceneReferenceResolved',
+    'SceneReferenceUnresolved', 'Transform', 'TransformData', 'TransformDataWarp',
+    'TransformDataRotation', 'TransformId', 'WarpAuthoringSettings', 'WarpBezier',
+    'WarpBezierControlPatch', 'WarpBezierEditMode', 'WarpBezierGrid', 'WarpBezierNode',
+    'WarpPointPatch', 'WarpShapeAction', 'WarpTransform',
 ]

@@ -149,9 +149,19 @@ struct NativeRuntime {
 #[pymethods]
 impl NativeRuntime {
     #[new]
-    fn new() -> PyResult<Self> {
+    #[pyo3(signature = (*, observation_texture_rgba_bytes=None))]
+    fn new(observation_texture_rgba_bytes: Option<u64>) -> PyResult<Self> {
+        let mut limits = zipzi_runtime::RuntimeLimits::default();
+        if let Some(bytes) = observation_texture_rgba_bytes {
+            if bytes == 0 {
+                return Err(pyo3::exceptions::PyValueError::new_err(
+                    "observation_texture_rgba_bytes must be positive",
+                ));
+            }
+            limits.observation_texture_rgba_bytes = bytes;
+        }
         let host = Arc::new(
-            LocalHost::new(Default::default(), 128)
+            LocalHost::new(limits, 128)
                 .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?,
         );
         let client = host

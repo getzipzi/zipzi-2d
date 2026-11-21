@@ -29,6 +29,9 @@ pub struct Drawable {
     pub texture_asset_id: String,
     /// Resolved texture slot index; separate from the persistent texture asset ID.
     pub texture_slot: i32,
+    /// Material UV addressing override for both color draws and raw mask draws.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub texture_repeat: Option<bool>,
     /// Geometry remains editable when this resource cannot contribute color.
     #[serde(default = "renderable_default")]
     pub renderable: bool,
@@ -73,6 +76,7 @@ impl Default for Drawable {
             raw_blend_mode: None,
             texture_asset_id: String::new(),
             texture_slot: 0,
+            texture_repeat: None,
             renderable: true,
             positions: Vec::new(),
             uvs: Arc::from([]),

@@ -438,7 +438,9 @@ impl FrameEncoder<'_, '_> {
             geometry: self.renderer.meshes[index].revision,
             texture: texture.view as *const TextureRef as usize,
             revision: self.textures.revision(&source.texture_asset_id),
-            repeat: self.textures.repeats(&source.texture_asset_id),
+            repeat: source
+                .texture_repeat
+                .unwrap_or_else(|| self.textures.repeats(&source.texture_asset_id)),
         })
     }
 
@@ -551,7 +553,9 @@ impl FrameEncoder<'_, '_> {
                 None,
                 &self.renderer.meshes[index],
                 &uniform,
-                self.textures.repeats(&source.texture_asset_id),
+                source
+                    .texture_repeat
+                    .unwrap_or_else(|| self.textures.repeats(&source.texture_asset_id)),
                 source.double_sided,
                 false,
             );
