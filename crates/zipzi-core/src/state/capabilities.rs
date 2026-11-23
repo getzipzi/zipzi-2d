@@ -368,9 +368,12 @@ impl DocumentState {
                 code: "NO_REFERENCE_SLOT",
             }
         };
-        let content = if doc
-            .get_motion_track(id)
-            .is_some_and(|(_, t)| doc.motion_track_disabled_reason(&t.target).is_some())
+        // A track lookup can index every key in the library. Only a track's
+        // own target configuration can prevent editing its content.
+        let content = if kind == ObjectKind::MotionTrack
+            && doc
+                .get_motion_track(id)
+                .is_some_and(|(_, t)| doc.motion_track_disabled_reason(&t.target).is_some())
         {
             CapabilityState::Unavailable {
                 code: "CONFIGURE_TRACK_TARGET",
