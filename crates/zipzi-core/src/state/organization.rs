@@ -73,33 +73,39 @@ impl DocumentBuilder {
                 .collect::<Vec<_>>(),
         );
         let mut removed = delta.removed.clone();
-        removed.extend(
-            self.content
-                .model()
-                .binding_identities()
-                .iter()
-                .filter(|v| delta.removed.contains(&v.owner))
-                .map(|v| v.id.clone()),
-        );
-        self.clear_owned_editor_objects(&removed);
-        let mut editor = self.editor_state().clone();
-        for id in &removed {
-            editor.rotation_bone_lengths.remove(id);
-            editor.rotation_bone_reference_scales.remove(id);
-            editor.rotation_bone_angle_offsets.remove(id);
+        if !removed.is_empty() {
+            removed.extend(
+                self.content
+                    .model()
+                    .binding_identities()
+                    .iter()
+                    .filter(|v| delta.removed.contains(&v.owner))
+                    .map(|v| v.id.clone()),
+            );
+            self.clear_owned_editor_objects(&removed);
         }
-        for (source, target) in &delta.rotation_bone_copies {
-            for values in [
-                &mut editor.rotation_bone_lengths,
-                &mut editor.rotation_bone_reference_scales,
-                &mut editor.rotation_bone_angle_offsets,
-            ] {
-                if let Some(value) = values.get(source).copied() {
-                    values.insert(target.clone(), value);
+        if !removed.is_empty() || !delta.rotation_bone_copies.is_empty() {
+            let mut editor = self.editor_state().clone();
+            for id in &removed {
+                editor.rotation_bone_lengths.remove(id);
+                editor.rotation_bone_reference_scales.remove(id);
+                editor.rotation_bone_angle_offsets.remove(id);
+            }
+            for (source, target) in &delta.rotation_bone_copies {
+                for values in [
+                    &mut editor.rotation_bone_lengths,
+                    &mut editor.rotation_bone_reference_scales,
+                    &mut editor.rotation_bone_angle_offsets,
+                ] {
+                    if let Some(value) = values.get(source).copied() {
+                        values.insert(target.clone(), value);
+                    }
                 }
             }
+            if &editor != self.editor_state() {
+                self.set_editor_state(editor)?;
+            }
         }
-        self.set_editor_state(editor)?;
         macro_rules! remove {
             ($get:ident, $remove:ident) => {
                 for id in &delta.removed {

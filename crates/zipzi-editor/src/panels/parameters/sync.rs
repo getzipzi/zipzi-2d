@@ -11,7 +11,7 @@ impl ParametersPanel {
         if self.drag.active() && !self.parameter_drag_valid(window, cx) {
             self.cancel_parameter_drag(window, cx);
         }
-        let (document_id, parameters, revision, selection) = {
+        let (document_id, parameters, revision, link_revision, selection) = {
             let owner = owner.read(cx);
             self.owner_disabled = owner.modal || owner.editor.is_busy();
             if owner.editor.is_busy() && self.document_id == owner.editor.active_id() {
@@ -22,6 +22,7 @@ impl ParametersPanel {
                 owner.editor.active_id(),
                 doc.map_or_else(Vec::new, |doc| doc.parameters()),
                 doc.map(|doc| doc.evaluation_layout_id()),
+                doc.map(|doc| doc.model_generation()),
                 doc.map(|doc| {
                     format!(
                         "{:?}/{:?}",
@@ -73,11 +74,17 @@ impl ParametersPanel {
                     .is_none_or(|id| groups.iter().any(|group| &group.id == id))
             });
             self.layout = ParameterLayout::new(&groups, &parameters, &t!("parameter.ungrouped"));
-            self.links = owner
+        }
+        let mut links_changed = false;
+        if layout_changed || self.link_revision != link_revision {
+            let links = owner
                 .read(cx)
                 .editor
                 .document()
                 .map_or_else(Vec::new, |doc| doc.parameter_links());
+            links_changed = links != self.links;
+            self.links = links;
+            self.link_revision = link_revision;
         }
         let visuals_changed = structure_changed
             || self.visual_revision != revision
@@ -100,7 +107,7 @@ impl ParametersPanel {
         if visuals_changed {
             self.refresh_binding_hints(&owner, cx);
         }
-        if layout_changed || (self.only_related && visuals_changed) {
+        if layout_changed || links_changed || (self.only_related && visuals_changed) {
             self.refresh_visible_rows(window, cx);
         } else if visuals_changed {
             self.refresh_linked_rows(cx);

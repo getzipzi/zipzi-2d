@@ -50,6 +50,16 @@ impl<T> SnapshotTable<T> {
         self.pages.last_mut().unwrap().push(Arc::new(value));
         self.len += 1;
     }
+
+    pub(super) fn truncate(&mut self, len: usize) {
+        if len < self.len {
+            self.pages.truncate(len.div_ceil(PAGE_SIZE));
+            if len % PAGE_SIZE != 0 {
+                self.pages.last_mut().unwrap().truncate(len % PAGE_SIZE);
+            }
+            self.len = len;
+        }
+    }
 }
 impl<T: Clone> SnapshotTable<T> {
     pub(super) fn last_mut(&mut self) -> Option<&mut T> {

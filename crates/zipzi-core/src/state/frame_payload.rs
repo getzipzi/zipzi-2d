@@ -13,11 +13,16 @@ impl DocumentBuilder {
         }
         if !self.roots_touched.is_empty() {
             if self.roots_touched.len() != 1
-                || !self.roots_touched.contains(&RootDomain::EditorState)
                 || !self.touched_assets.is_empty()
                 || !self.touched_parameters.is_empty()
                 || !self.touched.is_empty()
             {
+                return Ok(false);
+            }
+            if self.roots_touched.contains(&RootDomain::DisplayInfo) {
+                return self.validate_combined_parameter_payload();
+            }
+            if !self.roots_touched.contains(&RootDomain::EditorState) {
                 return Ok(false);
             }
             if let Some(issue) = self

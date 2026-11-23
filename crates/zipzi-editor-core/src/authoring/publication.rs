@@ -206,7 +206,15 @@ fn refresh_root(
                     }
                 }
             }
-            old == *new && index.refresh_organization_document(after)
+            let combined_changed = old.combined_parameters != new.combined_parameters;
+            old.combined_parameters.clone_from(&new.combined_parameters);
+            if old != *new || !index.refresh_organization_document(after) {
+                return false;
+            }
+            if combined_changed {
+                index.refresh_combined_parameter_rows(after, &after.reference_projection());
+            }
+            true
         }
         RootDomain::MotionGroups => {
             let old = before.motion_groups();

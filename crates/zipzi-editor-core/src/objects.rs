@@ -31,9 +31,19 @@ pub struct ObjectIndex {
     pub bindings: SharedVec<BindingInfo>,
     pub draw_groups: SharedVec<zipzi_core::draw_order::DrawOrderGroup>,
     structure: Arc<ObjectStructure>,
+    combined_parameters: Option<CombinedParameterRows>,
 }
 
-/// Slot maps and dependency paths change only when rebuilding the structure.
+/// The combined-parameter objects and edges occupy the tail of the tables.
+/// Their lookups can be replaced independently of the scene and motion graph.
+#[derive(Clone, Debug)]
+struct CombinedParameterRows {
+    object_start: usize,
+    relation_start: usize,
+    structure: Arc<ObjectStructure>,
+}
+
+/// Slot maps and dependency paths for the main model projection.
 #[derive(Clone, Debug, Default)]
 struct ObjectStructure {
     slots: HashMap<ObjectRef, usize>,
@@ -60,7 +70,15 @@ impl ObjectIndex {
         false
     }
     pub fn get(&self, r: &ObjectRef) -> Option<&ObjectInfo> {
-        self.structure.slots.get(r).map(|&i| &self.objects[i])
+        self.structure
+            .slots
+            .get(r)
+            .map(|&i| &self.objects[i])
+            .or_else(|| {
+                let combined = self.combined_parameters.as_ref()?;
+                let slot = combined.structure.slots.get(r)?;
+                self.objects.get(combined.object_start + slot)
+            })
     }
     pub fn binding(&self, r: &ObjectRef) -> Option<&BindingInfo> {
         self.structure
@@ -77,20 +95,34 @@ impl ObjectIndex {
         self.structure.parameters.get(id).unwrap_or(&EMPTY)
     }
     pub fn outgoing(&self, r: &ObjectRef) -> impl Iterator<Item = &Relation> {
+        let combined = self
+            .combined_parameters
+            .as_ref()
+            .and_then(|rows| Some((rows.relation_start, rows.structure.outgoing.get(r)?)));
         self.structure
             .outgoing
             .get(r)
             .into_iter()
             .flatten()
             .map(|&i| &self.relations[i])
+            .chain(combined.into_iter().flat_map(move |(start, slots)| {
+                slots.iter().map(move |&i| &self.relations[start + i])
+            }))
     }
     pub fn incoming(&self, r: &ObjectRef) -> impl Iterator<Item = &Relation> {
+        let combined = self
+            .combined_parameters
+            .as_ref()
+            .and_then(|rows| Some((rows.relation_start, rows.structure.incoming.get(r)?)));
         self.structure
             .incoming
             .get(r)
             .into_iter()
             .flatten()
             .map(|&i| &self.relations[i])
+            .chain(combined.into_iter().flat_map(move |(start, slots)| {
+                slots.iter().map(move |&i| &self.relations[start + i])
+            }))
     }
     pub fn name<'a>(&'a self, r: &'a ObjectRef) -> &'a str {
         self.get(r).map_or(&r.id, |i| &i.name)

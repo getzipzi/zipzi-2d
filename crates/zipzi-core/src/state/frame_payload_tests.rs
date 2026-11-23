@@ -118,6 +118,34 @@ fn fixture(bound: bool) -> DocumentState {
 }
 
 #[test]
+fn combined_parameter_sets_share_layout_without_reusing_occupied_ids() {
+    let base = fixture(true);
+    let mut display = base.display_info().clone();
+    display.combined_parameters = Some(vec![CdiCombinedSet {
+        id: id(20),
+        members: vec![ReferenceEntry {
+            id: id(21),
+            target: CdiParameterRef::Resolved {
+                parameter_id: id(3),
+            },
+        }],
+    }]);
+    let mut builder = base.builder();
+    builder.set_display_info(display.clone()).unwrap();
+    assert!(builder.validate_metadata_payload().unwrap());
+    let full = freeze_full(builder.clone()).unwrap();
+    let linked = builder.freeze().unwrap().state;
+    assert!(Arc::ptr_eq(&base.read_cache, &linked.read_cache));
+    assert_eq!(linked.display_info(), full.display_info());
+
+    display.combined_parameters.as_mut().unwrap()[0].members[0].id = id(6);
+    let mut builder = base.builder();
+    builder.set_display_info(display).unwrap();
+    assert!(!builder.validate_metadata_payload().unwrap());
+    assert_eq!(builder.freeze().unwrap_err().code, "DUPLICATE_ID");
+}
+
+#[test]
 fn unchanged_binding_payloads_are_not_revalidated_for_unrelated_edits() {
     use crate::model_validation::bindings::take_validation_counts;
     for edit in [

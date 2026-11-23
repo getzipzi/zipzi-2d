@@ -1,5 +1,5 @@
 use super::*;
-fn clip_ids(clip: &MotionClip) -> impl Iterator<Item = &str> {
+pub(super) fn clip_ids(clip: &MotionClip) -> impl Iterator<Item = &str> {
     std::iter::once(clip.id.as_str())
         .chain(
             clip.tracks.iter().flat_map(|t| {

@@ -2,10 +2,75 @@
 use super::*;
 use zipzi_core::document::ReferenceEntryAllocation;
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{ObjectKind, ObjectRef};
+    use std::sync::atomic::Ordering;
+
+    #[test]
+    fn parameter_links_refresh_reference_rows_and_keep_unrelated_index_slots() -> Result<()> {
+        let mut doc = Document::new_blank()?;
+        let a = doc.create_parameter(crate::NewParameter {
+            runtime_id: "ParamX".into(),
+            ..Default::default()
+        })?;
+        let b = doc.create_parameter(crate::NewParameter {
+            runtime_id: "ParamY".into(),
+            ..Default::default()
+        })?;
+        let parameter = ObjectRef::new(ObjectKind::Parameter, &a);
+        let baseline = doc.object_index();
+        let layout = doc.evaluation_layout_id();
+        let builds = doc.object_index_builds.load(Ordering::Relaxed);
+
+        doc.toggle_parameter_link(&a)?;
+        let linked = doc.object_index();
+        let set = linked
+            .objects
+            .iter()
+            .find(|row| row.reference.kind == ObjectKind::CdiCombinedSet)
+            .unwrap();
+        assert_eq!(linked.outgoing(&set.reference).count(), 2);
+        assert_eq!(
+            linked
+                .incoming(&parameter)
+                .filter(|r| r.kind == crate::RelationKind::ReferenceTarget)
+                .count(),
+            1
+        );
+        assert_eq!(doc.parameter_links(), vec![(a.clone(), b.clone())]);
+        assert!(std::ptr::eq(
+            baseline.get(&parameter).unwrap(),
+            linked.get(&parameter).unwrap()
+        ));
+        assert!(baseline.get(&set.reference).is_none());
+        assert_eq!(doc.evaluation_layout_id(), layout);
+
+        doc.undo()?;
+        assert!(doc.object_index().get(&set.reference).is_none());
+        doc.redo()?;
+        assert!(doc.object_index().get(&set.reference).is_some());
+        doc.toggle_parameter_link(&b)?;
+        assert!(doc.object_index().get(&set.reference).is_none());
+        assert_eq!(
+            doc.object_index()
+                .incoming(&parameter)
+                .filter(|r| r.kind == crate::RelationKind::ReferenceTarget)
+                .count(),
+            0
+        );
+        assert_eq!(linked.outgoing(&set.reference).count(), 2);
+        assert!(doc.parameter_links().is_empty());
+        assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+        Ok(())
+    }
+}
+
 impl Document {
     pub fn parameters(&self) -> Vec<ParameterValue> {
-        let model_read_guard_52 = self.model();
-        let groups: HashMap<_, _> = model_read_guard_52
+        let model = self.model();
+        let groups: HashMap<_, _> = model
             .display_info()
             .parameters
             .iter()
@@ -19,11 +84,10 @@ impl Document {
                 _ => None,
             })
             .collect();
-        sorting::ordered_parameter_ids(&self.model())
+        sorting::ordered_parameter_ids(&model)
             .iter()
             .filter_map(|id| {
-                let model_read_guard_53 = self.model();
-                let parameter = model_read_guard_53.parameter(id)?;
+                let parameter = model.parameter(id)?;
                 Some(ParameterValue {
                     id: id.clone(),
                     group_id: groups.get(id.as_str()).cloned().flatten(),
@@ -162,6 +226,7 @@ impl Document {
             "The next parameter is already linked"
         );
         let version = self.session.version();
+        let before = self.session.document();
         let mut edit = self.session.begin_draft("Link parameters", Some(version))?;
         edit.apply(|candidate| {
             let mut info = candidate.read_document()?.display_info().clone();
@@ -195,8 +260,7 @@ impl Document {
         })?;
         let receipt = edit.commit_to(&mut self.session)?;
         self.pristine_blank = None;
-        self.consume_authoring_receipt(&receipt, None);
-        self.context.reconcile(&self.object_index());
+        self.consume_authoring_receipt(&receipt, Some(&before));
         Ok(self.authoring_result(receipt))
     }
 

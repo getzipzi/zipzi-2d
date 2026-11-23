@@ -304,7 +304,11 @@ impl DocumentSession {
                 | EditorCommand::Navigate(_)
                 | EditorCommand::NavigateBack
         );
-        let context_only = selection || matches!(&command, EditorCommand::FocusParameter(_));
+        let context_only = selection
+            || matches!(
+                &command,
+                EditorCommand::FocusParameter(_) | EditorCommand::ToggleParameterLink { .. }
+            );
         let invalidate =
             !(context_only || matches!(&command, EditorCommand::FinishEdit)) || had_pending;
         let result = match command {

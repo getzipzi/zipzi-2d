@@ -747,34 +747,8 @@ impl ObjectIndex {
                 }
             }
         }
-        for set in m.display_info().combined_parameters.iter().flatten() {
-            let r = ObjectRef::new(K::CdiCombinedSet, &set.id);
-            s.add(r.clone(), "Combined parameters", json!(set), None);
-            s.edge(&doc, R::Contains, r.clone(), "combined set");
-            for (i, member) in set.members.iter().enumerate() {
-                let child = ObjectRef::new(K::CdiCombinedMember, &member.id);
-                s.add(
-                    child.clone(),
-                    format!("Member {}", i + 1),
-                    json!(member),
-                    None,
-                );
-                s.edge(&r, R::Contains, child.clone(), "member");
-                let target = match &member.target {
-                    zipzi_core::document::CdiParameterRef::Resolved { parameter_id } => {
-                        Some(ObjectRef::new(K::Parameter, parameter_id))
-                    }
-                    zipzi_core::document::CdiParameterRef::Unresolved { runtime_id } => {
-                        Some(s.unresolved("combined set", runtime_id))
-                    }
-                    zipzi_core::document::CdiParameterRef::Unspecified => None,
-                };
-                if let Some(target) = target {
-                    s.edge(&child, R::ReferenceTarget, target, "");
-                }
-            }
-        }
-        for disabled in &m.reference_projection().disabled {
+        let references = m.reference_projection();
+        for disabled in &references.disabled {
             if let Some(identity) = m.reference_identity(&disabled.id) {
                 let kind = match identity.kind {
                     zipzi_core::document::ReferenceKind::ModelParameterGroup => {
@@ -784,8 +758,8 @@ impl ObjectIndex {
                         K::ModelParameterMember
                     }
                     zipzi_core::document::ReferenceKind::ModelHitArea => K::ModelHitArea,
-                    zipzi_core::document::ReferenceKind::CdiCombinedSet => K::CdiCombinedSet,
-                    zipzi_core::document::ReferenceKind::CdiCombinedMember => K::CdiCombinedMember,
+                    zipzi_core::document::ReferenceKind::CdiCombinedSet
+                    | zipzi_core::document::ReferenceKind::CdiCombinedMember => continue,
                 };
                 if let Some(&slot) = s.structure.slots.get(&ObjectRef::new(kind, &disabled.id)) {
                     s.objects[slot].diagnostic =
@@ -830,8 +804,82 @@ impl ObjectIndex {
             }
         }
         s.build_influences();
+        s.refresh_combined_parameter_rows(m, &references);
         s
     }
+
+    pub(crate) fn refresh_combined_parameter_rows(
+        &mut self,
+        model: &Model,
+        projection: &zipzi_core::document::ReferenceProjection,
+    ) {
+        use ObjectKind as K;
+        use RelationKind as R;
+        use zipzi_core::document::CdiParameterRef;
+
+        let mut rows = Self::default();
+        let document = ObjectRef::new(K::Document, model.id());
+        for set in model.display_info().combined_parameters.iter().flatten() {
+            let owner = ObjectRef::new(K::CdiCombinedSet, &set.id);
+            rows.add(owner.clone(), "Combined parameters", json!(set), None);
+            rows.edge(&document, R::Contains, owner.clone(), "combined set");
+            for (i, member) in set.members.iter().enumerate() {
+                let child = ObjectRef::new(K::CdiCombinedMember, &member.id);
+                rows.add(
+                    child.clone(),
+                    format!("Member {}", i + 1),
+                    json!(member),
+                    None,
+                );
+                rows.edge(&owner, R::Contains, child.clone(), "member");
+                let target = match &member.target {
+                    CdiParameterRef::Resolved { parameter_id } => {
+                        ObjectRef::new(K::Parameter, parameter_id)
+                    }
+                    CdiParameterRef::Unresolved { runtime_id } => {
+                        rows.unresolved("combined set", runtime_id)
+                    }
+                    CdiParameterRef::Unspecified => continue,
+                };
+                rows.edge(&child, R::ReferenceTarget, target, "");
+            }
+        }
+        for disabled in &projection.disabled {
+            let kind = if disabled.owner.is_some() {
+                K::CdiCombinedMember
+            } else {
+                K::CdiCombinedSet
+            };
+            if let Some(&slot) = rows
+                .structure
+                .slots
+                .get(&ObjectRef::new(kind, &disabled.id))
+            {
+                rows.objects[slot].diagnostic =
+                    Some(format!("NeedsConfiguration: {:?}", disabled.reason));
+            }
+        }
+
+        if let Some(previous) = self.combined_parameters.take() {
+            self.objects.truncate(previous.object_start);
+            self.relations.truncate(previous.relation_start);
+        }
+        if rows.objects.is_empty() {
+            return;
+        }
+        self.combined_parameters = Some(super::CombinedParameterRows {
+            object_start: self.objects.len(),
+            relation_start: self.relations.len(),
+            structure: rows.structure,
+        });
+        for row in &rows.objects {
+            self.objects.push(row.clone());
+        }
+        for edge in &rows.relations {
+            self.relations.push(edge.clone());
+        }
+    }
+
     fn pose_ref(&mut self, p: &PosePartRef) -> ObjectRef {
         match p {
             PosePartRef::Unspecified => unreachable!("unconfigured references have no edge"),
