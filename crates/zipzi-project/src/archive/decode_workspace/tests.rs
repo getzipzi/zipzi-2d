@@ -246,6 +246,65 @@ fn decode_estimate_covers_motion_tracks_and_keys_at_multiple_sizes() {
 }
 
 #[test]
+fn decode_estimate_covers_dense_bezier_motions() {
+    let mut document: Value = serde_json::from_slice(&motions(1, 1, 8193)).unwrap();
+    let segments =
+        &mut document["document"]["animation_assets"]["motions"][0]["tracks"][0]["segments"];
+    for (index, segment) in segments.as_array_mut().unwrap().iter_mut().enumerate() {
+        let time = index as f64;
+        segment["curve"] = json!({
+            "kind": "bezier", "control1": {"time": time + 0.2, "value": 0.1},
+            "control2": {"time": time + 0.8, "value": 0.9}, "preset": null
+        });
+        segment["frame_step"] = json!({"kind": "every_frames", "frames": 3});
+    }
+    let current = serde_json::to_vec(&document).unwrap();
+    let estimate = document_decode_workspace(&current, &mut || true).unwrap();
+    calibrate("typed_bezier_8193", &current, None);
+    document["format_version"] = 23.into();
+    let previous = serde_json::to_vec(&document).unwrap();
+    assert_eq!(
+        document_decode_workspace(&previous, &mut || true).unwrap(),
+        estimate
+    );
+    calibrate("v23_bezier_8193", &previous, None);
+}
+
+#[test]
+fn typed_motion_estimate_keeps_opaque_fields_at_the_generic_rate() {
+    let mut document: Value = serde_json::from_slice(&motions(2, 2, 64)).unwrap();
+    let estimate = |doc: &Value| {
+        document_decode_workspace(&serde_json::to_vec(doc).unwrap(), &mut || true).unwrap()
+    };
+    let generic_estimate = |doc: &Value| {
+        let mut generic = doc.clone();
+        // v22 materializes a whole clip as serde_json::Value during conversion.
+        generic["format_version"] = 22.into();
+        estimate(&generic)
+    };
+    let initial = estimate(&document);
+    let initial_generic = generic_estimate(&document);
+    assert!(initial < initial_generic * 3 / 4);
+
+    let motion = &mut document["document"]["animation_assets"]["motions"][0];
+    motion["extensions"]["data"] = json!(vec![json!({"shape":{"kind":"linear"}}); 8193]);
+    assert_eq!(
+        estimate(&document) - initial,
+        generic_estimate(&document) - initial_generic
+    );
+    let bytes = serde_json::to_vec(&document).unwrap();
+    calibrate("typed_motion_with_opaque_metadata", &bytes, None);
+
+    let escaped = std::str::from_utf8(&bytes)
+        .unwrap()
+        .replace("\"segments\":", "\"\\u0073egments\":");
+    assert!(
+        document_decode_workspace(escaped.as_bytes(), &mut || true).unwrap() > estimate(&document)
+    );
+    calibrate("escaped_typed_field", escaped.as_bytes(), None);
+}
+
+#[test]
 fn decode_estimate_covers_rejected_documents() {
     let mut root: Value = serde_json::from_slice(&geometry(0, 0, 0)).unwrap();
     root["unknown"] = json!(vec![0; 32768]);
