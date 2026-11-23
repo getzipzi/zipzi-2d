@@ -757,7 +757,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                         .min_w_0()
                                         .items_center()
                                         .h(crate::ui::compact::rem(crate::ui::compact::ROW))
-                                        .pl(crate::ui::compact::rem(4. + row.depth as f32 * 10.))
+                                        .pl(crate::ui::compact::rem(4. + row.depth as f32 * 6.))
                                         .pr_2()
                                         .rounded_none()
                                         .bg(if is_selected {
