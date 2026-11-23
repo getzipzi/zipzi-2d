@@ -57,7 +57,7 @@ fn default_views_fit_once_per_workspace_and_preserve_navigation() -> anyhow::Res
         }
         let metrics = editor.canvas_metrics();
         let zoom = ((f64::from(metrics.width) / 208.).min(f64::from(metrics.height) / 208.) * 0.9)
-            .clamp(0.04, 32.) as f32;
+            .clamp(f64::from(MIN_ZOOM), f64::from(MAX_ZOOM)) as f32;
         ViewState {
             zoom,
             pan: ViewportPoint {

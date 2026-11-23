@@ -168,21 +168,36 @@ impl CanvasScene {
             .map(Arc::as_ref)
             .collect()
     }
+    /// Bounds for fitting visible mesh artwork. Fully transparent textures can
+    /// belong to interactive meshes far outside the artwork.
     pub fn content_bounds(&self) -> Option<[f32; 4]> {
         let mut result: Option<[f32; 4]> = None;
-        for mesh in self
-            .meshes
-            .iter()
-            .filter(|mesh| self.mesh_visible(&mesh.id))
-        {
-            if let Some(b) = mesh.bounds {
-                result = Some(match result {
-                    None => b,
-                    Some([x0, y0, x1, y1]) => {
-                        [x0.min(b[0]), y0.min(b[1]), x1.max(b[2]), y1.max(b[3])]
-                    }
-                });
+        let mut texture_has_nonzero_alpha = HashMap::new();
+        for drawable in &self.source.viewport_frame.drawables {
+            if !drawable.renderable
+                || drawable.indices.is_empty()
+                || !self.mesh_visible(&drawable.id)
+            {
+                continue;
             }
+            let Some(b) = self.mesh(&drawable.id).and_then(|mesh| mesh.bounds) else {
+                continue;
+            };
+            let Some(&slot) = self.texture_slots.get(&drawable.texture_asset_id) else {
+                continue;
+            };
+            if !*texture_has_nonzero_alpha.entry(slot).or_insert_with(|| {
+                self.source.textures[slot]
+                    .rgba
+                    .chunks_exact(4)
+                    .any(|pixel| pixel[3] != 0)
+            }) {
+                continue;
+            }
+            result = Some(match result {
+                None => b,
+                Some([x0, y0, x1, y1]) => [x0.min(b[0]), y0.min(b[1]), x1.max(b[2]), y1.max(b[3])],
+            });
         }
         result
     }

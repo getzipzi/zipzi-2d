@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use zipzi_core::DrawableFrame;
 
-pub const MIN_ZOOM: f32 = 0.04;
+pub const MIN_ZOOM: f32 = 0.01;
 pub const MAX_ZOOM: f32 = 32.0;
 
 /// Decoded source pixels owned by the document, shared with render workers.

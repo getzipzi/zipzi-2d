@@ -75,7 +75,9 @@ fn main() -> Result<()> {
         .unwrap()
         .bounds
         .context("empty mesh")?;
-    let zoom = (900. / (x1 - x0)).min(560. / (y1 - y0)).clamp(0.04, 32.);
+    let zoom = (900. / (x1 - x0))
+        .min(560. / (y1 - y0))
+        .clamp(MIN_ZOOM, MAX_ZOOM);
     editor.set_viewport_zoom(binding, zoom, None)?;
     let frame = present(&mut editor)?;
     let center = frame.transform.to_viewport(ModelPoint {

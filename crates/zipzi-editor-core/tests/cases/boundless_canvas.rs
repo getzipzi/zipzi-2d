@@ -11,6 +11,18 @@ fn fixture() -> anyhow::Result<(Editor, tempfile::TempDir)> {
 fn fixture_with_source(
     source_canvas: Option<zipzi_core::Canvas>,
 ) -> anyhow::Result<(Editor, tempfile::TempDir)> {
+    fixture_with_artwork(
+        source_canvas,
+        [Vec2::new(1000., -600.), Vec2::new(1200., -500.)],
+        |_| Ok(()),
+    )
+}
+
+fn fixture_with_artwork(
+    source_canvas: Option<zipzi_core::Canvas>,
+    [min, max]: [Vec2; 2],
+    add_objects: impl FnOnce(&mut zipzi_sdk::Commands<'_>) -> Result<(), zipzi_core::Status>,
+) -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let dir = tempfile::tempdir()?;
     let texture = dir.path().join("texture.png");
     std::fs::write(&texture, include_bytes!("../fixtures/accent.png"))?;
@@ -36,14 +48,9 @@ fn fixture_with_source(
         )?;
         crate::support::insert_fixture_mesh(
             edit,
-            rectangle_mesh(
-                &id(3),
-                "Offset artwork",
-                &id(2),
-                Vec2::new(1000., -600.),
-                Vec2::new(1200., -500.),
-            )?,
-        )
+            rectangle_mesh(&id(3), "Offset artwork", &id(2), min, max)?,
+        )?;
+        add_objects(edit)
     })?;
     let saved = crate::support::save_fixture(&mut session, &dir.path().join("boundless.zipzi"))?;
     let document = Document::open(&saved.path)?;
@@ -131,6 +138,73 @@ fn fit_command_before_preview_and_after_manual_navigation_uses_content() -> anyh
         fitted,
         "Resizing must preserve the fitted view"
     );
+    Ok(())
+}
+
+#[test]
+fn fit_uses_only_visible_mesh_artwork_and_can_reach_one_percent() -> anyhow::Result<()> {
+    use zipzi_core::{PreciseVec2, RotationPose, RotationTransform, Transform, TransformData};
+
+    let id = |n| uuid::Uuid::from_u128(n).to_string();
+    let [min, max] = [Vec2::new(10000., -12000.), Vec2::new(82000., 8000.)];
+    let (mut editor, _dir) = fixture_with_artwork(None, [min, max], |edit| {
+        let image =
+            zipzi_project::ResourceStore::default().prepare_rgba(1, 1, [255, 0, 0, 0].into())?;
+        edit.create_empty_asset(id(4), "Transparent texture".into())?;
+        edit.replace_image(&id(4), image)?;
+        support::insert_fixture_mesh(
+            edit,
+            rectangle_mesh(
+                &id(5),
+                "Distant interaction mesh",
+                &id(4),
+                Vec2::new(0., 400000.),
+                Vec2::new(100., 401000.),
+            )?,
+        )?;
+        support::insert_transform(
+            edit,
+            Transform {
+                id: id(6),
+                name: "Distant rotation".into(),
+                data: TransformData::Rotation(RotationTransform {
+                    pose: RotationPose {
+                        origin: PreciseVec2::new(0., 500000.),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+        )
+    })?;
+    editor.set_canvas_metrics(metrics(2.));
+    for frame in [editor.preview()?.canvas.unwrap(), {
+        editor.pan_by(ViewportPoint { x: 900., y: 900. });
+        editor.dispatch(editor.command(CommandId::FitView))?;
+        editor.preview()?.canvas.unwrap()
+    }] {
+        assert!(frame.geometry.mesh_visible(&id(5)));
+        assert!(
+            frame
+                .geometry
+                .controls
+                .iter()
+                .any(|c| c.points[0].y == 500000.)
+        );
+        assert_eq!(
+            frame.geometry.content_bounds(),
+            Some([min.x, min.y, max.x, max.y])
+        );
+        let t = frame.transform;
+        assert_eq!(t.scale, 0.01);
+        let upper_left = t.to_viewport(ModelPoint { x: min.x, y: max.y });
+        let lower_right = t.to_viewport(ModelPoint { x: max.x, y: min.y });
+        assert!(upper_left.x >= 0. && upper_left.y >= 0.);
+        assert!(lower_right.x <= 800. && lower_right.y <= 600.);
+        assert!((upper_left.x + lower_right.x - 800.).abs() < 0.001);
+        assert!((upper_left.y + lower_right.y - 600.).abs() < 0.001);
+    }
     Ok(())
 }
 

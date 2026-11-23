@@ -110,12 +110,12 @@ fn model3_background_import_resolves_selected_moc3() -> anyhow::Result<()> {
 }
 
 #[test]
-fn zoom_stays_within_four_to_thirty_two_hundred_percent() -> anyhow::Result<()> {
+fn zoom_stays_within_one_to_thirty_two_hundred_percent() -> anyhow::Result<()> {
     let (document, _source) = sample_document()?;
     let mut editor = crate::support::editor_from_document(document);
 
     editor.zoom_by(-100.0);
-    assert_eq!(editor.view().zoom, 0.04);
+    assert_eq!(editor.view().zoom, 0.01);
     support::attach_viewports(&mut editor);
     assert!(!editor.command_available(editor.command(CommandId::ZoomOut)));
     assert!(editor.command_available(editor.command(CommandId::ZoomIn)));

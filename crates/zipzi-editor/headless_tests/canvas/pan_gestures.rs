@@ -528,10 +528,10 @@ fn trackpad_pinch_scales_relative_to_zoom_and_preserves_pointer_anchor(cx: &mut 
             (-0.25, TouchPhase::Moved, 1.65),
             (0.2, TouchPhase::Ended, 1.98),
             (100., TouchPhase::Moved, 32.),
-            (-0.9999, TouchPhase::Moved, 0.04),
-            (0.5, TouchPhase::Cancelled, 0.04),
-            (f32::NAN, TouchPhase::Moved, 0.04),
-            (-1., TouchPhase::Moved, 0.04),
+            (-0.9999, TouchPhase::Moved, 0.01),
+            (0.5, TouchPhase::Cancelled, 0.01),
+            (f32::NAN, TouchPhase::Moved, 0.01),
+            (-1., TouchPhase::Moved, 0.01),
         ] {
             window.dispatch_event(
                 PinchEvent {
@@ -572,7 +572,7 @@ fn trackpad_pinch_scales_relative_to_zoom_and_preserves_pointer_anchor(cx: &mut 
             harness
                 .view
                 .read_with(cx, |view, _| view.editor.view().zoom),
-            0.04
+            0.01
         );
     })
     .unwrap();
