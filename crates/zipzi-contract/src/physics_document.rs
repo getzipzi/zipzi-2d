@@ -232,6 +232,11 @@ pub enum PhysicsProperty {
         /// Replacement minimum/default/maximum range for angle normalization.
         PhysicsRange,
     ),
+    /// Set whether the rig participates in physics evaluation and export.
+    Enabled(
+        /// True to include the rig, false to keep its configuration inactive.
+        bool,
+    ),
 }
 impl PhysicsProperty {
     pub fn entity_id(&self) -> Option<&str> {
@@ -430,6 +435,17 @@ pub struct PhysicsSetting {
     pub normalization: wire::PhysicsNormalization,
     /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
     pub extensions: BTreeMap<String, serde_json::Value>,
+    /// Whether the rig participates in physics evaluation and export. Defaults to true.
+    #[serde(default = "enabled_by_default", skip_serializing_if = "is_enabled")]
+    pub enabled: bool,
+}
+
+fn enabled_by_default() -> bool {
+    true
+}
+
+fn is_enabled(enabled: &bool) -> bool {
+    *enabled
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -474,6 +490,13 @@ impl PhysicsSetting {
     }
 }
 impl PhysicsDefinition {
+    pub fn enabled_settings(&self) -> impl Iterator<Item = &PhysicsSetting> {
+        self.settings
+            .iter()
+            .map(Arc::as_ref)
+            .filter(|rig| rig.enabled)
+    }
+
     pub fn actual_counts(&self) -> (usize, usize, usize, usize) {
         (
             self.settings.len(),

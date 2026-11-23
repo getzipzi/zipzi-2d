@@ -14462,6 +14462,23 @@
           "form": "newtype",
           "name": "AngleNormalization",
           "rust_name": "AngleNormalization"
+        },
+        {
+          "doc": "Set whether the rig participates in physics evaluation and export.",
+          "fields": [
+            {
+              "doc": "True to include the rig, false to keep its configuration inactive.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Enabled",
+          "rust_name": "Enabled"
         }
       ]
     },
@@ -14611,6 +14628,16 @@
             "value": {
               "kind": "json"
             }
+          },
+          "skip": false
+        },
+        {
+          "default": true,
+          "doc": "Whether the rig participates in physics evaluation and export. Defaults to true.",
+          "name": "enabled",
+          "rust_name": "enabled",
+          "shape": {
+            "kind": "bool"
           },
           "skip": false
         }

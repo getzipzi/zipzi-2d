@@ -1,14 +1,17 @@
 //! Physics groups are navigated independently of animation playback.
 use super::*;
-use crate::authoring::{AuthoringContext, business};
+use crate::authoring::{ActionAvailability, AuthoringContext, business};
 use crate::panels::sorting::{self, SortItem};
 use crate::panels::{properties::physics::group_name, toolbar::PanelToolbar};
 use crate::ui::compact;
 use gpui_kit::assets::IconName;
-use gpui_kit::component::menu::ContextMenuExt;
+use gpui_kit::component::{Icon, menu::ContextMenuExt};
 use zipzi_core::document::PhysicsAsset;
 use zipzi_editor_core::BusinessAction as A;
-use zipzi_editor_core::{DocumentId, ObjectKind, ObjectRef};
+use zipzi_editor_core::property::physics::ENABLED;
+use zipzi_editor_core::{
+    AuthoringAction, DocumentId, ObjectKind, ObjectRef, PropertyPatch, PropertyScope, PropertyValue,
+};
 
 fn selected(editor: &zipzi_editor_core::Editor, asset: &PhysicsAsset) -> Option<usize> {
     let mut object = editor.active_inspection()?.object()?;
@@ -155,10 +158,10 @@ impl AnimationPanel {
                 .child(div().p_2().child(t!("editor.welcome")))
                 .into_any_element();
         };
-        let Some(asset) = state
+        let Some((doc, asset)) = state
             .editor
             .document()
-            .and_then(|doc| doc.physics_definition())
+            .and_then(|doc| doc.physics_definition().map(|asset| (doc, asset)))
         else {
             return root
                 .child(
@@ -193,6 +196,60 @@ impl AnimationPanel {
                 self.resources.view.scroll.scroll_to_top_of_item(i);
             }
             let object = reference(&rig.id);
+            let enabled = rig.enabled;
+            let toggle = ActionAvailability::for_object(doc, &object, AuthoringAction::Patch);
+            let toggle_disabled = disabled || toggle.as_ref().is_none_or(|state| !state.enabled);
+            let toggle_label = if enabled {
+                t!("physics.disable_group")
+            } else {
+                t!("physics.enable_group")
+            };
+            let toggle_hint = toggle
+                .and_then(|state| state.reason)
+                .unwrap_or_else(|| toggle_label.clone().into());
+            let toggle_object = object.clone();
+            let toggle_owner = self.owner.clone();
+            let toggle = compact::header_button(Button::new("physics-group-enabled"))
+                .ghost()
+                .w(compact::rem(compact::HEADER_CONTROL))
+                .icon(
+                    Icon::new(if enabled {
+                        IconName::Eye
+                    } else {
+                        IconName::EyeOff
+                    })
+                    .text_color(cx.theme().foreground),
+                )
+                .toggled(!enabled)
+                .tooltip(toggle_hint)
+                .accessibility_label(toggle_label)
+                .disabled(toggle_disabled)
+                .on_click(move |_, window, cx| {
+                    cx.stop_propagation();
+                    let _ = toggle_owner.update(cx, |owner, cx| {
+                        if owner.modal
+                            || owner.editor.is_busy()
+                            || window.has_active_dialog(cx)
+                            || owner.editor.active_id() != Some(document)
+                            || !owner.prepare_property_inputs(document, window, cx)
+                        {
+                            return;
+                        }
+                        let Some(context) = owner.editor.editing_context_token() else {
+                            return;
+                        };
+                        let patch = PropertyPatch {
+                            scope: PropertyScope::Object,
+                            expected: [(ENABLED.key, PropertyValue::Bool(enabled))].into(),
+                            changes: [(ENABLED.key, PropertyValue::Bool(!enabled))].into(),
+                        };
+                        let result =
+                            owner
+                                .editor
+                                .commit_properties(context, toggle_object.clone(), patch);
+                        owner.complete_edit(result, cx);
+                    });
+                });
             let row = self
                 .resource_row(
                     ("physics-group-row", i),
@@ -203,6 +260,7 @@ impl AnimationPanel {
                     cx,
                 )
                 .test_support()
+                .pr_2()
                 .aria_label(group_name(&asset, &rig.id).to_owned())
                 .aria_selected(index == Some(i))
                 .child(
@@ -218,6 +276,16 @@ impl AnimationPanel {
                         .text_size(compact::rem(compact::CAPTION))
                         .text_color(cx.theme().muted_foreground)
                         .child(format!("{} → {}", rig.inputs.len(), rig.outputs.len())),
+                )
+                .child(
+                    div()
+                        .id("physics-group-toggle")
+                        .h_full()
+                        .flex()
+                        .flex_shrink_0()
+                        .items_center()
+                        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                        .child(toggle),
                 )
                 .on_mouse_down(
                     MouseButton::Left,

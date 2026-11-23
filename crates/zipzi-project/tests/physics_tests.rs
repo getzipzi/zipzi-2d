@@ -56,6 +56,97 @@ fn physics3_roundtrip_project_and_reference_protection() {
 }
 
 #[test]
+fn physics_group_enabled_state_roundtrips_and_filters_exports() {
+    use zipzi_core::document::{PhysicsPatch, PhysicsProperty, PhysicsRigPatch};
+    use zipzi_project::export_available_physics3;
+
+    let mut source: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../fixtures/animation_cpu/multi.physics3.json"
+    ))
+    .unwrap();
+    source["PhysicsSettings"][1]["Input"][0]["Source"]["Id"] = "ParamMissing".into();
+    let doc = import_physics3(&document(), PHYSICS, &source.to_string())
+        .unwrap()
+        .candidate;
+    let original = doc.physics().as_deref().unwrap();
+    let first = &original.data.settings[0];
+    let second = &original.data.settings[1];
+    let native = native_bytes(&doc);
+    let mut json = project_json(&native);
+    let group_path = "/document/animation_assets/physics/data/settings/1";
+    assert!(json.pointer(&format!("{group_path}/enabled")).is_none());
+
+    let disable = |state: &DocumentState, group_id: &str| {
+        prepare(state, |builder| {
+            builder.patch_physics(&PhysicsPatch {
+                asset_id: PHYSICS.into(),
+                asset_changes: vec![],
+                rig: Some(PhysicsRigPatch {
+                    group_id: group_id.into(),
+                    changes: vec![PhysicsProperty::Enabled(false)],
+                }),
+            })
+        })
+    };
+    for version in [22, 23, 24] {
+        json["format_version"] = version.into();
+        let legacy = load_native(&replace_project_json(&native, &json)).unwrap();
+        assert_eq!(legacy.physics(), doc.physics());
+        let disabled = disable(&legacy, &second.id);
+        let saved = native_bytes(&disabled);
+        let saved_json = project_json(&saved);
+        assert_eq!(saved_json["format_version"], 24);
+        assert_eq!(
+            saved_json.pointer(&format!("{group_path}/enabled")),
+            Some(&serde_json::Value::Bool(false))
+        );
+        let reopened = load_native(&saved).unwrap();
+        let asset = reopened.physics().as_deref().unwrap();
+        assert_eq!(reopened.physics(), disabled.physics());
+        assert_eq!(asset.data.settings[1].inputs, second.inputs);
+        assert_eq!(asset.data.settings[1].outputs, second.outputs);
+
+        let strict = export_physics3(&reopened).unwrap().unwrap();
+        assert_eq!(
+            export_available_physics3(&reopened).unwrap().unwrap(),
+            strict
+        );
+        let exported: serde_json::Value = serde_json::from_str(&strict).unwrap();
+        assert_eq!(exported["Meta"]["PhysicsSettingCount"], 1);
+        assert_eq!(exported["Meta"]["TotalInputCount"], 1);
+        assert_eq!(exported["Meta"]["TotalOutputCount"], 1);
+        assert_eq!(exported["Meta"]["VertexCount"], 2);
+        assert_eq!(
+            exported["Meta"]["PhysicsDictionary"][0]["Id"],
+            first.external_id
+        );
+        assert_eq!(exported["PhysicsSettings"][0]["Id"], first.external_id);
+
+        let all_disabled = disable(&reopened, &first.id);
+        assert!(export_physics3(&all_disabled).unwrap().is_none());
+        assert!(export_available_physics3(&all_disabled).unwrap().is_none());
+    }
+
+    let disabled = disable(&doc, &second.id);
+    let cubism = zipzi_cmo3::encode_cmo3(
+        &disabled,
+        &|_: &zipzi_core::state::AssetRecord| unreachable!("document has no image assets"),
+        &Default::default(),
+    )
+    .unwrap();
+    let imported = zipzi_cmo3::import_model(&cubism.bytes).unwrap();
+    let groups = &imported
+        .document
+        .physics()
+        .as_deref()
+        .unwrap()
+        .data
+        .settings;
+    assert_eq!(groups.len(), 1);
+    assert_eq!(groups[0].external_id, first.external_id);
+}
+
+#[test]
 fn physics3_unresolved_and_opaque_edits_block_strict_export() {
     let source = include_str!("../../../fixtures/animation_cpu/thirty.physics3.json");
     let mut missing = document();

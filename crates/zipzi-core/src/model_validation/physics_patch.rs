@@ -74,6 +74,7 @@ impl Model<'_> {
             use PhysicsProperty::*;
             match change {
                 Name(value) => name = Some(value.clone()),
+                Enabled(value) => rig.as_mut().unwrap().enabled = *value,
                 InputWeight { id, value } => item!(inputs, id).weight = *value,
                 InputAxis { id, value } => item!(inputs, id).kind = *value,
                 InputReflect { id, value } => item!(inputs, id).reflect = *value,

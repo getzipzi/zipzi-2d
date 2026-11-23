@@ -55,11 +55,11 @@ impl Model<'_> {
         let Some(asset) = self.physics() else {
             return Ok(None);
         };
-        let mut data = asset.data.to_wire(|t| t.validation_key());
+        let mut data = asset.data.to_enabled_wire(|t| t.validation_key());
         let mut groups = vec![];
         let mut disabled = vec![];
         let mut bindings = BTreeMap::new();
-        for (native, wire) in asset.data.settings.iter().zip(&mut data.settings) {
+        for (native, wire) in asset.data.enabled_settings().zip(&mut data.settings) {
             self.validate_native_physics_rig(native)?;
             let wire = std::sync::Arc::make_mut(wire);
             let mut inputs = PhysicsSlotMap::default();

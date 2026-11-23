@@ -8,6 +8,13 @@ use zipzi_core::{
 };
 pub const NAME: PropertySpec =
     PropertySpec::new(ObjectKind::PhysicsGroup, "name", "name", PropertyType::Text).trimmed();
+pub const ENABLED: PropertySpec = PropertySpec::new(
+    ObjectKind::PhysicsGroup,
+    "enabled",
+    "enabled",
+    PropertyType::Bool,
+)
+.affects(PropertyEffect::Properties);
 pub const FPS: PropertySpec =
     PropertySpec::new(ObjectKind::PhysicsGroup, "fps", "fps", PropertyType::Float)
         .range(0.0, 240.0, 1.0)
@@ -196,6 +203,7 @@ pub const ANGLE_MAXIMUM: PropertySpec = PropertySpec::new(
 .preview();
 pub const FIELDS: &[PropertySpec] = &[
     NAME,
+    ENABLED,
     FPS,
     INPUT_WEIGHT,
     OUTPUT_WEIGHT,
@@ -253,6 +261,7 @@ pub fn values(
         .find(|entry| entry.id == rig.id)
         .map_or(rig.id.as_str(), |entry| entry.name.as_str());
     values.insert(NAME.key, PropertyValue::Text(name.into()));
+    values.insert(ENABLED.key, PropertyValue::Bool(rig.enabled));
     values.insert(
         FPS.key,
         PropertyValue::Float(asset.data.meta.fps.unwrap_or(30.)),
@@ -391,6 +400,7 @@ pub(crate) fn patch(
         use PhysicsProperty::*;
         let change = match key.name() {
             "name" => Name(value.text()),
+            "enabled" => Enabled(boolean()),
             "fps" => {
                 result
                     .asset_changes

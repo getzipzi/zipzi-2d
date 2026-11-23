@@ -1,5 +1,50 @@
 use super::*;
 use crate::model_validation::physics_authoring::PhysicsChange;
+
+impl DocumentState {
+    /// A live preview can keep its existing evaluation state when only physics groups
+    /// were enabled or disabled. Use shared playback inputs to reject other changes.
+    pub fn can_retarget_physics_enablement(&self, previous: &Self) -> bool {
+        let (Some(new), Some(old)) = (self.physics(), previous.physics()) else {
+            return false;
+        };
+        let a = &self.content;
+        let b = &previous.content;
+        !Arc::ptr_eq(new, old)
+            && self.frame_input_id == previous.frame_input_id
+            && a.setup == b.setup
+            && a.expressions.shares_values(&b.expressions)
+            && a.expressions.shares_order(&b.expressions)
+            && a.motions.shares_values(&b.motions)
+            && a.motions.shares_order(&b.motions)
+            && Arc::ptr_eq(&a.motion_groups, &b.motion_groups)
+            && Arc::ptr_eq(&a.motion_roots, &b.motion_roots)
+            && Arc::ptr_eq(&a.pose, &b.pose)
+            && Arc::ptr_eq(&a.editor_state, &b.editor_state)
+            && Arc::ptr_eq(&a.model3_settings, &b.model3_settings)
+            && new.id == old.id
+            && new.data.version == old.data.version
+            && new.data.meta == old.data.meta
+            && new.data.extensions == old.data.extensions
+            && new.data.settings.len() == old.data.settings.len()
+            && new
+                .data
+                .settings
+                .iter()
+                .zip(&old.data.settings)
+                .all(|(a, b)| {
+                    Arc::ptr_eq(a, b)
+                        || (a.id == b.id
+                            && a.external_id == b.external_id
+                            && a.inputs == b.inputs
+                            && a.outputs == b.outputs
+                            && a.vertices == b.vertices
+                            && a.normalization == b.normalization
+                            && a.extensions == b.extensions)
+                })
+    }
+}
+
 impl DocumentBuilder {
     pub fn replace_physics(&mut self, mut asset: Option<PhysicsAsset>) -> Result<(), Status> {
         self.write(|this| {

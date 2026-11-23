@@ -80,32 +80,50 @@ impl PhysicsSettingWire for PhysicsSetting {
 
 pub trait PhysicsDefinitionWire {
     fn to_wire(&self, map: impl Fn(&PhysicsTarget) -> String) -> wire::PhysicsDefinition;
+    fn to_enabled_wire(&self, map: impl Fn(&PhysicsTarget) -> String) -> wire::PhysicsDefinition;
 }
 impl PhysicsDefinitionWire for PhysicsDefinition {
     fn to_wire(&self, map: impl Fn(&PhysicsTarget) -> String) -> wire::PhysicsDefinition {
-        let mut meta = self.meta.clone();
-        for d in &mut meta.dictionary {
-            if let Some(g) = self.settings.iter().find(|g| g.id == d.id) {
-                d.id = g.external_id.clone();
-            }
-        }
-        let mut result = wire::PhysicsDefinition {
-            version: self.version,
-            meta,
-            settings: self
-                .settings
-                .iter()
-                .map(|g| Arc::new(g.to_wire(&map)))
-                .collect(),
-            extensions: self.extensions.clone(),
-        };
-        let (g, i, o, n) = result.actual_counts();
-        result.meta.setting_count = g;
-        result.meta.input_count = i;
-        result.meta.output_count = o;
-        result.meta.vertex_count = n;
-        result
+        physics_definition_to_wire(self, map, false)
     }
+
+    fn to_enabled_wire(&self, map: impl Fn(&PhysicsTarget) -> String) -> wire::PhysicsDefinition {
+        physics_definition_to_wire(self, map, true)
+    }
+}
+
+fn physics_definition_to_wire(
+    definition: &PhysicsDefinition,
+    map: impl Fn(&PhysicsTarget) -> String,
+    enabled_only: bool,
+) -> wire::PhysicsDefinition {
+    let mut meta = definition.meta.clone();
+    meta.dictionary.retain_mut(|entry| {
+        if let Some(group) = definition.settings.iter().find(|g| g.id == entry.id) {
+            if enabled_only && !group.enabled {
+                return false;
+            }
+            entry.id.clone_from(&group.external_id);
+        }
+        true
+    });
+    let mut result = wire::PhysicsDefinition {
+        version: definition.version,
+        meta,
+        settings: definition
+            .settings
+            .iter()
+            .filter(|group| !enabled_only || group.enabled)
+            .map(|g| Arc::new(g.to_wire(&map)))
+            .collect(),
+        extensions: definition.extensions.clone(),
+    };
+    let (g, i, o, n) = result.actual_counts();
+    result.meta.setting_count = g;
+    result.meta.input_count = i;
+    result.meta.output_count = o;
+    result.meta.vertex_count = n;
+    result
 }
 
 pub(crate) trait PhysicsAssetIdentity {
@@ -202,6 +220,7 @@ impl PhysicsAssetImport for PhysicsAsset {
                     vertices: nodes,
                     normalization: g.normalization.clone(),
                     extensions: g.extensions.clone(),
+                    enabled: true,
                 })
             })
             .collect();
@@ -255,6 +274,7 @@ impl PhysicsAssetEditing for PhysicsAsset {
                 extensions: BTreeMap::new(),
             },
             extensions: BTreeMap::new(),
+            enabled: true,
         }
     }
 }

@@ -116,10 +116,9 @@ impl AnimationEvaluator {
         // Runtime/manual evaluation updates the shared source identity. Any
         // editing cache retained here would no longer have its own provenance.
         self.editing = None;
-        let reusable = self.identity.is_some_and(|previous| {
+        let same_recipe = self.identity.is_some_and(|previous| {
             self.preview.is_some()
                 && previous.document == id.document
-                && previous.model_generation == id.model_generation
                 && self.motion == request.motion
                 && self.physics.manual == request.physics.manual
                 && self.eye_blink_seed == request.eye_blink_seed
@@ -136,11 +135,30 @@ impl AnimationEvaluator {
                     })
                 && previous.candidate == id.candidate
                 && previous.preview_mode == id.preview_mode
-                && self
-                    .source
-                    .as_ref()
-                    .is_some_and(|source| source.same_document(&request.source))
         });
+        let mut reusable = false;
+        if same_recipe && let (Some(previous), Some(source)) = (self.identity, &self.source) {
+            reusable = previous.model_generation == id.model_generation
+                && source.same_document(&request.source);
+            if !reusable
+                && request.eye_blink_seed.is_some()
+                && request.physics.manual
+                && id.candidate.is_none()
+                && previous.workspace_revision == id.workspace_revision
+                && let (
+                    zipzi_sdk::QuerySource::Published(old),
+                    zipzi_sdk::QuerySource::Published(new),
+                ) = (source.snapshot.source, request.source.snapshot.source)
+                && old.session == new.session
+                && old.generation == new.generation
+            {
+                reusable = self
+                    .preview
+                    .as_mut()
+                    .unwrap()
+                    .retarget_interactive_physics(request.source.document(), id.time)?;
+            }
+        }
         let expressions = || {
             request.expressions.iter().map(|trigger| {
                 (

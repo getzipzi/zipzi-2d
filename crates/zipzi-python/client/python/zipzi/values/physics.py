@@ -3,9 +3,9 @@
 """Generated physics values; available through zipzi.values too."""
 from __future__ import annotations
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
-from .._value_codec import Value
+from .._value_codec import Value, default as _default
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsAsset(Value):
@@ -636,6 +636,16 @@ class PhysicsPropertyAngleNormalization(PhysicsProperty):
     value: PhysicsRange
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class PhysicsPropertyEnabled(PhysicsProperty):
+    """Set whether the rig participates in physics evaluation and export.
+
+    Fields:
+    value: True to include the rig, false to keep its configuration inactive.
+    """
+    _variant = 'Enabled'
+    value: bool
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsRange(Value):
     """Minimum, default and maximum of one Physics normalization range.
 
@@ -673,6 +683,7 @@ class PhysicsSetting(Value):
     vertices: Ordered Physics node chain; outputs refer to stable node IDs.
     normalization: Native position and angle normalization ranges for this Physics rig.
     extensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
+    enabled: Whether the rig participates in physics evaluation and export. Defaults to true.
     """
     _type = 'PhysicsSetting'
     id: str
@@ -682,6 +693,7 @@ class PhysicsSetting(Value):
     vertices: tuple[PhysicsNode, ...]
     normalization: PhysicsNormalization
     extensions: Mapping[str, object]
+    enabled: bool = field(default_factory=lambda: _default(PhysicsSetting, 'enabled'))
 
 class PhysicsTarget(Value):
     """Optional resolved or unresolved parameter target for Physics input or output.
@@ -739,7 +751,7 @@ __all__ = [
     'PhysicsPropertyInputParameter', 'PhysicsPropertyOutputWeight', 'PhysicsPropertyOutputScale', 'PhysicsPropertyOutputAxis',
     'PhysicsPropertyOutputReflect', 'PhysicsPropertyOutputParameter', 'PhysicsPropertyOutputNode', 'PhysicsPropertyVertexPosition',
     'PhysicsPropertyVertexRadius', 'PhysicsPropertyVertexMobility', 'PhysicsPropertyVertexDelay', 'PhysicsPropertyVertexAcceleration',
-    'PhysicsPropertyPositionNormalization', 'PhysicsPropertyAngleNormalization', 'PhysicsRange', 'PhysicsRigPatch',
-    'PhysicsSetting', 'PhysicsTarget', 'PhysicsTargetUnspecified', 'PhysicsTargetResolved',
-    'PhysicsTargetUnresolved', 'PhysicsVector',
+    'PhysicsPropertyPositionNormalization', 'PhysicsPropertyAngleNormalization', 'PhysicsPropertyEnabled', 'PhysicsRange',
+    'PhysicsRigPatch', 'PhysicsSetting', 'PhysicsTarget', 'PhysicsTargetUnspecified',
+    'PhysicsTargetResolved', 'PhysicsTargetUnresolved', 'PhysicsVector',
 ]

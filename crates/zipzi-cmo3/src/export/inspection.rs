@@ -96,13 +96,13 @@ pub(crate) fn inspect_with_animation(
 
     if let Some(asset) = doc.physics().as_deref() {
         use zipzi_core::physics::PhysicsAxis;
-        if asset.data.settings.iter().any(|rig| {
+        if asset.data.enabled_settings().any(|rig| {
             rig.inputs.iter().any(|v| v.kind == PhysicsAxis::Y)
                 || rig.outputs.iter().any(|v| v.kind == PhysicsAxis::Y)
         }) {
             loss(&asset.id,"PHYSICS_Y", "Cubism editable physics supports X and angle inputs/outputs; Y channels are omitted");
         }
-        if asset.data.settings.iter().any(|g| {
+        if asset.data.enabled_settings().any(|g| {
             g.inputs
                 .iter()
                 .any(|v| v.source.disabled_reason().is_some())
@@ -136,8 +136,11 @@ pub(crate) fn inspect_with_animation(
         if !asset.data.extensions.is_empty()
             || !meta.extensions.is_empty()
             || !meta.forces.extensions.is_empty()
-            || meta.dictionary.iter().any(|d| !d.extensions.is_empty())
-            || asset.data.settings.iter().any(|rig| {
+            || meta.dictionary.iter().any(|entry| {
+                !entry.extensions.is_empty()
+                    && asset.data.enabled_settings().any(|rig| rig.id == entry.id)
+            })
+            || asset.data.enabled_settings().any(|rig| {
                 !rig.extensions.is_empty()
                     || !rig.normalization.extensions.is_empty()
                     || rig

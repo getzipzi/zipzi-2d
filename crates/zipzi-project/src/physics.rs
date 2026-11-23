@@ -165,12 +165,16 @@ fn has_extensions(asset: &PhysicsAsset) -> bool {
         })
 }
 
+fn all_groups_disabled(asset: &PhysicsAsset) -> bool {
+    !asset.data.settings.is_empty() && asset.data.enabled_settings().next().is_none()
+}
+
 pub(crate) fn opaque_export_problems(
     document: &DocumentState,
     asset: &PhysicsAsset,
 ) -> Vec<crate::OpaqueExportProblem> {
     use crate::OpaqueExportProblem as P;
-    if !(has_extensions(asset)) {
+    if all_groups_disabled(asset) || !has_extensions(asset) {
         return vec![];
     }
     let mut problems = vec![];
@@ -187,6 +191,9 @@ pub fn export_physics3(document: &DocumentState) -> Result<Option<String>, Physi
     let Some(asset) = document.physics() else {
         return Ok(None);
     };
+    if all_groups_disabled(asset) {
+        return Ok(None);
+    }
     if let Some(problem) = opaque_export_problems(document, asset).first() {
         return Err(error(
             problem.code(),
@@ -194,7 +201,7 @@ pub fn export_physics3(document: &DocumentState) -> Result<Option<String>, Physi
             "Imported opaque fields no longer match their provenance",
         ));
     }
-    for g in &asset.data.settings {
+    for g in asset.data.enabled_settings() {
         for (id, target) in g
             .inputs
             .iter()
@@ -215,7 +222,7 @@ pub fn export_physics3(document: &DocumentState) -> Result<Option<String>, Physi
             }
         }
     }
-    let data = asset.data.to_wire(|t| {
+    let data = asset.data.to_enabled_wire(|t| {
         document
             .parameter(t.parameter_id().expect("validated target"))
             .expect("valid parameter")
@@ -227,7 +234,7 @@ pub fn export_physics3(document: &DocumentState) -> Result<Option<String>, Physi
         .map_err(|failure| error(failure.code, failure.path, failure.message))
 }
 
-/// Export only the channels accepted by the same projection used for preview.
+/// Export only the groups and channels accepted by the same projection used for preview.
 /// Opaque payload protection is deliberately identical to strict export.
 pub fn export_available_physics3(
     document: &DocumentState,
@@ -235,6 +242,9 @@ pub fn export_available_physics3(
     let Some(asset) = document.physics() else {
         return Ok(None);
     };
+    if all_groups_disabled(asset) {
+        return Ok(None);
+    }
     if let Some(problem) = opaque_export_problems(document, asset).first() {
         return Err(error(
             problem.code(),

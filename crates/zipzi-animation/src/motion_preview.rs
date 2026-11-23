@@ -122,6 +122,8 @@ pub struct MotionPreview {
     canonical_step: Option<u32>,
     // Full simulation state before a presentation-only fractional tail.
     fractional_base: Option<Checkpoint>,
+    // These checkpoints inherit live state and cannot follow a cold rewind.
+    live_physics: bool,
 }
 
 impl MotionPreview {
@@ -176,6 +178,7 @@ impl MotionPreview {
             geometry: Mutex::default(),
             canonical_step: None,
             fractional_base: None,
+            live_physics: false,
             cache: SeekCache::default(),
             operation: MotionOperation {
                 preview_id: uuid::Uuid::new_v4().to_string(),
@@ -495,6 +498,7 @@ impl MotionPreview {
         };
         self.cache.retain_before(changed_at);
         if self.snapshot.time >= changed_at {
+            self.fractional_base = None;
             if let Some(state) = self.cache.nearest(changed_at) {
                 self.snapshot.clone_from(&state.snapshot);
                 self.motion.clone_from(&state.motion);
@@ -599,6 +603,8 @@ impl MotionPreview {
 
     fn reset_state(&mut self) {
         self.canonical_step = None;
+        self.fractional_base = None;
+        self.live_physics = false;
         self.cache.clear();
         let mut parameters = self.base.clone();
         let mut virtual_controls = BTreeMap::new();
@@ -633,6 +639,12 @@ impl MotionPreview {
         if !dt.is_finite() || dt < 0.0 || !(self.snapshot.time + dt).is_finite() {
             return Err(AnimationError::InvalidTime);
         }
+        self.advance_frame(dt, false)?;
+        self.commit_operation(MotionOperationKind::Advance { dt });
+        Ok(&self.snapshot)
+    }
+
+    fn advance_frame(&mut self, dt: f32, reapply_physics: bool) -> Result<(), AnimationError> {
         let time = self.snapshot.time + dt;
         self.motion
             .evaluate(&self.document, &self.curves, time, &mut self.snapshot)?;
@@ -666,6 +678,10 @@ impl MotionPreview {
                 dt,
                 &mut self.snapshot.coverage,
             );
+            if reapply_physics {
+                self.physics
+                    .reapply_outputs(&self.document, &mut self.snapshot.parameters);
+            }
         }
         self.pose.update(
             &self.document,
@@ -682,8 +698,41 @@ impl MotionPreview {
         self.snapshot.time = time;
         self.snapshot.coverage.sort();
         self.snapshot.coverage.dedup();
-        self.commit_operation(MotionOperationKind::Advance { dt });
-        Ok(&self.snapshot)
+        Ok(())
+    }
+
+    /// Switch physics groups on a running interactive preview. Retain its
+    /// canonical step and unchanged rigs. Seeking before the switch rebuilds
+    /// from the new authored definition.
+    pub fn retarget_interactive_physics(
+        &mut self,
+        document: &DocumentState,
+        target_time: f32,
+    ) -> Result<bool, AnimationError> {
+        if self.source_identity.is_some()
+            || !target_time.is_finite()
+            || self.snapshot.time > target_time
+            || (self.canonical_step.is_none() && self.fractional_base.is_none())
+            || !document.can_retarget_physics_enablement(&self.document)
+        {
+            return Ok(false);
+        }
+        // Re-evaluate a fractional display sample from its full step, with
+        // the new group mask. Never carry fractional solver steps forward.
+        if let Some(base) = self.fractional_base.take() {
+            self.restore_checkpoint(base);
+        }
+        self.physics.update_enabled_groups(document);
+        self.document = Arc::new(document.clone());
+        self.cache.clear();
+        // Recompose the boundary frame before keeping it as a resume point.
+        // Its parameters must no longer include any disabled rig's output.
+        let step = self.canonical_step.expect("canonical step");
+        self.advance_frame(0., true)?;
+        self.canonical_step = Some(step);
+        self.live_physics = true;
+        self.remember_checkpoint(step);
+        Ok(true)
     }
 
     /// Initialize particles and physics outputs using current snapshot parameters.
@@ -734,8 +783,12 @@ impl MotionPreview {
         candidate.reset_state();
         let mut cache = self.cache.clone();
         let checkpoint = cache.nearest(time);
+        if self.live_physics && checkpoint.is_none() {
+            cache.clear();
+        }
         let start = checkpoint.as_ref().map_or(0, |state| state.step);
         if let Some(state) = checkpoint {
+            candidate.live_physics = self.live_physics;
             candidate.snapshot.clone_from(&state.snapshot);
             candidate.motion.clone_from(&state.motion);
             candidate.motion.copy_schedule_from(&self.motion);
@@ -819,14 +872,7 @@ impl MotionPreview {
             self.advance((next - self.snapshot.time).max(0.0))?;
             self.canonical_step = (next == step as f32 / 60.0).then_some(step);
             if self.canonical_step.is_some() && step.is_multiple_of(60) {
-                self.cache.insert(self.checkpoint_bytes(), || Checkpoint {
-                    step,
-                    snapshot: self.snapshot.clone(),
-                    motion: self.motion.clone(),
-                    expressions: self.expressions.clone(),
-                    physics: self.physics.clone(),
-                    pose: self.pose.clone(),
-                });
+                self.remember_checkpoint(step);
             }
             self.fractional_base = fractional_base;
             if !progress(step - start, total) {
@@ -848,6 +894,17 @@ impl MotionPreview {
             physics: self.physics.clone(),
             pose: self.pose.clone(),
         }
+    }
+
+    fn remember_checkpoint(&mut self, step: u32) {
+        self.cache.insert(self.checkpoint_bytes(), || Checkpoint {
+            step,
+            snapshot: self.snapshot.clone(),
+            motion: self.motion.clone(),
+            expressions: self.expressions.clone(),
+            physics: self.physics.clone(),
+            pose: self.pose.clone(),
+        });
     }
 
     fn restore_checkpoint(&mut self, mut state: Checkpoint) {

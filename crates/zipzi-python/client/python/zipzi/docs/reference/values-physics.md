@@ -58,6 +58,7 @@ Import from `zipzi.values.physics` or `zipzi.values`; both expose the same class
 - [zipzi.values.PhysicsPropertyVertexAcceleration](values-physics.md#zipzi-values-physicspropertyvertexacceleration)
 - [zipzi.values.PhysicsPropertyPositionNormalization](values-physics.md#zipzi-values-physicspropertypositionnormalization)
 - [zipzi.values.PhysicsPropertyAngleNormalization](values-physics.md#zipzi-values-physicspropertyanglenormalization)
+- [zipzi.values.PhysicsPropertyEnabled](values-physics.md#zipzi-values-physicspropertyenabled)
 - [zipzi.values.PhysicsRange](values-physics.md#zipzi-values-physicsrange)
 - [zipzi.values.PhysicsRigPatch](values-physics.md#zipzi-values-physicsrigpatch)
 - [zipzi.values.PhysicsSetting](values-physics.md#zipzi-values-physicssetting)
@@ -617,7 +618,7 @@ class PhysicsProperty(Value)
 
 Typed Physics rig property replacement, targeting stable row or node identities.
 
-Variants: [PhysicsPropertyName](values-physics.md#zipzi-values-physicspropertyname), [PhysicsPropertyInputWeight](values-physics.md#zipzi-values-physicspropertyinputweight), [PhysicsPropertyInputAxis](values-physics.md#zipzi-values-physicspropertyinputaxis), [PhysicsPropertyInputReflect](values-physics.md#zipzi-values-physicspropertyinputreflect), [PhysicsPropertyInputParameter](values-physics.md#zipzi-values-physicspropertyinputparameter), [PhysicsPropertyOutputWeight](values-physics.md#zipzi-values-physicspropertyoutputweight), [PhysicsPropertyOutputScale](values-physics.md#zipzi-values-physicspropertyoutputscale), [PhysicsPropertyOutputAxis](values-physics.md#zipzi-values-physicspropertyoutputaxis), [PhysicsPropertyOutputReflect](values-physics.md#zipzi-values-physicspropertyoutputreflect), [PhysicsPropertyOutputParameter](values-physics.md#zipzi-values-physicspropertyoutputparameter), [PhysicsPropertyOutputNode](values-physics.md#zipzi-values-physicspropertyoutputnode), [PhysicsPropertyVertexPosition](values-physics.md#zipzi-values-physicspropertyvertexposition), [PhysicsPropertyVertexRadius](values-physics.md#zipzi-values-physicspropertyvertexradius), [PhysicsPropertyVertexMobility](values-physics.md#zipzi-values-physicspropertyvertexmobility), [PhysicsPropertyVertexDelay](values-physics.md#zipzi-values-physicspropertyvertexdelay), [PhysicsPropertyVertexAcceleration](values-physics.md#zipzi-values-physicspropertyvertexacceleration), [PhysicsPropertyPositionNormalization](values-physics.md#zipzi-values-physicspropertypositionnormalization), [PhysicsPropertyAngleNormalization](values-physics.md#zipzi-values-physicspropertyanglenormalization)
+Variants: [PhysicsPropertyName](values-physics.md#zipzi-values-physicspropertyname), [PhysicsPropertyInputWeight](values-physics.md#zipzi-values-physicspropertyinputweight), [PhysicsPropertyInputAxis](values-physics.md#zipzi-values-physicspropertyinputaxis), [PhysicsPropertyInputReflect](values-physics.md#zipzi-values-physicspropertyinputreflect), [PhysicsPropertyInputParameter](values-physics.md#zipzi-values-physicspropertyinputparameter), [PhysicsPropertyOutputWeight](values-physics.md#zipzi-values-physicspropertyoutputweight), [PhysicsPropertyOutputScale](values-physics.md#zipzi-values-physicspropertyoutputscale), [PhysicsPropertyOutputAxis](values-physics.md#zipzi-values-physicspropertyoutputaxis), [PhysicsPropertyOutputReflect](values-physics.md#zipzi-values-physicspropertyoutputreflect), [PhysicsPropertyOutputParameter](values-physics.md#zipzi-values-physicspropertyoutputparameter), [PhysicsPropertyOutputNode](values-physics.md#zipzi-values-physicspropertyoutputnode), [PhysicsPropertyVertexPosition](values-physics.md#zipzi-values-physicspropertyvertexposition), [PhysicsPropertyVertexRadius](values-physics.md#zipzi-values-physicspropertyvertexradius), [PhysicsPropertyVertexMobility](values-physics.md#zipzi-values-physicspropertyvertexmobility), [PhysicsPropertyVertexDelay](values-physics.md#zipzi-values-physicspropertyvertexdelay), [PhysicsPropertyVertexAcceleration](values-physics.md#zipzi-values-physicspropertyvertexacceleration), [PhysicsPropertyPositionNormalization](values-physics.md#zipzi-values-physicspropertypositionnormalization), [PhysicsPropertyAngleNormalization](values-physics.md#zipzi-values-physicspropertyanglenormalization), [PhysicsPropertyEnabled](values-physics.md#zipzi-values-physicspropertyenabled)
 
 <a id="zipzi-values-physicspropertyname"></a>
 
@@ -922,6 +923,22 @@ Replace the angle normalization range.
 
 Related: [zipzi.values.PhysicsProperty](values-physics.md#zipzi-values-physicsproperty), [zipzi.values.PhysicsRange](values-physics.md#zipzi-values-physicsrange)
 
+<a id="zipzi-values-physicspropertyenabled"></a>
+
+## zipzi.values.PhysicsPropertyEnabled
+
+```python
+class PhysicsPropertyEnabled(PhysicsProperty)
+```
+
+Set whether the rig participates in physics evaluation and export.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `value` | `bool` | Required | True to include the rig, false to keep its configuration inactive. |
+
+Related: [zipzi.values.PhysicsProperty](values-physics.md#zipzi-values-physicsproperty)
+
 <a id="zipzi-values-physicsrange"></a>
 
 ## zipzi.values.PhysicsRange
@@ -974,6 +991,7 @@ Authored Physics rig with ordered inputs, outputs and stable node chain.
 | `vertices` | `tuple[PhysicsNode, ...]` | Required | Ordered Physics node chain; outputs refer to stable node IDs. |
 | `normalization` | `PhysicsNormalization` | Required | Native position and angle normalization ranges for this Physics rig. |
 | `extensions` | `Mapping[str, object]` | Required | Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed. |
+| `enabled` | `bool` | `true` | Whether the rig participates in physics evaluation and export. Defaults to true. |
 
 Related: [zipzi.values.PhysicsInput](values-physics.md#zipzi-values-physicsinput), [zipzi.values.PhysicsNode](values-physics.md#zipzi-values-physicsnode), [zipzi.values.PhysicsNormalization](values-physics.md#zipzi-values-physicsnormalization), [zipzi.values.PhysicsOutput](values-physics.md#zipzi-values-physicsoutput)
 

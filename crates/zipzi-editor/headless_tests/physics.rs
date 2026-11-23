@@ -932,6 +932,64 @@ fn physics_context_action(h: &super::Harness, cx: &mut TestAppContext, row: usiz
 }
 
 #[gpui_kit::test]
+fn physics_list_toggle_is_undoable_without_selecting_the_group(cx: &mut TestAppContext) {
+    use zipzi_editor_core::{BusinessAction as A, ObjectKind as K};
+
+    let (mut document, assets) = document_fixture::combined_animation_document().unwrap();
+    let plan = document
+        .plan_business(&A::Create(K::PhysicsGroup, None), "Group".into())
+        .unwrap();
+    document.execute_business(&plan).unwrap();
+    let history = document.history_lengths().0;
+    let h = setup_with_document(cx, document, assets);
+    cx.update_window(h.window, |_, window, cx| {
+        window.resize(size(px(1200.), px(1200.)));
+        window.activate_window();
+        window.click("workspace-animation", cx);
+        h.view.update(cx, |v, cx| {
+            v.dock
+                .as_ref()
+                .unwrap()
+                .show(PanelKind::AnimationPhysics, None, window, cx)
+        });
+        window.render_frame(cx);
+        window.click(("physics-group-row", 0usize), cx);
+        window.render_frame(cx);
+        let second = ("physics-group-row", 1usize);
+        let toggle = "physics-group-enabled";
+        assert_eq!(window.within(second).find(toggle).checked(), Some(false));
+        window.within(second).click(toggle, cx);
+        window.render_frame(cx);
+        assert_eq!(window.within(second).find(toggle).checked(), Some(true));
+        h.view.read_with(cx, |v, _| {
+            assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
+            let doc = v.editor.document().unwrap();
+            let physics = doc.physics_definition().unwrap();
+            assert!(physics.data.settings[0].enabled);
+            assert!(!physics.data.settings[1].enabled);
+            assert_eq!(
+                v.editor.active_inspection().unwrap().object().unwrap().id,
+                physics.data.settings[0].id
+            );
+            assert_eq!(doc.history_lengths().0, history + 1);
+        });
+
+        h.view
+            .update(cx, |v, cx| v.run_command(CommandId::Undo, window, cx));
+        window.render_frame(cx);
+        assert_eq!(window.within(second).find(toggle).checked(), Some(false));
+        h.view
+            .update(cx, |v, cx| v.run_command(CommandId::Redo, window, cx));
+        window.render_frame(cx);
+        assert_eq!(window.within(second).find(toggle).checked(), Some(true));
+        window.within(second).click(toggle, cx);
+        window.render_frame(cx);
+        assert_eq!(window.within(second).find(toggle).checked(), Some(false));
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn physics_list_drag_reorders_execution_once_and_undo_restores_groups(cx: &mut TestAppContext) {
     use zipzi_editor_core::{BusinessAction as A, ObjectKind as K};
     let (mut document, assets) = document_fixture::combined_animation_document().unwrap();

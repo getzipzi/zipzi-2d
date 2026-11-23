@@ -284,6 +284,100 @@ fn cursor_preview_drives_physics_returns_to_default_and_restores_timeline() -> a
 }
 
 #[test]
+fn cursor_preview_switches_physics_groups_without_replaying_elapsed_time() -> anyhow::Result<()> {
+    use property::physics::ENABLED;
+    use zipzi_core::document::PhysicsEdit;
+
+    let (mut editor, _assets) = setup()?;
+    let id = editor.active_id().unwrap();
+    let first = target(&editor);
+    let asset = editor.document().unwrap().physics_definition().unwrap();
+    let rig = &asset.data.settings[0];
+    let input = rig.inputs[0].source.parameter_id().unwrap();
+    let output = rig.outputs[0].destination.parameter_id().unwrap();
+    let default_input = editor
+        .document()
+        .unwrap()
+        .parameter_draft(input)?
+        .default_value;
+    let second = ObjectRef::new(ObjectKind::PhysicsGroup, uuid::Uuid::new_v4().to_string());
+    let plan = editor.plan_physics_authoring(
+        id,
+        PhysicsEdit::CreateGroup {
+            asset_id: asset.id.clone(),
+            id: second.id.clone(),
+            name: "Second".into(),
+            before: None,
+        },
+    )?;
+    editor.execute_physics_authoring(id, &plan)?;
+    editor.set_physics_cursor(id, true)?;
+
+    let mut evaluator = AnimationEvaluator::default();
+    let mut evaluate = |editor: &mut Editor| -> anyhow::Result<_> {
+        let request = editor.animation_request().unwrap();
+        let mut total = 0;
+        let frame = evaluator.evaluate(&request, |_, steps| {
+            total = steps;
+            true
+        })?;
+        assert!(editor.present_animation(frame.identity, frame.snapshot.clone()));
+        Ok((frame.snapshot, total))
+    };
+    let disable = |editor: &mut Editor, group: ObjectRef| {
+        let context = editor.editing_context_token().unwrap();
+        editor.commit_properties(
+            context,
+            group,
+            PropertyPatch {
+                scope: PropertyScope::Object,
+                expected: [(ENABLED.key, PropertyValue::Bool(true))].into(),
+                changes: [(ENABLED.key, PropertyValue::Bool(false))].into(),
+            },
+        )
+    };
+
+    editor.advance_animation_clock(19.9);
+    assert!(evaluate(&mut editor)?.1 > 1_000);
+    editor.set_physics_input(id, input, 1.)?;
+    editor.advance_animation_clock(20.);
+    let (driven, _) = evaluate(&mut editor)?;
+    assert_ne!(driven.parameters[output], 0.);
+    assert_eq!(driven.physics.len(), 2);
+
+    disable(&mut editor, second)?;
+    let (one, steps) = evaluate(&mut editor)?;
+    assert_eq!(steps, 0);
+    assert_eq!(one.time, driven.time);
+    assert_eq!(one.physics, driven.physics[..1]);
+    assert_eq!(one.parameters[output], driven.parameters[output]);
+
+    editor.advance_animation_clock(20.026);
+    let (fractional, _) = evaluate(&mut editor)?;
+    disable(&mut editor, first.clone())?;
+    let (none, steps) = evaluate(&mut editor)?;
+    assert_eq!(steps, 1);
+    assert_eq!(none.time, fractional.time);
+    assert!(none.physics.is_empty());
+    assert_eq!(none.parameters[output], 0.);
+    assert_eq!(none.parameters[input], 1.);
+
+    editor.execute(EditorCommand::Undo)?;
+    editor.advance_animation_clock(20.08);
+    let (restored, steps) = evaluate(&mut editor)?;
+    assert!(steps < 6);
+    assert_eq!(restored.physics[0].id, first.id);
+    assert_eq!(restored.parameters[input], 1.);
+    assert!(editor.animation().unwrap().playing);
+
+    editor.rewind_animation()?;
+    let (rewound, _) = evaluate(&mut editor)?;
+    assert_eq!(rewound.time, 0.);
+    assert_eq!(rewound.parameters[input], default_input);
+    Ok(())
+}
+
+#[test]
 fn cursor_preview_blinks_and_breathes_without_mouse_mapping_or_physics() -> anyhow::Result<()> {
     let mut document = Document::new_blank()?;
     let eye = document.create_parameter(NewParameter {

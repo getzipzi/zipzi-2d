@@ -11,7 +11,7 @@ impl Exporter<'_> {
         };
         let mut settings = Vec::new();
         let mut selected = N::null();
-        for rig in &asset.data.settings {
+        for rig in asset.data.enabled_settings() {
             let g = self.new_guid("CPhysicsSettingsGuid");
             if settings.is_empty() {
                 selected = g.clone();

@@ -4,7 +4,7 @@
     {
       "path": "client/python/zipzi/_schema.json",
       "owner": "zipzi-python/tools/generate.py",
-      "sha256": "b76abfeec6111097526a86893c92ba3ad5e5a3d39a6c271753ae68e8f893a9ed"
+      "sha256": "ba78b988f02dac2f76aa168bf56912d26f0c0a6d064fda96f7579376551ae064"
     },
     {
       "path": "client/python/zipzi/docs/reference/errors.md",
@@ -89,7 +89,7 @@
     {
       "path": "client/python/zipzi/docs/reference/values-physics.md",
       "owner": "zipzi-python/tools/generate.py",
-      "sha256": "64af9a596162baa035617862ba77f7898bb21b87f298d647b20a96d742ea85b3"
+      "sha256": "2c7d98b9e325cfe53d443c2455ace03142069788a9515fd20561e2a878bf13d9"
     },
     {
       "path": "client/python/zipzi/docs/reference/values-pose.md",
@@ -129,7 +129,7 @@
     {
       "path": "client/python/zipzi/values/__init__.py",
       "owner": "zipzi-python/tools/generate.py",
-      "sha256": "7553463492bf1cac8f290691d41dafc441ccd898cdf5373eb8d84464d852b4fb"
+      "sha256": "d7709a12982c8ff27d6a8419c23b82d7adefda75fa7a76cccec08285aed3f18b"
     },
     {
       "path": "client/python/zipzi/values/bindings.py",
@@ -189,7 +189,7 @@
     {
       "path": "client/python/zipzi/values/physics.py",
       "owner": "zipzi-python/tools/generate.py",
-      "sha256": "3281f2f1cc4e83b60762eef39dfce1f15778cc1615e0806fde9da0d4c597d18f"
+      "sha256": "bdc2b4559848a2baa0b9962c2447680ae7ab4b418ef923f7f05e62f1bd9cdb4f"
     },
     {
       "path": "client/python/zipzi/values/pose.py",
@@ -229,7 +229,7 @@
     {
       "path": "schema/authoring.json",
       "owner": "zipzi-python/tools/generate.py",
-      "sha256": "77c6571041acf5817c18b5b6765697e374e0cf022f908d3587a0843c926d353a"
+      "sha256": "38e1800253303ddec4731bef4a6c2386deef3a2a1165ebc68beb4ea0abde11b7"
     }
   ]
 }

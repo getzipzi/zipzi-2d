@@ -198,6 +198,7 @@ impl PhysicsRuntime {
         let projection = document
             .physics_projection()
             .expect("validated physics topology")
+            .filter(|projection| !projection.groups.is_empty())
             .map(Arc::new);
         let parameter_cache = document
             .parameter_order()
@@ -260,6 +261,47 @@ impl PhysicsRuntime {
 
     pub(crate) fn reset(&mut self, document: &DocumentState) {
         *self = Self::new(document);
+    }
+
+    pub(crate) fn update_enabled_groups(&mut self, document: &DocumentState) {
+        let mut next = Self::new(document);
+        if let (Some(old), Some(new)) = (&self.projection, &next.projection) {
+            let mut rigs: std::collections::HashMap<_, _> = old
+                .groups
+                .iter()
+                .map(|slots| slots.group_id.as_str())
+                .zip(std::mem::take(&mut self.rigs))
+                .collect();
+            for (slots, rig) in new.groups.iter().zip(&mut next.rigs) {
+                if let Some(previous) = rigs.remove(slots.group_id.as_str()) {
+                    *rig = previous;
+                    next.solved = self.solved;
+                }
+            }
+            next.remaining = self.remaining;
+            next.initialized_inputs = self.initialized_inputs;
+            std::mem::swap(&mut next.parameter_cache, &mut self.parameter_cache);
+            std::mem::swap(&mut next.input_cache, &mut self.input_cache);
+        }
+        *self = next;
+    }
+
+    pub(crate) fn reapply_outputs(
+        &mut self,
+        document: &DocumentState,
+        parameters: &mut BTreeMap<String, f32>,
+    ) {
+        let Some(projection) = &self.projection else {
+            return;
+        };
+        let alpha = projection
+            .executable
+            .data
+            .meta
+            .fps
+            .filter(|fps| *fps > 0.)
+            .map_or(0., |fps| self.remaining / (1. / fps));
+        self.apply_outputs(document, parameters, alpha, true);
     }
 
     pub(crate) fn snapshot(&self, _document: &DocumentState) -> Vec<PhysicsRigSnapshot> {
@@ -372,10 +414,24 @@ impl PhysicsRuntime {
         if count >= 100_000 {
             diagnostics.push("Physics: step limit reached".into());
         }
-        let alpha = self.remaining / step;
+        self.apply_outputs(document, parameters, self.remaining / step, false);
+    }
+
+    fn apply_outputs(
+        &mut self,
+        document: &DocumentState,
+        parameters: &mut BTreeMap<String, f32>,
+        alpha: f32,
+        reuse_only: bool,
+    ) {
+        let asset = &self
+            .projection
+            .as_ref()
+            .expect("physics projection")
+            .executable;
         for (setting, rig) in asset.data.settings.iter().zip(&mut self.rigs) {
             for (index, output) in setting.outputs.iter().enumerate() {
-                if output.vertex_index == 0 {
+                if output.vertex_index == 0 || (reuse_only && rig.outputs[index].is_none()) {
                     continue;
                 }
                 let value = rig.previous[index] * (1.0 - alpha) + rig.current[index] * alpha;
@@ -725,6 +781,74 @@ mod tests {
         preview.set_physics_enabled(true);
         preview.seek(0.).unwrap();
         assert_eq!(initial, preview.physics_snapshot());
+    }
+
+    #[test]
+    fn disabled_middle_group_matches_evaluation_without_that_group() {
+        use zipzi_core::document::{PhysicsPatch, PhysicsProperty, PhysicsRigPatch};
+
+        let mut source: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../fixtures/animation_cpu/multi.physics3.json"
+        ))
+        .unwrap();
+        let mut tail = source["PhysicsSettings"][0].clone();
+        tail["Id"] = "PhysicsTail".into();
+        source["PhysicsSettings"].as_array_mut().unwrap().push(tail);
+        let meta = &mut source["Meta"];
+        meta["PhysicsDictionary"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({"Id": "PhysicsTail", "Name": "Tail"}));
+        meta["PhysicsSettingCount"] = 3.into();
+        meta["TotalInputCount"] = 3.into();
+        meta["TotalOutputCount"] = 3.into();
+        meta["VertexCount"] = 6.into();
+
+        let doc = document(&source.to_string());
+        let asset = doc.physics().as_deref().unwrap();
+        let middle = &asset.data.settings[1];
+        let mut builder = doc.builder();
+        builder
+            .patch_physics(&PhysicsPatch {
+                asset_id: asset.id.clone(),
+                asset_changes: vec![],
+                rig: Some(PhysicsRigPatch {
+                    group_id: middle.id.clone(),
+                    changes: vec![PhysicsProperty::Enabled(false)],
+                }),
+            })
+            .unwrap();
+        let disabled = builder.freeze().unwrap().state;
+
+        let mut filtered = asset.clone();
+        filtered.data.settings.remove(1);
+        filtered
+            .data
+            .meta
+            .dictionary
+            .retain(|entry| entry.id != middle.id);
+        let mut builder = doc.builder();
+        builder.replace_physics(Some(filtered)).unwrap();
+        let removed = builder.freeze().unwrap().state;
+        let evaluate = |state| {
+            let mut preview = crate::MotionPreview::new(state);
+            preview.set_base_parameter(X, 0.7).unwrap();
+            preview.set_physics_stabilized_start(true);
+            preview.seek(0.3).unwrap();
+            (
+                preview.physics_snapshot(),
+                preview.snapshot().parameters.clone(),
+            )
+        };
+
+        assert_eq!(evaluate(&doc).0.len(), 3);
+        let actual = evaluate(&disabled);
+        assert_eq!(actual, evaluate(&removed));
+        assert_eq!(actual.0[1].id, asset.data.settings[2].id);
+        assert_eq!(
+            actual.0[1].output_ids,
+            [asset.data.settings[2].outputs[0].id.clone()]
+        );
     }
 
     #[test]
