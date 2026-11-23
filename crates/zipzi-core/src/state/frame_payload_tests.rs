@@ -210,6 +210,43 @@ fn metadata_edits_share_warm_evaluation_without_skipping_invalid_defaults() {
 }
 
 #[test]
+fn editor_state_only_shares_layout_and_still_validates_its_references() {
+    let base = fixture(true);
+    let mut evaluator = FrameEvaluator::default();
+    let before = frame(&mut evaluator, &base, 0.5);
+    let mut state = base.editor_state().clone();
+    state.objects.entry(id(6)).or_default().hidden_in_editor = true;
+    let mut builder = base.builder();
+    builder.set_editor_state(state.clone()).unwrap();
+    let full = freeze_full(builder.clone()).unwrap();
+    let edited = builder.freeze().unwrap();
+    assert!(edited.writes.root_changed(RootDomain::EditorState));
+    assert!(!edited.writes.animation_inputs_changed());
+    assert_eq!(edited.state.editor_state(), full.editor_state());
+    assert_eq!(edited.state.frame_input_id(), base.frame_input_id());
+    assert_eq!(
+        edited.state.evaluation_layout_id(),
+        base.evaluation_layout_id()
+    );
+    assert!(Arc::ptr_eq(&edited.state.read_cache, &base.read_cache));
+    assert_eq!(frame(&mut evaluator, &edited.state, 0.5), before);
+
+    let mut invalid = base.builder();
+    state.objects.entry(id(99)).or_default().locked = true;
+    invalid.set_editor_state(state).unwrap();
+    assert_eq!(invalid.freeze().unwrap_err().code, "INVALID_EDITOR_STATE");
+
+    // A batch that also changes a scene reference still needs graph validation.
+    let mut mixed = edited.state.builder();
+    mixed.set_editor_state(base.editor_state().clone()).unwrap();
+    let mut mesh = mixed.mesh(&id(6)).unwrap().clone();
+    mesh.texture_asset_id = id(99).into();
+    mixed.replace_mesh(mesh).unwrap();
+    assert!(!mixed.validate_metadata_payload().unwrap());
+    assert!(mixed.freeze().is_err());
+}
+
+#[test]
 fn cached_binding_validation_is_invalidated_by_domains_targets_and_ownership() {
     use crate::model_validation::bindings::take_validation_counts;
     let base = fixture(true);

@@ -161,6 +161,17 @@ impl Document {
     pub fn object_state(&self, object: &ObjectRef) -> ObjectState {
         self.object_state_index().state(object).clone()
     }
+    /// Explicit lock IDs in stable order. Inherited locks also depend on the hierarchy.
+    pub fn locked_object_ids(&self) -> Vec<String> {
+        self.session
+            .document()
+            .editor_state()
+            .objects
+            .iter()
+            .filter(|(_, state)| state.locked)
+            .map(|(id, _)| id.clone())
+            .collect()
+    }
     pub fn ensure_editable(&self, objects: &[ObjectRef]) -> Result<()> {
         let locks = self.object_state_index();
         for object in objects {

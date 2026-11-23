@@ -5,14 +5,31 @@ use super::*;
 mod tests;
 
 impl DocumentBuilder {
-    /// Labels and parameter defaults cannot change graph references or sample
-    /// grids. Avoid rebuilding/validating the complete scene for these edits.
+    /// Labels, parameter defaults and standalone editor settings leave the
+    /// evaluation layout intact. Check their own constraints before sharing it.
     pub(super) fn validate_metadata_payload(&self) -> Result<bool, Status> {
-        if self.setup_touched
-            || !self.roots_touched.is_empty()
-            || !self.scene_initializations.is_empty()
-        {
+        if self.setup_touched || !self.scene_initializations.is_empty() {
             return Ok(false);
+        }
+        if !self.roots_touched.is_empty() {
+            if self.roots_touched.len() != 1
+                || !self.roots_touched.contains(&RootDomain::EditorState)
+                || !self.touched_assets.is_empty()
+                || !self.touched_parameters.is_empty()
+                || !self.touched.is_empty()
+            {
+                return Ok(false);
+            }
+            if let Some(issue) = self
+                .content
+                .model()
+                .editor_state_issues(self.editor_state())
+                .into_iter()
+                .next()
+            {
+                return Err(issue.status);
+            }
+            return Ok(true);
         }
         if !self.content.assets.shares_order(&self.base.content.assets)
             || !self

@@ -10,6 +10,7 @@ use zipzi_editor_core::{COMMANDS, CommandId};
 pub(super) struct SceneCreationMenuCache {
     document: Option<zipzi_editor_core::DocumentId>,
     layout: Option<zipzi_core::state::ContentId>,
+    locks: Vec<String>,
     pending: bool,
     selection: Vec<zipzi_editor_core::ObjectRef>,
     states: std::collections::HashMap<
@@ -25,8 +26,10 @@ impl SceneCreationMenuCache {
             return;
         };
         let layout = document.evaluation_layout_id();
+        let locks = document.locked_object_ids();
         if self.document == editor.active_id()
             && self.layout == Some(layout)
+            && self.locks == locks
             && self.pending == document.has_pending_edit()
             && self.selection == document.context().selections
         {
@@ -34,6 +37,7 @@ impl SceneCreationMenuCache {
         }
         self.document = editor.active_id();
         self.layout = Some(layout);
+        self.locks = locks;
         self.pending = document.has_pending_edit();
         self.selection = document.context().selections.clone();
         self.states = crate::authoring::scene_creation::all_commands()

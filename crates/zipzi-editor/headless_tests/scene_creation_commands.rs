@@ -131,6 +131,22 @@ fn creation_menu_cache_reuses_pose_previews_and_tracks_structural_changes(cx: &m
             "pose-only updates rebuilt structural capabilities"
         );
     }
+    for visible in [false, true] {
+        h.view.update(cx, |view, _| {
+            view.editor
+                .execute(EditorCommand::SetObjectVisible {
+                    object: part.clone(),
+                    visible,
+                })
+                .unwrap()
+        });
+        assert!(!native_action(&h, C::CreateMesh, cx).2);
+        assert_eq!(
+            builds(cx),
+            initial,
+            "visibility rebuilt creation capabilities"
+        );
+    }
     h.view.update(cx, |view, _| {
         view.editor
             .execute(EditorCommand::SetObjectsLocked {
