@@ -1,7 +1,7 @@
 use super::controls::{self, WORKSPACE_SWITCHER_HEIGHT, WORKSPACE_SWITCHER_WIDTH};
 use crate::{EditorView, t, ui::compact};
 use gpui_kit::component::{
-    ActiveTheme, Disableable, IconName, Side, TitleBar,
+    ActiveTheme, Disableable, IconName, TitleBar,
     button::{Button, ButtonVariants},
     menu::{DropdownMenu, PopupMenuItem},
 };
@@ -220,12 +220,12 @@ fn render_project_select(
         .dropdown_menu(move |mut menu, window, cx| {
             menu = crate::ui::compact::menu(menu);
             menu = menu
-                .check_side(Side::Right)
                 .min_w(compact::scaled(240., cx))
                 .max_w(compact::scaled(360., cx))
                 .scrollable(true);
             for document in &documents {
                 let id = document.id;
+                let active = Some(id) == active_id;
                 let title = document
                     .title
                     .clone()
@@ -247,16 +247,21 @@ fn render_project_select(
                             .flex()
                             .flex_col()
                             .py(compact::rem(2.))
-                            .child(div().min_w_0().overflow_hidden().text_ellipsis().child(
-                                format!(
-                                    "{title}{}",
-                                    if modified {
-                                        t!("editor.unsaved").into_owned()
-                                    } else {
-                                        String::new()
-                                    }
-                                ),
-                            ))
+                            .child(
+                                div()
+                                    .min_w_0()
+                                    .overflow_hidden()
+                                    .text_ellipsis()
+                                    .when(active, |label| label.font_weight(FontWeight::SEMIBOLD))
+                                    .child(format!(
+                                        "{title}{}",
+                                        if modified {
+                                            t!("editor.unsaved").into_owned()
+                                        } else {
+                                            String::new()
+                                        }
+                                    )),
+                            )
                             .when_some(path.clone(), |row, path| {
                                 row.child(
                                     div()
@@ -270,7 +275,7 @@ fn render_project_select(
                             })
                     })
                     .icon(IconName::File)
-                    .checked(Some(id) == active_id)
+                    .highlighted(active)
                     .on_click(move |_, window, cx| {
                         _ = owner.update(cx, |view, cx| view.activate_document(id, window, cx));
                     }),

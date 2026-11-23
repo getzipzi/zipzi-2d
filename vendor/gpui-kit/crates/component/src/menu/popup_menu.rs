@@ -41,6 +41,7 @@ pub enum PopupMenuItem {
         label: SharedString,
         disabled: bool,
         checked: bool,
+        highlighted: bool,
         is_link: bool,
         action: Option<Box<dyn Action>>,
         // For link item
@@ -51,6 +52,7 @@ pub enum PopupMenuItem {
         icon: Option<Icon>,
         disabled: bool,
         checked: bool,
+        highlighted: bool,
         action: Option<Box<dyn Action>>,
         render: Box<dyn Fn(&mut Window, &mut App) -> AnyElement + 'static>,
         handler: Option<Rc<dyn Fn(&ClickEvent, &mut Window, &mut App)>>,
@@ -74,6 +76,7 @@ impl PopupMenuItem {
             label: label.into(),
             disabled: false,
             checked: false,
+            highlighted: false,
             action: None,
             is_link: false,
             handler: None,
@@ -91,6 +94,7 @@ impl PopupMenuItem {
             icon: None,
             disabled: false,
             checked: false,
+            highlighted: false,
             action: None,
             render: Box::new(move |window, cx| builder(window, cx).into_any_element()),
             handler: None,
@@ -190,6 +194,20 @@ impl PopupMenuItem {
         self
     }
 
+    /// Give an item a persistent highlight while allowing normal menu navigation.
+    pub fn highlighted(mut self, highlighted: bool) -> Self {
+        match &mut self {
+            PopupMenuItem::Item {
+                highlighted: state, ..
+            }
+            | PopupMenuItem::ElementItem {
+                highlighted: state, ..
+            } => *state = highlighted,
+            _ => {}
+        }
+        self
+    }
+
     /// Add a click handler for the menu item.
     ///
     /// Only works for [`PopupMenuItem::Item`] and [`PopupMenuItem::ElementItem`].
@@ -218,6 +236,7 @@ impl PopupMenuItem {
             label: label.into(),
             disabled: false,
             checked: false,
+            highlighted: false,
             action: None,
             is_link: true,
             handler: Some(Rc::new(move |_, _, cx| cx.open_url(&href))),
@@ -1289,6 +1308,7 @@ impl PopupMenu {
                 render,
                 icon,
                 disabled,
+                highlighted,
                 ..
             } => this
                 .when(!disabled, |this| {
@@ -1297,6 +1317,7 @@ impl PopupMenu {
                     )
                 })
                 .disabled(*disabled)
+                .highlighted(*highlighted)
                 .child(
                     h_flex()
                         .flex_1()
@@ -1318,6 +1339,7 @@ impl PopupMenu {
                 label,
                 action,
                 disabled,
+                highlighted,
                 is_link,
                 ..
             } => {
@@ -1331,6 +1353,7 @@ impl PopupMenu {
                     )
                 })
                 .disabled(*disabled)
+                .highlighted(*highlighted)
                 .h(item_height)
                 .gap_x_1()
                 .children(Self::render_icon(
