@@ -6,6 +6,7 @@ impl Model<'_> {
     pub(crate) fn validate_deletion_business_locks(
         &self,
         candidate: &Model<'_>,
+        index: &index::DeletionIndex,
         report: &mut DeletionReport,
         control: &ConversionControl,
     ) -> Result<bool, Status> {
@@ -33,7 +34,6 @@ impl Model<'_> {
                 checks.push(self.validate_expression_unlocked(expression));
             }
         }
-        let index = self.deletion_index(control)?;
         for status in checks.into_iter().filter_map(Result::err) {
             if status.code == "OBJECT_LOCKED" {
                 let key = index
@@ -41,6 +41,10 @@ impl Model<'_> {
                     .iter()
                     .find(|k| k.id == status.message && k.owner_id.is_none())
                     .cloned()
+                    .or_else(|| {
+                        self.get_motion_track(&status.message)
+                            .map(|_| object(DeletionKind::MotionTrack, &status.message))
+                    })
                     .unwrap_or_else(|| object(DeletionKind::DisplayInfo, &status.message));
                 if !report
                     .blockers

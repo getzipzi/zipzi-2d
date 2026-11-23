@@ -36,7 +36,6 @@ mod reference_projection;
 mod references;
 pub(crate) struct Model<'a> {
     pub content: ModelContent<'a>,
-    pub(crate) deletion_index: OnceLock<Arc<crate::state::deletion::index::DeletionIndex>>,
     organization_index: OnceLock<Arc<organization::OrganizationIndex>>,
     motion_lookup: OnceLock<Arc<motion_authoring::MotionLookup>>,
     prepared: OnceLock<Result<crate::evaluation::PreparedEvaluation, Status>>,
@@ -51,7 +50,6 @@ impl<'a> Model<'a> {
     pub fn new(content: ModelContent<'a>) -> Self {
         Self {
             content,
-            deletion_index: OnceLock::new(),
             organization_index: OnceLock::new(),
             motion_lookup: OnceLock::new(),
             prepared: OnceLock::new(),

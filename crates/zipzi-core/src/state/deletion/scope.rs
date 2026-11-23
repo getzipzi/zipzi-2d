@@ -4,9 +4,9 @@ impl Model<'_> {
     pub(crate) fn deletion_scope(
         &self,
         request: &DeletionRequest,
+        index: &index::DeletionIndex,
         control: &ConversionControl,
     ) -> Result<(BTreeMap<DeletionObject, DeletionReason>, DeletionReport), Status> {
-        let index = self.deletion_index(control)?;
         let mut roots = BTreeSet::new();
         for root in &request.roots {
             control.checkpoint()?;
@@ -66,6 +66,12 @@ impl Model<'_> {
                 DeletionKind::DisplayInfo | DeletionKind::ModelSettings | DeletionKind::CdiPart => {
                     false
                 }
+                // Curve identities are validated against the scoped index after
+                // expanding scene and parameter roots.
+                DeletionKind::MotionTrack
+                | DeletionKind::MotionKey
+                | DeletionKind::ExpressionTrack
+                | DeletionKind::ExpressionKey => true,
                 _ => index.objects.contains(&key),
             };
             if !exists {
@@ -141,9 +147,32 @@ impl Model<'_> {
                 }
             }
         }
+        Ok((removed, report))
+    }
+
+    pub(super) fn validate_curve_roots(
+        index: &index::DeletionIndex,
+        removed: &mut BTreeMap<DeletionObject, DeletionReason>,
+        report: &DeletionReport,
+        control: &ConversionControl,
+    ) -> Result<(), Status> {
+        for key in &report.requested {
+            control.checkpoint()?;
+            if matches!(
+                key.kind,
+                DeletionKind::MotionTrack
+                    | DeletionKind::MotionKey
+                    | DeletionKind::ExpressionTrack
+                    | DeletionKind::ExpressionKey
+            ) && !index.objects.contains(key)
+            {
+                return Err(Status::error("MISSING_DELETION_TARGET", &key.id));
+            }
+        }
         // A curve cannot survive without its first persistent key. Selecting
         // all its keys explicitly retires that track and reports the expansion.
         for (owner, children) in &index.owned {
+            control.checkpoint()?;
             if matches!(
                 owner.kind,
                 DeletionKind::MotionTrack | DeletionKind::ExpressionTrack
@@ -155,7 +184,7 @@ impl Model<'_> {
                     .or_insert(DeletionReason::Dependency);
             }
         }
-        Ok((removed, report))
+        Ok(())
     }
 
     pub(crate) fn deletion_scene_object(&self, id: &str) -> Option<DeletionObject> {

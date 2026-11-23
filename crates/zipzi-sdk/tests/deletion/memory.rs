@@ -90,6 +90,124 @@ fn small_deletion_shares_unrelated_records_through_preparation_publication_and_h
     s.redo(s.version()).unwrap();
     assert!(s.snapshot().document().mesh(&id(10)).is_none());
 }
+
+#[test]
+fn deletion_budget_only_includes_curves_reached_by_the_request() {
+    let mut s = fixture();
+    let (_, prepared) = crate::support::prepared(&s, |c| {
+        c.create_motion(MotionClip {
+            id: id(80),
+            name: "Dense".into(),
+            duration: 6000.,
+            fps: 30.,
+            looping: false,
+            restricted_beziers: false,
+            fade_in: None,
+            fade_out: None,
+            track_order: vec![],
+            tracks: vec![
+                MotionTrack {
+                    id: id(81),
+                    target: MotionTrackTarget::Parameter {
+                        parameter_id: id(3),
+                    },
+                    initial: MotionKey {
+                        id: id(82),
+                        time: 0.,
+                        value: 0.,
+                    },
+                    segments: std::sync::Arc::new(
+                        (1..=6000)
+                            .map(|n| {
+                                MotionSegment::new(
+                                    MotionKey {
+                                        id: id(10_000 + n),
+                                        time: n as f32,
+                                        value: 0.,
+                                    },
+                                    MotionCurve::Linear {},
+                                )
+                            })
+                            .collect(),
+                    ),
+                    fade_in: None,
+                    fade_out: None,
+                    extensions: Default::default(),
+                },
+                MotionTrack {
+                    id: id(83),
+                    target: MotionTrackTarget::PartOpacity { part_id: id(4) },
+                    initial: MotionKey {
+                        id: id(84),
+                        time: 0.,
+                        value: 1.,
+                    },
+                    segments: Default::default(),
+                    fade_in: None,
+                    fade_out: None,
+                    extensions: Default::default(),
+                },
+            ]
+            .into(),
+            events: Default::default(),
+            extensions: Default::default(),
+            meta_extensions: Default::default(),
+            opaque_source_ids: None,
+            opaque_source_content_hash: None,
+        })
+    })
+    .unwrap();
+    s.publish(prepared).unwrap();
+    let before = s.snapshot().clone();
+    let limits = ConversionLimits {
+        max_workspace_bytes: 1024 * 1024,
+        ..Default::default()
+    };
+    let control = ConversionControl::default();
+
+    let (outcome, prepared) =
+        crate::support::prepared(&s, |c| c.edit_deletion(&request(&[10]), limits, &control))
+            .unwrap();
+    assert!(outcome.work.workspace_bytes < limits.max_workspace_bytes);
+    s.publish(prepared).unwrap();
+    assert!(s.snapshot().document().mesh(&id(10)).is_none());
+    assert!(std::ptr::eq(
+        before.document().motion(&id(80)).unwrap(),
+        s.snapshot().document().motion(&id(80)).unwrap(),
+    ));
+
+    let sparse_track = DeletionRequest {
+        roots: vec![DeletionTarget::Record(DeletionObject {
+            kind: DeletionKind::MotionTrack,
+            id: id(83),
+            owner_id: None,
+        })],
+        ..Default::default()
+    };
+    let (_, prepared) =
+        crate::support::prepared(&s, |c| c.edit_deletion(&sparse_track, limits, &control)).unwrap();
+    s.publish(prepared).unwrap();
+    let retained = s.snapshot().document().motion(&id(80)).unwrap();
+    assert_eq!(retained.tracks.len(), 1);
+    assert!(std::sync::Arc::ptr_eq(
+        &before.document().motion(&id(80)).unwrap().tracks[0].segments,
+        &retained.tracks[0].segments,
+    ));
+
+    let affected = DeletionRequest {
+        roots: vec![DeletionTarget::Parameter(id(3))],
+        ..Default::default()
+    };
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .analyze_deletion(&affected, limits, &control)
+            .unwrap_err()
+            .code,
+        "AUTHORING_MEMORY_LIMIT",
+    );
+}
+
 #[test]
 fn deletion_workspace_budget_charges_rewrites_and_reports_without_changing_redo() {
     let mut s = large_fixture();

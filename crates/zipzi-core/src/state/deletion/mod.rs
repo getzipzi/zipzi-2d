@@ -1,8 +1,8 @@
 //! Dependency analysis and atomic Builder deletion with natural tracked writes.
 use super::*;
 use crate::draw_order::DrawOrderGroup;
-use crate::model_validation::organization;
 use crate::model_validation::Model;
+use crate::model_validation::organization;
 mod business;
 mod dependents;
 pub(crate) mod index;
@@ -18,17 +18,25 @@ fn object(kind: DeletionKind, id: &str) -> DeletionObject {
     }
 }
 impl Model<'_> {
-    pub fn analyze_deletion(
+    fn analyze_deletion(
         &self,
         request: &DeletionRequest,
+        limit: usize,
         control: &ConversionControl,
-    ) -> Result<DeletionReport, Status> {
+    ) -> Result<(DeletionReport, index::DeletionIndex, usize), Status> {
         control.checkpoint()?;
         if request.roots.is_empty() {
             return Err(Status::error("INVALID_SELECTION", "Select deletion roots"));
         }
-        let (mut removed, mut report) = self.deletion_scope(request, control)?;
-        self.indexed_deletion_dependencies(request, &mut removed, &mut report, control)?;
+        let mut builder = index::IndexBuilder::new(limit);
+        builder.visit(self, control)?;
+        let (mut removed, mut report) = self.deletion_scope(request, &builder.index, control)?;
+        // Only a requested or scoped Part/parameter can acquire curve
+        // dependencies. Index those curves and explicitly requested curves.
+        builder.curves(self, removed.keys(), control)?;
+        let (index, index_bytes) = builder.finish(control)?;
+        Self::validate_curve_roots(&index, &mut removed, &report, control)?;
+        self.indexed_deletion_dependencies(&index, request, &mut removed, &mut report, control)?;
         self.resolve_motion_registration_deletion(&mut removed, &mut report, control)?;
         self.analyze_parameter_deletion(request, &removed, &mut report, control)?;
         self.analyze_business_deletion(request, &removed, &mut report, control)?;
@@ -37,6 +45,49 @@ impl Model<'_> {
             .into_iter()
             .map(|(object, reason)| DeletionRemoval { object, reason })
             .collect();
+        if self
+            .editor_state()
+            .objects
+            .values()
+            .any(|flags| flags.locked)
+        {
+            self.analyze_deletion_locks(&mut report, control)?;
+        }
+        let mask_owners: BTreeSet<_> = report
+            .rewritten
+            .iter()
+            .filter(|r| {
+                matches!(
+                    r.field,
+                    DeletionField::MeshMask { .. } | DeletionField::OffscreenMask { .. }
+                )
+            })
+            .map(|r| r.owner.clone())
+            .collect();
+        report
+            .effects
+            .extend(mask_owners.into_iter().map(DeletionEffect::MaskChanged));
+        for removal in &report.removed {
+            let effect = match removal.object.kind {
+                DeletionKind::Glue => Some(DeletionEffect::GlueRemoved(removal.object.clone())),
+                DeletionKind::HitArea => {
+                    Some(DeletionEffect::HitAreaRemoved(removal.object.clone()))
+                }
+                DeletionKind::Offscreen => {
+                    Some(DeletionEffect::CompositionChanged(removal.object.clone()))
+                }
+                _ => None,
+            };
+            report.effects.extend(effect);
+        }
+        Ok((report, index, index_bytes))
+    }
+
+    fn analyze_deletion_locks(
+        &self,
+        report: &mut DeletionReport,
+        control: &ConversionControl,
+    ) -> Result<(), Status> {
         let writes: BTreeSet<_> = report
             .removed
             .iter()
@@ -80,34 +131,7 @@ impl Model<'_> {
                 });
             }
         }
-        let mask_owners: BTreeSet<_> = report
-            .rewritten
-            .iter()
-            .filter(|r| {
-                matches!(
-                    r.field,
-                    DeletionField::MeshMask { .. } | DeletionField::OffscreenMask { .. }
-                )
-            })
-            .map(|r| r.owner.clone())
-            .collect();
-        report
-            .effects
-            .extend(mask_owners.into_iter().map(DeletionEffect::MaskChanged));
-        for removal in &report.removed {
-            let effect = match removal.object.kind {
-                DeletionKind::Glue => Some(DeletionEffect::GlueRemoved(removal.object.clone())),
-                DeletionKind::HitArea => {
-                    Some(DeletionEffect::HitAreaRemoved(removal.object.clone()))
-                }
-                DeletionKind::Offscreen => {
-                    Some(DeletionEffect::CompositionChanged(removal.object.clone()))
-                }
-                _ => None,
-            };
-            report.effects.extend(effect);
-        }
-        Ok(report)
+        Ok(())
     }
 }
 fn add_owned(
@@ -157,8 +181,9 @@ impl DocumentState {
         control: &ConversionControl,
     ) -> Result<DeletionReport, Status> {
         let model = self.content.model();
-        index::DeletionIndex::admission_bytes(&model, control, limits.max_workspace_bytes / 2)?;
-        model.analyze_deletion(request, control)
+        let (report, _, _) =
+            model.analyze_deletion(request, limits.max_workspace_bytes / 2, control)?;
+        Ok(report)
     }
 }
 impl DocumentBuilder {
@@ -204,12 +229,8 @@ impl DocumentBuilder {
             // it contains no saved baseline, session, history or publication machinery.
             let source = candidate.content.clone();
             let model = source.model();
-            let index_bytes = index::DeletionIndex::admission_bytes(
-                &model,
-                control,
-                limits.max_workspace_bytes / 2,
-            )?;
-            let mut report = model.analyze_deletion(request, control)?;
+            let (mut report, index, index_bytes) =
+                model.analyze_deletion(request, limits.max_workspace_bytes / 2, control)?;
             if ready(&report).is_err() {
                 outcome = Some(DeletionOutcome {
                     report,
@@ -218,17 +239,30 @@ impl DocumentBuilder {
                 return Ok(());
             }
             let payload = super::cost::deletion_payload(&model, &report);
-            let mut cost = limits.check_conversion(0, payload.saturating_add(index_bytes))?;
+            // Conversion needs room for input and output payloads, alongside
+            // one live deletion index shared by the operation's stages.
+            let conversion_limits = ConversionLimits {
+                max_workspace_bytes: limits.max_workspace_bytes - index_bytes,
+                ..limits
+            };
+            let include_index = |mut work: ConversionWork, bytes| {
+                work.workspace_bytes += bytes;
+                work
+            };
+            let mut cost = conversion_limits.check_conversion(0, payload)?;
             if !model.install_deletion_migrations(
                 candidate,
                 request,
                 &mut report,
-                limits,
+                conversion_limits,
                 control,
                 &mut cost,
             )? {
                 if ready(&report).is_err() {
-                    outcome = Some(DeletionOutcome { report, work: cost });
+                    outcome = Some(DeletionOutcome {
+                        report,
+                        work: include_index(cost, index_bytes),
+                    });
                     return Ok(());
                 }
             }
@@ -236,25 +270,32 @@ impl DocumentBuilder {
                 candidate,
                 request,
                 &mut report,
-                limits,
+                conversion_limits,
                 control,
                 &mut cost,
             )? {
                 if ready(&report).is_err() {
-                    outcome = Some(DeletionOutcome { report, work: cost });
+                    outcome = Some(DeletionOutcome {
+                        report,
+                        work: include_index(cost, index_bytes),
+                    });
                     return Ok(());
                 }
             }
             if !model.install_leaf_deletion(
                 candidate,
+                &index,
                 request,
                 &mut report,
-                limits,
+                conversion_limits,
                 control,
                 &mut cost,
             )? {
                 if ready(&report).is_err() {
-                    outcome = Some(DeletionOutcome { report, work: cost });
+                    outcome = Some(DeletionOutcome {
+                        report,
+                        work: include_index(cost, index_bytes),
+                    });
                     return Ok(());
                 }
             }
@@ -353,15 +394,25 @@ impl DocumentBuilder {
             }
             model.validate_deletion_business_locks(
                 &candidate.content.model(),
+                &index,
                 &mut report,
                 control,
             )?;
             if ready(&report).is_err() {
-                outcome = Some(DeletionOutcome { report, work: cost });
+                outcome = Some(DeletionOutcome {
+                    report,
+                    work: include_index(cost, index_bytes),
+                });
                 return Ok(());
             }
             candidate.validate_candidate()?;
-            let retained = candidate.content.model().deletion_index(control)?;
+            drop(index);
+            let model = candidate.content.model();
+            let mut retained =
+                index::IndexBuilder::new(limits.max_workspace_bytes - cost.workspace_bytes);
+            retained.visit(&model, control)?;
+            retained.curves(&model, report.removed.iter().map(|r| &r.object), control)?;
+            let (retained, retained_bytes) = retained.finish(control)?;
             for removal in &report.removed {
                 if retained.objects.contains(&removal.object) {
                     return Err(Status::error(
@@ -371,7 +422,10 @@ impl DocumentBuilder {
                 }
             }
             control.check()?;
-            outcome = Some(DeletionOutcome { report, work: cost });
+            outcome = Some(DeletionOutcome {
+                report,
+                work: include_index(cost, index_bytes.max(retained_bytes)),
+            });
             Ok(())
         })?;
         Ok(outcome.unwrap())

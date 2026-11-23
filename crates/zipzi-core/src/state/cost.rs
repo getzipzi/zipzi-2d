@@ -870,15 +870,58 @@ pub(super) fn deletion_payload(
         .blend_constraints
         .values()
         .filter(|v| ids.contains(&v.id)));
-    add!(model
-        .content
-        .motions
-        .values()
-        .filter(|v| ids.contains(&v.id)
-            || v.tracks
-                .iter()
-                .any(|t| ids.contains(&t.id) || t.keys().any(|k| ids.contains(&k.id)))
-            || v.events.iter().any(|e| ids.contains(&e.id))));
+    let motion_keys: std::collections::HashSet<_> = report
+        .requested
+        .iter()
+        .filter(|root| root.kind == DeletionKind::MotionKey)
+        .map(|root| root.id.as_str())
+        .collect();
+    for clip in model.content.motions.values() {
+        if ids.contains(&clip.id) {
+            continue;
+        }
+        let rewrites_keys = |track: &MotionTrack| {
+            !motion_keys.is_empty()
+                && !ids.contains(&track.id)
+                && track
+                    .keys()
+                    .any(|key| motion_keys.contains(key.id.as_str()))
+        };
+        if !clip
+            .tracks
+            .iter()
+            .any(|track| ids.contains(&track.id) || rewrites_keys(track))
+            && !clip.events.iter().any(|event| ids.contains(&event.id))
+        {
+            continue;
+        }
+        // Removing a track clones the clip's track list. Segment buffers
+        // remain shared except when keys of a retained track are rewritten.
+        cost.add(size_of::<MotionClip>());
+        clip.id.retained(&mut cost);
+        clip.name.retained(&mut cost);
+        clip.track_order.retained(&mut cost);
+        clip.events.retained(&mut cost);
+        clip.extensions.retained(&mut cost);
+        clip.meta_extensions.retained(&mut cost);
+        clip.opaque_source_ids.retained(&mut cost);
+        clip.opaque_source_content_hash.retained(&mut cost);
+        cost.add(size_of::<Vec<MotionTrack>>() + 2 * size_of::<usize>());
+        cost.add(
+            clip.tracks
+                .capacity()
+                .saturating_mul(size_of::<MotionTrack>()),
+        );
+        for track in &clip.tracks {
+            track.id.retained(&mut cost);
+            track.target.retained(&mut cost);
+            track.initial.retained(&mut cost);
+            track.extensions.retained(&mut cost);
+            if rewrites_keys(track) {
+                track.segments.retained(&mut cost);
+            }
+        }
+    }
     add!(model
         .content
         .expressions

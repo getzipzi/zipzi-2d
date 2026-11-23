@@ -6,6 +6,7 @@ impl Model<'_> {
     pub(crate) fn install_leaf_deletion(
         &self,
         candidate: &mut DocumentBuilder,
+        index: &index::DeletionIndex,
         request: &DeletionRequest,
         report: &mut DeletionReport,
         limits: ConversionLimits,
@@ -13,7 +14,6 @@ impl Model<'_> {
         cost: &mut ConversionWork,
     ) -> Result<bool, Status> {
         let removed: BTreeSet<_> = report.removed.iter().map(|r| r.object.clone()).collect();
-        let index = self.deletion_index(control)?;
         let mut affected = BTreeSet::new();
         for key in removed.iter().filter(|k| k.kind == DeletionKind::Sample) {
             control.checkpoint()?;

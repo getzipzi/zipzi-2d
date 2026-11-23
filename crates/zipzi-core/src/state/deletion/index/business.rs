@@ -1,5 +1,16 @@
 //! Business ownership and typed uses share the same frozen scene relation index.
 use super::*;
+use std::collections::HashSet;
+
+#[derive(Default)]
+struct CurveScope<'a> {
+    motions: HashSet<&'a str>,
+    expressions: HashSet<&'a str>,
+    parameters: HashSet<&'a str>,
+    parts: HashSet<&'a str>,
+    tracks: HashSet<(Option<&'a str>, &'a str)>,
+    keys: HashSet<(Option<&'a str>, &'a str)>,
+}
 impl IndexBuilder {
     pub(crate) fn business(
         &mut self,
@@ -81,6 +92,7 @@ impl IndexBuilder {
                 object(DeletionKind::Parameter, &table.parameter_id),
             );
             for sample in &table.samples {
+                self.checkpoint(control)?;
                 self.own(key.clone(), object(DeletionKind::Sample, &sample.id));
             }
         }
@@ -94,6 +106,7 @@ impl IndexBuilder {
                 object(DeletionKind::Parameter, &c.parameter_id),
             );
             for sample in &c.samples {
+                self.checkpoint(control)?;
                 self.own(key.clone(), object(DeletionKind::Sample, &sample.id));
             }
         }
@@ -112,6 +125,7 @@ impl IndexBuilder {
                 );
             }
             for (slot, id) in b.constraint_ids.iter().enumerate() {
+                self.checkpoint(control)?;
                 self.edge(
                     key.clone(),
                     DeletionField::BlendConstraint { slot },
@@ -124,18 +138,17 @@ impl IndexBuilder {
             let clip = d.get_motion(id).unwrap();
             let key = object(DeletionKind::Motion, id);
             self.record(key.clone());
-            for track in &clip.tracks {
-                self.own(key.clone(), object(DeletionKind::MotionTrack, &track.id));
-                self.track(track, None, control)?;
-            }
             for event in &clip.events {
+                self.checkpoint(control)?;
                 self.own(key.clone(), object(DeletionKind::MotionEvent, &event.id));
             }
         }
         for group in d.motion_groups() {
+            self.checkpoint(control)?;
             let key = object(DeletionKind::MotionGroup, &group.id);
             self.record(key.clone());
             for entry in &group.entries {
+                self.checkpoint(control)?;
                 self.own(
                     key.clone(),
                     object(DeletionKind::MotionRegistration, &entry.id),
@@ -171,6 +184,7 @@ impl IndexBuilder {
             let key = object(DeletionKind::Expression, id);
             self.record(key.clone());
             for entry in &expression.entries {
+                self.checkpoint(control)?;
                 let child = object(DeletionKind::ExpressionEntry, &entry.id);
                 self.own(key.clone(), child.clone());
                 if let ExpressionTarget::Resolved { parameter_id } = &entry.target {
@@ -182,18 +196,8 @@ impl IndexBuilder {
                 }
             }
             if let Some(scene) = expression.source_scene() {
-                for track in &scene.tracks {
-                    self.own(
-                        key.clone(),
-                        DeletionObject {
-                            kind: DeletionKind::ExpressionTrack,
-                            id: track.id.clone(),
-                            owner_id: Some(id.clone()),
-                        },
-                    );
-                    self.track(track, Some(id), control)?;
-                }
                 for event in &scene.events {
+                    self.checkpoint(control)?;
                     self.own(
                         key.clone(),
                         DeletionObject {
@@ -213,6 +217,7 @@ impl IndexBuilder {
                 let owner = object(DeletionKind::PhysicsGroup, &group.id);
                 self.own(key.clone(), owner.clone());
                 for input in &group.inputs {
+                    self.checkpoint(control)?;
                     let child = object(DeletionKind::PhysicsInput, &input.id);
                     self.own(owner.clone(), child.clone());
                     if let PhysicsTarget::Resolved { parameter_id } = &input.source {
@@ -224,6 +229,7 @@ impl IndexBuilder {
                     }
                 }
                 for output in &group.outputs {
+                    self.checkpoint(control)?;
                     let child = object(DeletionKind::PhysicsOutput, &output.id);
                     self.own(owner.clone(), child.clone());
                     if let PhysicsTarget::Resolved { parameter_id } = &output.destination {
@@ -240,6 +246,7 @@ impl IndexBuilder {
                     );
                 }
                 for node in &group.vertices {
+                    self.checkpoint(control)?;
                     self.own(owner.clone(), object(DeletionKind::PhysicsNode, &node.id));
                 }
             }
@@ -249,6 +256,7 @@ impl IndexBuilder {
             let owner = object(DeletionKind::ModelParameterGroup, &group.id);
             self.record(owner.clone());
             for member in &group.parameters {
+                self.checkpoint(control)?;
                 let child = object(DeletionKind::ModelParameterMember, &member.id);
                 self.own(owner.clone(), child.clone());
                 if let Some(parameter) = member.target.object_id() {
@@ -265,6 +273,7 @@ impl IndexBuilder {
             let owner = object(DeletionKind::CdiCombinedSet, &set.id);
             self.record(owner.clone());
             for member in &set.members {
+                self.checkpoint(control)?;
                 let child = object(DeletionKind::CdiCombinedMember, &member.id);
                 self.own(owner.clone(), child.clone());
                 if let CdiParameterRef::Resolved { parameter_id } = &member.target {
@@ -275,6 +284,130 @@ impl IndexBuilder {
                     );
                 }
             }
+        }
+        Ok(())
+    }
+
+    pub(in crate::state::deletion) fn curves<'a>(
+        &mut self,
+        model: &Model<'_>,
+        removed: impl IntoIterator<Item = &'a DeletionObject>,
+        control: &ConversionControl,
+    ) -> Result<(), Status> {
+        let mut scope = CurveScope::default();
+        for object in removed {
+            self.checkpoint(control)?;
+            let id = object.id.as_str();
+            let owner = object.owner_id.as_deref();
+            match (object.kind, owner) {
+                (DeletionKind::Motion, _) => {
+                    scope.motions.insert(id);
+                }
+                (DeletionKind::Expression, _) => {
+                    scope.expressions.insert(id);
+                }
+                (DeletionKind::Parameter, _) => {
+                    scope.parameters.insert(id);
+                }
+                (DeletionKind::Part, _) => {
+                    scope.parts.insert(id);
+                }
+                (DeletionKind::MotionTrack, None) | (DeletionKind::ExpressionTrack, Some(_)) => {
+                    scope.tracks.insert((owner, id));
+                }
+                (DeletionKind::MotionKey, None) | (DeletionKind::ExpressionKey, Some(_)) => {
+                    scope.keys.insert((owner, id));
+                }
+                _ => {}
+            }
+        }
+        if scope.motions.is_empty()
+            && scope.expressions.is_empty()
+            && scope.parameters.is_empty()
+            && scope.parts.is_empty()
+            && scope.tracks.is_empty()
+            && scope.keys.is_empty()
+        {
+            return Ok(());
+        }
+        for id in model.motion_order() {
+            self.checkpoint(control)?;
+            let clip = model.get_motion(id).unwrap();
+            self.clip_tracks(
+                &scope,
+                object(DeletionKind::Motion, id),
+                &clip.tracks,
+                control,
+            )?;
+        }
+        for id in model.expression_order() {
+            self.checkpoint(control)?;
+            if let Some(scene) = model.get_expression(id).unwrap().source_scene() {
+                self.clip_tracks(
+                    &scope,
+                    object(DeletionKind::Expression, id),
+                    &scene.tracks,
+                    control,
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    fn clip_tracks(
+        &mut self,
+        scope: &CurveScope<'_>,
+        owner: DeletionObject,
+        tracks: &[MotionTrack],
+        control: &ConversionControl,
+    ) -> Result<(), Status> {
+        let expression = (owner.kind == DeletionKind::Expression).then_some(owner.id.as_str());
+        let (kind, all) = if let Some(id) = expression {
+            (
+                DeletionKind::ExpressionTrack,
+                scope.expressions.contains(id),
+            )
+        } else {
+            (
+                DeletionKind::MotionTrack,
+                scope.motions.contains(owner.id.as_str()),
+            )
+        };
+        for track in tracks {
+            self.checkpoint(control)?;
+            let target = match &track.target {
+                MotionTrackTarget::Parameter { parameter_id } => {
+                    scope.parameters.contains(parameter_id.as_str())
+                }
+                MotionTrackTarget::PartOpacity { part_id } => {
+                    scope.parts.contains(part_id.as_str())
+                }
+                _ => false,
+            };
+            if !all && !target && !scope.tracks.contains(&(expression, track.id.as_str())) {
+                let mut selected_key = false;
+                if !scope.keys.is_empty() {
+                    for key in track.keys() {
+                        control.checkpoint()?;
+                        if scope.keys.contains(&(expression, key.id.as_str())) {
+                            selected_key = true;
+                            break;
+                        }
+                    }
+                }
+                if !selected_key {
+                    continue;
+                }
+            }
+            self.own(
+                owner.clone(),
+                DeletionObject {
+                    kind,
+                    id: track.id.clone(),
+                    owner_id: expression.map(str::to_owned),
+                },
+            );
+            self.track(track, expression, control)?;
         }
         Ok(())
     }
