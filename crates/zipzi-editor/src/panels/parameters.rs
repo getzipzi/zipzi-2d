@@ -2,6 +2,7 @@ mod drag;
 mod headers;
 mod interactions;
 mod keyform_glyph;
+mod legend;
 mod locate;
 mod management;
 mod selection;
@@ -434,6 +435,7 @@ impl ParametersPanel {
                         }
                     })),
             )
+            .trailing_control(legend::LegendButton)
     }
 
     fn keyform_toolbar_state(&self, cx: &App) -> KeyformToolbarState {
@@ -753,6 +755,11 @@ impl Panel for ParametersPanel {
 }
 
 impl crate::docking::header::PanelHeader for ParametersPanel {
+    fn header_min_width(&self) -> Pixels {
+        // Eleven buttons and the gaps between their groups.
+        px(236.)
+    }
+
     fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let dialog = window.has_active_dialog(cx);
         let (interaction_reason, create_disabled) = self.owner.upgrade().map_or(

@@ -1,7 +1,6 @@
 //! Independently observed, virtualized parameter row views.
 use super::track::parameter_pad_track;
 use super::*;
-use gpui_kit::component::Icon;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum LinkedRole {
@@ -166,14 +165,6 @@ impl Render for ParameterRowView {
                             .text_ellipsis()
                             .child(parameter.name.clone()),
                     )
-                    .when(self.visual.repeat, |name| {
-                        name.child(name_badge(
-                            format!("parameter-repeat-{parameter_id}"),
-                            t!("parameter.repeat").into_owned(),
-                            Icon::new(IconName::Repeat).size(crate::ui::compact::rem(12.)),
-                            theme.muted_foreground,
-                        ))
-                    })
                     .when(self.indirectly_related, |name| {
                         name.child(
                             crate::ui::compact::header_button(
@@ -275,23 +266,4 @@ impl Render for ParameterRowView {
                 )
             })
     }
-}
-
-fn name_badge(
-    id: String,
-    label: impl Into<SharedString>,
-    content: impl IntoElement,
-    color: Hsla,
-) -> impl IntoElement {
-    let label = label.into();
-    div()
-        .id(SharedString::from(id))
-        .test_support()
-        .aria_label(label.clone())
-        .tooltip(move |window, cx| Tooltip::new(label.clone()).build(window, cx))
-        .flex()
-        .items_center()
-        .flex_shrink_0()
-        .text_color(color)
-        .child(content)
 }

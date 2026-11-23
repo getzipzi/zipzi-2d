@@ -176,13 +176,7 @@ fn track_marks(
     } else {
         0.
     };
-    let cursor_color = if visual.repeat {
-        theme.magenta
-    } else if !visual.keys.is_empty() {
-        theme.red
-    } else {
-        theme.foreground
-    };
+    let cursor_color = cursor_color(visual.repeat, !visual.keys.is_empty(), theme);
     let mut marks: Vec<AnyElement> = visual
         .keys
         .iter()
@@ -191,13 +185,6 @@ fn track_marks(
                 ((key.value - parameter.minimum) / span).clamp(0., 1.)
             } else {
                 0.
-            };
-            let color = if key.partial {
-                theme.yellow
-            } else if key.selected {
-                theme.green
-            } else {
-                theme.muted_foreground
             };
             let key_value = key.value;
             let parameter_id = parameter.id.clone();
@@ -212,7 +199,14 @@ fn track_marks(
                 .top(crate::ui::compact::rem((TRACK_HEIGHT - MARKER_SIZE) / 2.))
                 .ml(crate::ui::compact::rem(-MARKER_SIZE / 2.))
                 .map(|marker| {
-                    key_marker_style(marker, key.base, key.selected, visual.kind, color, theme)
+                    key_marker_style(
+                        marker,
+                        visual.kind,
+                        key.base,
+                        key.selected,
+                        key.partial,
+                        theme,
+                    )
                 })
                 .when_some(interaction.clone(), |this, (_, panel, document_id)| {
                     this.on_mouse_down(MouseButton::Left, move |_, window, cx| {
@@ -277,14 +271,21 @@ fn track_color(theme: &gpui_kit::component::Theme) -> Hsla {
     theme.muted_foreground.opacity(0.55)
 }
 
-fn key_marker_style<T: Styled + FluentBuilder>(
+pub(super) fn key_marker_style<T: Styled + FluentBuilder>(
     marker: T,
+    kind: zipzi_core::ParameterKind,
     base: bool,
     selected: bool,
-    kind: zipzi_core::ParameterKind,
-    color: Hsla,
+    partial: bool,
     theme: &gpui_kit::component::Theme,
 ) -> T {
+    let color = if partial {
+        theme.yellow
+    } else if selected {
+        theme.green
+    } else {
+        theme.muted_foreground
+    };
     marker
         .size(crate::ui::compact::rem(MARKER_SIZE))
         .border_1()
@@ -301,7 +302,21 @@ fn key_marker_style<T: Styled + FluentBuilder>(
         })
 }
 
-fn cursor_marker(color: Hsla, at_key: bool) -> Div {
+pub(super) fn cursor_color(
+    repeat: bool,
+    has_keys: bool,
+    theme: &gpui_kit::component::Theme,
+) -> Hsla {
+    if repeat {
+        theme.magenta
+    } else if has_keys {
+        theme.red
+    } else {
+        theme.foreground
+    }
+}
+
+pub(super) fn cursor_marker(color: Hsla, at_key: bool) -> Div {
     div()
         .size(crate::ui::compact::rem(MARKER_SIZE))
         .rounded_full()
@@ -589,13 +604,6 @@ fn pad_marks(
     for (vx, vy, selected, partial, base) in &intersections {
         let px_norm = x_norm(*vx);
         let py_norm = y_norm(*vy);
-        let color = if *partial {
-            theme.yellow
-        } else if *selected {
-            theme.green
-        } else {
-            theme.muted_foreground
-        };
         let top_id = top.id.clone();
         let bottom_id = bottom.id.clone();
         let vx = *vx;
@@ -616,7 +624,7 @@ fn pad_marks(
                 .top(relative(1. - py_norm))
                 .ml(crate::ui::compact::rem(-MARKER_SIZE / 2.))
                 .mt(crate::ui::compact::rem(-MARKER_SIZE / 2.))
-                .map(|marker| key_marker_style(marker, *base, *selected, kind, color, theme))
+                .map(|marker| key_marker_style(marker, kind, *base, *selected, *partial, theme))
                 .when_some(interaction.clone(), |this, (_, panel, document_id)| {
                     this.on_mouse_down(MouseButton::Left, move |_, window, cx| {
                         cx.stop_propagation();
@@ -639,13 +647,11 @@ fn pad_marks(
     let x_fraction = x_norm(top_value);
     let y_fraction = y_norm(bottom_value);
     let has_keys = !linked.top_visual.keys.is_empty() || !linked.bottom_visual.keys.is_empty();
-    let cursor_color = if linked.top_visual.repeat || linked.bottom_visual.repeat {
-        theme.magenta
-    } else if has_keys {
-        theme.red
-    } else {
-        theme.foreground
-    };
+    let cursor_color = cursor_color(
+        linked.top_visual.repeat || linked.bottom_visual.repeat,
+        has_keys,
+        theme,
+    );
     let at_key = intersections.iter().any(|(vx, vy, _, _, _)| {
         (*vx - top_value).abs() < 1e-6 && (*vy - bottom_value).abs() < 1e-6
     });

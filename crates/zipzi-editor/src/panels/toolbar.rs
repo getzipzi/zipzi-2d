@@ -28,6 +28,7 @@ pub struct PanelToolbar {
     actions: Vec<Box<dyn FnOnce(bool) -> Button>>,
     controls: Vec<AnyElement>,
     search: Option<PanelToolbarSearch>,
+    trailing_control: Option<AnyElement>,
 }
 
 impl PanelToolbar {
@@ -37,6 +38,7 @@ impl PanelToolbar {
             actions: Vec::new(),
             controls: Vec::new(),
             search: None,
+            trailing_control: None,
         }
     }
 
@@ -54,6 +56,11 @@ impl PanelToolbar {
 
     pub fn search(mut self, search: PanelToolbarSearch) -> Self {
         self.search = Some(search);
+        self
+    }
+
+    pub fn trailing_control(mut self, control: impl IntoElement) -> Self {
+        self.trailing_control = Some(control.into_any_element());
         self
     }
 }
@@ -99,6 +106,9 @@ impl RenderOnce for PanelToolbar {
             Some(search) => bar.content(search),
             None => bar.content(div().flex_1().min_w_0()),
         };
+        if let Some(control) = self.trailing_control {
+            bar = bar.content(compact::header_control(control));
+        }
         div()
             .id(self.id)
             .test_support()
@@ -223,6 +233,11 @@ impl PanelToolbarPopover {
                 .p_2()
                 .trigger(compact::header_button(trigger.prepare_for_toolbar())),
         )
+    }
+
+    pub fn anchor(mut self, anchor: Anchor) -> Self {
+        self.0 = self.0.anchor(anchor);
+        self
     }
 
     pub fn open(mut self, open: bool) -> Self {

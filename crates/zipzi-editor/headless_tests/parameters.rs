@@ -1,6 +1,6 @@
 use super::{document_fixture, setup_with_document};
 use gpui_kit::test::TestWindowExt;
-use gpui_kit::{AppContext as _, TestAppContext, point};
+use gpui_kit::{AppContext as _, TestAppContext, point, px};
 
 fn show_keyforms(harness: &super::Harness, cx: &mut TestAppContext) {
     cx.update_window(harness.window, |_, window, cx| {
@@ -8,6 +8,96 @@ fn show_keyforms(harness: &super::Harness, cx: &mut TestAppContext) {
             .view
             .update(cx, |view, cx| view.reveal_keyforms(window, cx));
         window.render_frame(cx);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn parameter_legend_opens_and_dismisses_without_editing(cx: &mut TestAppContext) {
+    use gpui_kit::component::WindowExt;
+
+    let (document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let parameters = document.parameters();
+    let history = document.history_lengths();
+    let selected = document.context().selections.clone();
+    let harness = setup_with_document(cx, document, assets);
+    let button = "parameter-legend-button";
+    let content = "parameter-legend-content";
+    let toolbar = "parameters-panel-toolbar";
+
+    cx.update_window(harness.window, |_, window, cx| {
+        let trigger = window.find(button);
+        assert_eq!(trigger.label(), Some("Slider legend"));
+        let trigger_bounds = trigger.bounds();
+        let toolbar_bounds = window.find(toolbar).bounds();
+        assert!((trigger_bounds.right() - toolbar_bounds.right()).abs() <= px(1.));
+        assert!(window.try_find(content).is_none());
+
+        window.click(button, cx);
+        let legend = window.find(content);
+        assert!(legend.visible());
+        assert!(window.find("parameter-legend-red-ring").visible());
+        let legend_bounds = legend.bounds();
+        assert!(
+            legend_bounds.bottom() <= trigger_bounds.top()
+                || trigger_bounds.bottom() <= legend_bounds.top(),
+            "legend {legend_bounds:?} overlaps trigger {trigger_bounds:?}",
+        );
+        assert!(!window.has_active_dialog(cx));
+        window.click(button, cx);
+        assert!(window.try_find(content).is_none());
+
+        window.click(button, cx);
+        window.press("escape", cx);
+        assert!(window.try_find(content).is_none());
+
+        window.click(button, cx);
+        let outside = point(trigger_bounds.left() - px(3.), trigger_bounds.center().y);
+        window.click_at(toolbar, outside - toolbar_bounds.origin, cx);
+        assert!(window.try_find(content).is_none());
+    })
+    .unwrap();
+
+    harness.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert_eq!(document.parameters(), parameters);
+        assert_eq!(document.history_lengths(), history);
+        assert_eq!(document.context().selections, selected);
+    });
+}
+
+#[gpui_kit::test]
+fn parameter_legend_is_available_in_narrow_panel_tools(cx: &mut TestAppContext) {
+    use gpui_kit::component::dock::{DockLayout, panel_handle};
+
+    let harness = super::setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            let dock = view.dock.as_ref().unwrap();
+            let layout = DockLayout::h_split()
+                .child(
+                    DockLayout::tabs().panel_view(panel_handle(dock.parameters.clone()), cx),
+                    Some(px(220.)),
+                )
+                .child(
+                    DockLayout::tabs().panel_view(dock.viewport_panel(), cx),
+                    None,
+                );
+            dock.area
+                .clone()
+                .update(cx, |area, cx| area.set_center(layout, window, cx));
+        });
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("panel-header-tools", cx);
+        window.click("parameter-legend-button", cx);
+        assert!(window.find("parameter-legend-content").visible());
+        window.press("escape", cx);
+        assert!(window.try_find("parameter-legend-content").is_none());
+        assert!(window.find("parameter-legend-button").visible());
     })
     .unwrap();
 }
