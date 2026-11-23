@@ -323,6 +323,29 @@ pub fn import_motion3(
     name: &str,
     text: &str,
 ) -> Result<MotionImport, MotionProjectError> {
+    let (clip, diagnostics) = decode_motion_clip(document, id, name, text)?;
+    let mut candidate = document.builder();
+    let result = if candidate.motion(id).is_some() {
+        candidate.replace_motion(clip)
+    } else {
+        candidate.create_authored_motion(clip)
+    };
+    result.map_err(|s| error(s.code, "$", s.message))?;
+    Ok(MotionImport {
+        candidate: candidate
+            .freeze()
+            .map_err(|s| error(s.code, "$", s.message))?
+            .state,
+        diagnostics,
+    })
+}
+
+pub(crate) fn decode_motion_clip(
+    document: &DocumentState,
+    id: &str,
+    name: &str,
+    text: &str,
+) -> Result<(MotionClip, Vec<MotionDiagnostic>), MotionProjectError> {
     let wire = decode_motion3(text).map_err(|e| error(e.code, e.path, e.message))?;
     let mut diagnostics = Vec::new();
     if !wire.counts_match() {
@@ -445,22 +468,7 @@ pub fn import_motion3(
         clip.opaque_source_ids = Some(namespace(document, Some(&clip)));
         clip.opaque_source_content_hash = Some(content_hash(&clip));
     }
-    let mut candidate = document.builder();
-    let result = if candidate.motion(id).is_some() {
-        candidate.replace_motion(clip)
-    } else {
-        candidate.create_authored_motion(clip)
-    };
-    if let Err(status) = result {
-        return Err(error(status.code, "$", status.message));
-    }
-    Ok(MotionImport {
-        candidate: candidate
-            .freeze()
-            .map_err(|s| error(s.code, "$", s.message))?
-            .state,
-        diagnostics,
-    })
+    Ok((clip, diagnostics))
 }
 
 pub fn export_motion3(document: &DocumentState, id: &str) -> Result<String, MotionProjectError> {

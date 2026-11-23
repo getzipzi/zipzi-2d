@@ -92,6 +92,29 @@ pub fn import_expression3(
     name: &str,
     text: &str,
 ) -> Result<ExpressionImport, ExpressionProjectError> {
+    let (asset, diagnostics) = decode_expression_asset(document, id, name, text)?;
+    let mut candidate = document.builder();
+    let result = if candidate.expression(id).is_some() {
+        candidate.replace_expression(asset)
+    } else {
+        candidate.create_expression(asset)
+    };
+    result.map_err(|status| error(status.code, "$", status.message))?;
+    Ok(ExpressionImport {
+        candidate: candidate
+            .freeze()
+            .map_err(|s| error(s.code, "$", s.message))?
+            .state,
+        diagnostics,
+    })
+}
+
+pub(crate) fn decode_expression_asset(
+    document: &DocumentState,
+    id: &str,
+    name: &str,
+    text: &str,
+) -> Result<(ExpressionAsset, Vec<ExpressionDiagnostic>), ExpressionProjectError> {
     let wire = decode_exp3(text).map_err(wire_error)?;
     let parameters: HashMap<_, _> = document
         .parameter_order()
@@ -150,22 +173,7 @@ pub fn import_expression3(
         asset.opaque_source_ids = Some(parameter_ids(document, Some(&asset)));
         asset.opaque_source_content_hash = Some(content_hash(&asset));
     }
-    let mut candidate = document.builder();
-    let result = if candidate.expression(id).is_some() {
-        candidate.replace_expression(asset)
-    } else {
-        candidate.create_expression(asset)
-    };
-    if let Err(status) = result {
-        return Err(error(status.code, "$", status.message));
-    }
-    Ok(ExpressionImport {
-        candidate: candidate
-            .freeze()
-            .map_err(|s| error(s.code, "$", s.message))?
-            .state,
-        diagnostics,
-    })
+    Ok((asset, diagnostics))
 }
 
 /// Emit a Framework-compatible exp3 file using current model runtime IDs.

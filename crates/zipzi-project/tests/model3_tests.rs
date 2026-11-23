@@ -78,7 +78,8 @@ fn identical_expression_registrations_import_once() {
     model3["FileReferences"]["Motions"] = Value::Null;
     model3["FileReferences"]["Expressions"] = serde_json::json!([
         {"Name":"Smile","File":"smile.exp3.json"},
-        {"Name":"Smile","File":"smile.exp3.json"}
+        {"Name":"Smile","File":"smile.exp3.json"},
+        {"Name":"Grin","File":"smile.exp3.json"}
     ]);
     let path = temporary.join("model.model3.json");
     std::fs::write(&path, serde_json::to_vec(&model3).unwrap()).unwrap();
@@ -86,12 +87,30 @@ fn identical_expression_registrations_import_once() {
     let importer = ProjectImporter::default();
     let (result, imported, _) = importer.import_model3(&path);
     assert!(result.status.is_ok(), "{result:?}");
-    assert_eq!(imported.unwrap().document.expression_order().len(), 1);
+    let document = imported.unwrap().document;
+    let names: Vec<_> = document
+        .expression_order()
+        .iter()
+        .map(|id| document.expression(id).unwrap().name.as_str())
+        .collect();
+    assert_eq!(names, ["Smile", "Grin"]);
 
     model3["FileReferences"]["Expressions"][1]["File"] = "other.exp3.json".into();
     std::fs::write(&path, serde_json::to_vec(&model3).unwrap()).unwrap();
     let (result, imported, _) = importer.import_model3(&path);
     assert_eq!(result.status.code, "DUPLICATE_EXPRESSION_NAME");
+    assert!(imported.is_none());
+
+    std::fs::write(temporary.join("invalid.exp3.json"), r#"{"Type":"\u0000"}"#).unwrap();
+    model3["FileReferences"]["Expressions"][1]["File"] = "smile.exp3.json".into();
+    model3["FileReferences"]["Expressions"][2]["File"] = "invalid.exp3.json".into();
+    std::fs::write(&path, serde_json::to_vec(&model3).unwrap()).unwrap();
+    let (result, imported, _) = importer.import_model3(&path);
+    assert_eq!(result.status.code, "INVALID_EXPRESSION_TYPE");
+    assert!(result
+        .status
+        .message
+        .contains("Expressions[2] (invalid.exp3.json)"));
     assert!(imported.is_none());
     std::fs::remove_dir_all(temporary).unwrap();
 }
@@ -114,6 +133,7 @@ fn model3_import_discovers_unreferenced_animation_sidecars() {
     let discovered_motion = root.join("Animation/nested/待机.MOTION3.JSON");
     fs::write(&discovered_expression, expression).unwrap();
     fs::write(&discovered_motion, motion).unwrap();
+    fs::write(root.join("Animation/待机.motion3.json"), motion).unwrap();
     fs::write(root.join("registered.exp3.json"), expression).unwrap();
     fs::write(root.join("Animation/registered.motion3.json"), motion).unwrap();
     fs::write(root.join("Animation/broken.motion3.json"), "{broken").unwrap();
@@ -167,17 +187,22 @@ fn model3_import_discovers_unreferenced_animation_sidecars() {
         .unwrap()
         .name
         .starts_with("Smile-"));
-    assert_eq!(doc.motion_order().len(), 2);
+    assert_eq!(doc.motion_order().len(), 3);
     assert_eq!(doc.motion_groups().len(), 1);
     let idle = &doc.motion_groups()[0];
     assert_eq!(idle.name, "Idle");
     assert_eq!(idle.entries.len(), 1);
     assert_eq!(idle.entries[0].fade_in, Some(0.25));
-    assert_eq!(doc.motion_roots().len(), 1);
+    assert_eq!(doc.motion_roots().len(), 2);
     assert_eq!(
         doc.motion(&doc.motion_roots()[0].clip_id).unwrap().name,
         "待机"
     );
+    assert!(doc
+        .motion(&doc.motion_roots()[1].clip_id)
+        .unwrap()
+        .name
+        .starts_with("待机-"));
     assert!(doc.missing_attachments().is_empty());
     for path in [discovered_expression, discovered_motion] {
         assert!(imported
@@ -189,6 +214,27 @@ fn model3_import_discovers_unreferenced_animation_sidecars() {
             .protected_paths
             .contains(&path.canonicalize().unwrap()));
     }
+
+    let mut invalid_motion: Value = serde_json::from_str(motion).unwrap();
+    invalid_motion["Meta"]["ZipziSourceKeyRange"] = "invalid".into();
+    fs::write(
+        root.join("Animation/invalid.motion3.json"),
+        invalid_motion.to_string(),
+    )
+    .unwrap();
+    fs::write(root.join("invalid.exp3.json"), r#"{"Type":"\u0000"}"#).unwrap();
+    let (result, imported, _) = ProjectImporter::default().import_model3(&path);
+    assert!(result.status.is_ok(), "{result:?}");
+    assert!(result.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "INVALID_MOTION_SOURCE_RANGE"
+            && diagnostic.asset_id.ends_with("invalid.motion3.json")
+    }));
+    assert!(result.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "INVALID_EXPRESSION_TYPE" && diagnostic.asset_id == "invalid.exp3.json"
+    }));
+    let document = imported.unwrap().document;
+    assert_eq!(document.motion_order().len(), 3);
+    assert_eq!(document.expression_order().len(), 2);
 
     other_model3["FileReferences"]["Expressions"][0]["File"] = "Other/foreign.exp3.json".into();
     other_model3["FileReferences"]["Motions"]["Idle"][0]["File"] =
@@ -350,6 +396,15 @@ fn sound_and_userdata_are_managed_after_source_is_removed() {
         imported.document.missing_attachments()
     );
     assert_eq!(imported.document.package_attachments().len(), 2);
+    for reference in [
+        &imported.document.motion_groups()[0].entries[0].sound,
+        &imported.document.model3_settings().user_data,
+    ] {
+        assert!(matches!(
+            reference,
+            Some(zipzi_core::document::AttachmentRef::Resolved { .. })
+        ));
+    }
     let io = ProjectIo::new(temporary.join("cache"), importer.resources.clone());
     let project = temporary.join("project.zipzi");
     assert!(

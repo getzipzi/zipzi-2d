@@ -283,8 +283,34 @@ fn model3_motion_package_preserves_shared_file_registrations_and_atomic_import()
     assert_eq!(reopened.document.motion_order().len(), 1);
     assert_eq!(reopened.document.motion_groups().len(), 2);
     let revision = reopened.document.content_id();
+
+    let mut invalid_registration = model3.clone();
+    invalid_registration["FileReferences"]["Motions"]["TapBody"][0]["Sound"] =
+        "../invalid.wav".into();
+    let model_path = package.join("model.model3.json");
+    std::fs::write(&model_path, invalid_registration.to_string()).unwrap();
+    let (result, failed, _) = importer.import_model3(&model_path);
+    assert_eq!(result.status.code, "INVALID_MOTION_SOUND");
+    assert!(result
+        .status
+        .message
+        .contains("Motions.TapBody[0] (motions/Idle.motion3.json)"));
+    assert!(failed.is_none());
+
+    std::fs::write(&model_path, model3.to_string()).unwrap();
+    let mut invalid_clip: Value = serde_json::from_str(&source).unwrap();
+    invalid_clip["Meta"]["ZipziSourceKeyRange"] = "invalid".into();
+    std::fs::write(package.join(relative), invalid_clip.to_string()).unwrap();
+    let (result, failed, _) = importer.import_model3(&model_path);
+    assert_eq!(result.status.code, "INVALID_MOTION_SOURCE_RANGE");
+    assert!(result
+        .status
+        .message
+        .contains("Motions.Idle[0] (motions/Idle.motion3.json)"));
+    assert!(failed.is_none());
+
     std::fs::write(package.join(relative), "{broken").unwrap();
-    let (result, failed, _) = importer.import_model3(&package.join("model.model3.json"));
+    let (result, failed, _) = importer.import_model3(&model_path);
     assert!(!result.status.is_ok());
     assert!(failed.is_none());
     assert_eq!(reopened.document.content_id(), revision);

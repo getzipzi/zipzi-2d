@@ -8,8 +8,9 @@ use std::{
     fs,
     path::{Path, PathBuf},
 };
-use zipzi_core::document::{valid_attachment_path, PackageAttachment};
-use zipzi_core::{state::DocumentState, Status};
+use zipzi_core::document::{valid_attachment_path, MotionRegistration, PackageAttachment};
+use zipzi_core::state::{DocumentBuilder, DocumentState};
+use zipzi_core::Status;
 use zipzi_moc3::{import_from_bare_moc3, import_from_model3_json, ImportReport};
 use zipzi_psd::{import_psd_with_masks, ImportReport as PsdImportReport};
 
@@ -245,6 +246,8 @@ impl ProjectImporter {
                 );
             };
             let mut expression_paths = std::collections::HashMap::new();
+            let mut sources = HashMap::new();
+            let mut batch = ModelAnimationBatch::new(&res.document);
             for (index, registration) in references.iter().enumerate() {
                 let Some(name) = registration.get("Name").and_then(|value| value.as_str()) else {
                     return (
@@ -285,24 +288,26 @@ impl ProjectImporter {
                     Err(status) => return (ProjectResult::from_status(status), None, None),
                 };
                 referenced_animations.insert(source);
-                let id = stable_expression_id(&res.document, index, name);
-                if let Err(status) = import_model_expression(
-                    &mut res.document,
-                    &id,
-                    name,
-                    &text,
-                    &mut expression_diagnostics,
-                ) {
+                let origin = format!("Expressions[{index}] ({relative})");
+                let id = batch.stable_id(&[b"expression", &index.to_le_bytes(), name.as_bytes()]);
+                if let Err(status) =
+                    batch.add_expression(&id, name, &text, &mut expression_diagnostics)
+                {
                     return (
                         ProjectResult::failed(
                             &status.code,
-                            &format!("Expressions[{index}] {}", status.message),
+                            &format!("{origin}: {}", status.message),
                         ),
                         None,
                         None,
                     );
                 }
+                sources.insert(id, origin);
             }
+            res.document = match batch.finish_registered(&sources) {
+                Ok(state) => state,
+                Err(status) => return (ProjectResult::from_status(status), None, None),
+            };
             res.report
                 .unimported_attachments
                 .retain(|item| !item.starts_with("Expressions:"));
@@ -320,6 +325,8 @@ impl ProjectImporter {
             let mut imported_paths: std::collections::HashMap<String, String> =
                 std::collections::HashMap::new();
             let mut motion_groups = Vec::new();
+            let mut sources = HashMap::new();
+            let mut motions = ModelAnimationBatch::new(&res.document);
             for (group_name, entries) in groups {
                 let Some(entries) = entries.as_array() else {
                     return (
@@ -427,6 +434,7 @@ impl ProjectImporter {
                             }
                         },
                     };
+                    let origin = format!("Motions.{group_name}[{index}] ({relative})");
                     let clip_id = if let Some(id) = imported_paths.get(relative) {
                         id.clone()
                     } else {
@@ -447,8 +455,7 @@ impl ProjectImporter {
                         if name.is_empty() {
                             name = format!("{group_name}_{index}");
                         }
-                        let id = match import_model_motion(
-                            &mut res.document,
+                        let id = match motions.add_motion(
                             relative,
                             &name,
                             &text,
@@ -459,16 +466,14 @@ impl ProjectImporter {
                                 return (
                                     ProjectResult::failed(
                                         &status.code,
-                                        &format!(
-                                            "Motions.{group_name}[{index}] {}",
-                                            status.message
-                                        ),
+                                        &format!("{origin}: {}", status.message),
                                     ),
                                     None,
                                     None,
                                 )
                             }
                         };
+                        sources.insert(id.clone(), origin.clone());
                         imported_paths.insert(relative.to_string(), id.clone());
                         id
                     };
@@ -482,8 +487,10 @@ impl ProjectImporter {
                         })
                         .map(|(key, value)| (key.clone(), value.clone()))
                         .collect();
-                    registrations.push(zipzi_core::document::MotionRegistration {
-                        id: uuid::Uuid::new_v4().to_string(),
+                    let registration_id = uuid::Uuid::new_v4().to_string();
+                    sources.insert(registration_id.clone(), origin);
+                    registrations.push(MotionRegistration {
+                        id: registration_id,
                         clip_id,
                         fade_in,
                         fade_out,
@@ -491,19 +498,23 @@ impl ProjectImporter {
                         extensions,
                     });
                 }
+                let group_id = uuid::Uuid::new_v4().to_string();
+                sources.insert(group_id.clone(), format!("Motions.{group_name}"));
                 motion_groups.push(zipzi_core::document::MotionGroup {
-                    id: uuid::Uuid::new_v4().to_string(),
+                    id: group_id,
                     name: group_name.clone(),
                     entries: registrations,
                 });
             }
-            let result = import_edit(&mut res.document, |builder| {
-                builder.set_motion_groups(motion_groups)?;
-                builder.set_motion_roots(vec![])
-            });
-            if let Err(status) = result {
-                return (ProjectResult::from_status(status), None, None);
-            }
+            let result = motions
+                .builder
+                .set_motion_groups(motion_groups)
+                .and_then(|()| motions.builder.set_motion_roots(vec![]))
+                .and_then(|()| motions.finish_registered(&sources));
+            res.document = match result {
+                Ok(state) => state,
+                Err(status) => return (ProjectResult::from_status(status), None, None),
+            };
             res.report
                 .unimported_attachments
                 .retain(|item| !item.starts_with("Motions:"));
@@ -589,14 +600,7 @@ impl ProjectImporter {
                 bytes: Some(std::sync::Arc::new(bytes)),
             });
         }
-        let result = import_edit(&mut res.document, |builder| {
-            builder.set_package_attachments(managed)
-        });
-        if let Err(status) = result {
-            return (ProjectResult::from_status(status), None, None);
-        }
-        let result = resolve_attachment_paths(&mut res.document);
-        if let Err(status) = result {
+        if let Err(status) = register_package_attachments(&mut res.document, managed) {
             return (ProjectResult::from_status(status), None, None);
         }
         if !managed_diagnostics
@@ -886,6 +890,13 @@ enum AnimationSidecar {
     Motion,
 }
 
+struct DiscoveredAnimation {
+    path: PathBuf,
+    relative: String,
+    name: String,
+    kind: AnimationSidecar,
+}
+
 fn import_unreferenced_animations(
     document: &mut DocumentState,
     model_path: &Path,
@@ -948,7 +959,7 @@ fn import_unreferenced_animations(
     }
     files.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
-    let mut imported = Vec::new();
+    let mut sidecars = Vec::new();
     for (path, name, kind) in files {
         let Ok(source) = path.canonicalize() else {
             continue;
@@ -958,90 +969,224 @@ fn import_unreferenced_animations(
         }
         let relative = path
             .strip_prefix(&base_dir)
-            .expect("scanned model directory");
-        let relative = relative.to_string_lossy();
-        let result = fs::read_to_string(&source)
-            .map_err(|error| Status::error("ATTACHMENT_IO_ERROR", error.to_string()))
-            .and_then(|text| match kind {
-                AnimationSidecar::Expression => {
-                    let id =
-                        stable_attachment_id(document, format!("expression:{relative}").as_bytes());
-                    let name = unique_animation_name(&name, &id, |name| {
-                        document.expression_order().iter().any(|id| {
-                            document
-                                .expression(id)
-                                .is_some_and(|asset| asset.name == name)
-                        })
-                    });
-                    import_model_expression(document, &id, &name, &text, diagnostics)
-                }
-                AnimationSidecar::Motion => {
-                    import_model_motion(document, &relative, &name, &text, diagnostics).map(|_| ())
-                }
-            });
+            .expect("scanned model directory")
+            .to_string_lossy()
+            .into_owned();
+        sidecars.push(DiscoveredAnimation {
+            path: source,
+            relative,
+            name,
+            kind,
+        });
+    }
+    if sidecars.is_empty() {
+        return Vec::new();
+    }
+    import_discovered_animations(document, &sidecars, diagnostics)
+}
+
+fn import_discovered_animations(
+    document: &mut DocumentState,
+    files: &[DiscoveredAnimation],
+    diagnostics: &mut Vec<ResourceDiagnostic>,
+) -> Vec<PathBuf> {
+    let report_error = |file: &DiscoveredAnimation, status: Status| ResourceDiagnostic {
+        asset_id: file.relative.clone(),
+        code: status.code,
+        message: format!("{}: {}", file.relative, status.message),
+    };
+    let mut batch = ModelAnimationBatch::new(document);
+    let mut imported = Vec::new();
+    let mut batch_diagnostics = Vec::new();
+    for file in files {
+        match batch.add_discovered(file, &mut batch_diagnostics) {
+            Ok(()) => imported.push(file.path.clone()),
+            Err(status) => batch_diagnostics.push(report_error(file, status)),
+        }
+    }
+    if let Ok(state) = batch.finish() {
+        *document = state;
+        diagnostics.extend(batch_diagnostics);
+        return imported;
+    }
+
+    // Discovered sidecars are optional. Isolate validation failures so a bad
+    // clip only produces its own diagnostic and the other clips are kept.
+    imported.clear();
+    for file in files {
+        let mut batch = ModelAnimationBatch::new(document);
+        let mut file_diagnostics = Vec::new();
+        let result = batch
+            .add_discovered(file, &mut file_diagnostics)
+            .and_then(|()| batch.finish());
         match result {
-            Ok(()) => imported.push(source),
-            Err(status) => diagnostics.push(ResourceDiagnostic {
-                asset_id: relative.to_string(),
-                code: status.code,
-                message: format!("{relative}: {}", status.message),
-            }),
+            Ok(state) => {
+                *document = state;
+                imported.push(file.path.clone());
+                diagnostics.extend(file_diagnostics);
+            }
+            Err(status) => diagnostics.push(report_error(file, status)),
         }
     }
     imported
 }
 
-fn import_model_expression(
-    document: &mut DocumentState,
-    id: &str,
-    name: &str,
-    text: &str,
-    diagnostics: &mut Vec<ResourceDiagnostic>,
-) -> Result<(), Status> {
-    let imported = crate::import_expression3(document, id, name, text)
-        .map_err(|error| Status::error(error.code, format!("{}: {}", error.path, error.message)))?;
-    *document = imported.candidate;
-    diagnostics.extend(
-        imported
-            .diagnostics
-            .into_iter()
-            .map(|diagnostic| ResourceDiagnostic {
+struct ModelAnimationBatch<'a> {
+    document: &'a DocumentState,
+    builder: DocumentBuilder,
+    staged_ids: HashSet<String>,
+    new_motion_roots: Vec<MotionRegistration>,
+}
+
+impl<'a> ModelAnimationBatch<'a> {
+    fn new(document: &'a DocumentState) -> Self {
+        Self {
+            document,
+            builder: document.builder(),
+            staged_ids: HashSet::new(),
+            new_motion_roots: Vec::new(),
+        }
+    }
+
+    fn stable_id(&self, parts: &[&[u8]]) -> String {
+        stable_package_id(self.document.id(), parts, |id| {
+            self.staged_ids.contains(id) || self.document.contains_id(id)
+        })
+    }
+
+    fn add_expression(
+        &mut self,
+        id: &str,
+        name: &str,
+        text: &str,
+        diagnostics: &mut Vec<ResourceDiagnostic>,
+    ) -> Result<(), Status> {
+        let (asset, expression_diagnostics) =
+            crate::expression::decode_expression_asset(self.document, id, name, text).map_err(
+                |error| Status::error(error.code, format!("{}: {}", error.path, error.message)),
+            )?;
+        self.builder.create_expression(asset)?;
+        self.staged_ids.insert(id.into());
+        diagnostics.extend(expression_diagnostics.into_iter().map(|diagnostic| {
+            ResourceDiagnostic {
                 asset_id: name.into(),
                 code: diagnostic.code,
                 message: format!("{}: {}", diagnostic.path, diagnostic.message),
-            }),
-    );
-    Ok(())
-}
+            }
+        }));
+        Ok(())
+    }
 
-fn import_model_motion(
-    document: &mut DocumentState,
-    relative: &str,
-    name: &str,
-    text: &str,
-    diagnostics: &mut Vec<ResourceDiagnostic>,
-) -> Result<String, Status> {
-    let id = stable_motion_id(document, relative);
-    let name = unique_animation_name(name, &id, |name| {
-        document
-            .motion_order()
-            .iter()
-            .any(|id| document.motion(id).is_some_and(|clip| clip.name == name))
-    });
-    let imported = crate::import_motion3(document, &id, &name, text)
-        .map_err(|error| Status::error(error.code, format!("{}: {}", error.path, error.message)))?;
-    *document = imported.candidate;
-    diagnostics.extend(
-        imported
-            .diagnostics
-            .into_iter()
-            .map(|diagnostic| ResourceDiagnostic {
-                asset_id: relative.into(),
-                code: diagnostic.code,
-                message: format!("{}: {}", diagnostic.path, diagnostic.message),
-            }),
-    );
-    Ok(id)
+    fn add_motion(
+        &mut self,
+        relative: &str,
+        name: &str,
+        text: &str,
+        diagnostics: &mut Vec<ResourceDiagnostic>,
+    ) -> Result<String, Status> {
+        let id = self.stable_id(&[b"motion", relative.as_bytes()]);
+        let name = unique_animation_name(name, &id, |name| {
+            self.builder.motion_order().iter().any(|id| {
+                self.builder
+                    .motion(id)
+                    .is_some_and(|clip| clip.name == name)
+            })
+        });
+        let (clip, clip_diagnostics) =
+            crate::motion::decode_motion_clip(self.document, &id, &name, text).map_err(
+                |error| Status::error(error.code, format!("{}: {}", error.path, error.message)),
+            )?;
+        // New clip IDs use UUIDv8, like track and event IDs. Imported keys use UUIDv4.
+        self.staged_ids.insert(id.clone());
+        self.staged_ids
+            .extend(clip.tracks.iter().map(|track| track.id.clone()));
+        self.staged_ids
+            .extend(clip.events.iter().map(|event| event.id.clone()));
+        self.builder.create_motion(clip)?;
+        diagnostics.extend(
+            clip_diagnostics
+                .into_iter()
+                .map(|diagnostic| ResourceDiagnostic {
+                    asset_id: relative.into(),
+                    code: diagnostic.code,
+                    message: format!("{}: {}", diagnostic.path, diagnostic.message),
+                }),
+        );
+        Ok(id)
+    }
+
+    fn add_discovered(
+        &mut self,
+        file: &DiscoveredAnimation,
+        diagnostics: &mut Vec<ResourceDiagnostic>,
+    ) -> Result<(), Status> {
+        let text = fs::read_to_string(&file.path)
+            .map_err(|error| Status::error("ATTACHMENT_IO_ERROR", error.to_string()))?;
+        match file.kind {
+            AnimationSidecar::Expression => {
+                let id = self.stable_id(&[b"expression:", file.relative.as_bytes()]);
+                let name = unique_animation_name(&file.name, &id, |name| {
+                    self.builder.expression_order().iter().any(|id| {
+                        self.builder
+                            .expression(id)
+                            .is_some_and(|asset| asset.name == name)
+                    })
+                });
+                self.add_expression(&id, &name, &text, diagnostics)?;
+            }
+            AnimationSidecar::Motion => {
+                let clip_id = self.add_motion(&file.relative, &file.name, &text, diagnostics)?;
+                self.new_motion_roots.push(MotionRegistration {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    clip_id,
+                    fade_in: None,
+                    fade_out: None,
+                    sound: None,
+                    extensions: Default::default(),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    fn finish(mut self) -> Result<DocumentState, Status> {
+        if !self.new_motion_roots.is_empty() {
+            let mut roots = self.builder.motion_roots().clone();
+            roots.append(&mut self.new_motion_roots);
+            self.builder.set_motion_roots(roots)?;
+        }
+        Ok(self.builder.freeze()?.state)
+    }
+
+    fn finish_registered(
+        mut self,
+        sources: &HashMap<String, String>,
+    ) -> Result<DocumentState, Status> {
+        self.builder.validate_candidate().map_err(|mut status| {
+            // Animation validation reports the record ID or a path starting with it.
+            let id = status.message.split('.').next().unwrap_or_default();
+            let source = sources.get(id).or_else(|| {
+                uuid::Uuid::parse_str(id).ok()?;
+                if let Some((asset, _)) = self.builder.expression_entry(id) {
+                    return sources.get(&asset.id);
+                }
+                self.builder.motion_order().iter().find_map(|clip_id| {
+                    let clip = self.builder.motion(clip_id)?;
+                    let owns_id = clip
+                        .tracks
+                        .iter()
+                        .any(|track| track.id == id || track.keys().any(|key| key.id == id))
+                        || clip.events.iter().any(|event| event.id == id);
+                    owns_id.then(|| sources.get(clip_id)).flatten()
+                })
+            });
+            if let Some(source) = source {
+                status.message = format!("{source}: {}", status.message);
+            }
+            status
+        })?;
+        self.finish()
+    }
 }
 
 fn unique_animation_name(stem: &str, id: &str, is_taken: impl Fn(&str) -> bool) -> String {
@@ -1058,41 +1203,17 @@ fn unique_animation_name(stem: &str, id: &str, is_taken: impl Fn(&str) -> bool) 
     name
 }
 
-fn stable_expression_id(document: &DocumentState, index: usize, name: &str) -> String {
+fn stable_package_id(
+    document_id: &str,
+    parts: &[&[u8]],
+    contains_id: impl Fn(&str) -> bool,
+) -> String {
     for salt in 0u64.. {
         let mut digest = Sha256::new();
-        digest.update(document.id());
-        digest.update(b"expression");
-        digest.update(index.to_le_bytes());
-        digest.update(name.as_bytes());
-        digest.update(salt.to_le_bytes());
-        let mut bytes: [u8; 16] = digest.finalize()[..16]
-            .try_into()
-            .expect("SHA-256 has 16 bytes");
-        bytes[6] = (bytes[6] & 0x0f) | 0x80;
-        bytes[8] = (bytes[8] & 0x3f) | 0x80;
-        let hex: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
-        let id = format!(
-            "{}-{}-{}-{}-{}",
-            &hex[0..8],
-            &hex[8..12],
-            &hex[12..16],
-            &hex[16..20],
-            &hex[20..32]
-        );
-        if !document.contains_id(&id) {
-            return id;
+        digest.update(document_id);
+        for part in parts {
+            digest.update(part);
         }
-    }
-    unreachable!("salt space exhausted")
-}
-
-fn stable_motion_id(document: &DocumentState, relative: &str) -> String {
-    for salt in 0u64.. {
-        let mut digest = Sha256::new();
-        digest.update(document.id());
-        digest.update(b"motion");
-        digest.update(relative.as_bytes());
         digest.update(salt.to_le_bytes());
         let mut bytes: [u8; 16] = digest.finalize()[..16]
             .try_into()
@@ -1108,7 +1229,7 @@ fn stable_motion_id(document: &DocumentState, relative: &str) -> String {
             &hex[16..20],
             &hex[20..]
         );
-        if !document.contains_id(&id) {
+        if !contains_id(&id) {
             return id;
         }
     }
@@ -1120,30 +1241,7 @@ fn stable_pose_id(document: &DocumentState) -> String {
 }
 
 fn stable_attachment_id(document: &DocumentState, marker: &[u8]) -> String {
-    for salt in 0u64.. {
-        let mut digest = Sha256::new();
-        digest.update(document.id());
-        digest.update(marker);
-        digest.update(salt.to_le_bytes());
-        let mut bytes: [u8; 16] = digest.finalize()[..16]
-            .try_into()
-            .expect("SHA-256 has 16 bytes");
-        bytes[6] = (bytes[6] & 0x0f) | 0x80;
-        bytes[8] = (bytes[8] & 0x3f) | 0x80;
-        let hex: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
-        let id = format!(
-            "{}-{}-{}-{}-{}",
-            &hex[..8],
-            &hex[8..12],
-            &hex[12..16],
-            &hex[16..20],
-            &hex[20..]
-        );
-        if !document.contains_id(&id) {
-            return id;
-        }
-    }
-    unreachable!("salt space exhausted")
+    stable_package_id(document.id(), &[marker], |id| document.contains_id(id))
 }
 
 fn import_edit(
@@ -1155,9 +1253,14 @@ fn import_edit(
     *state = builder.freeze()?.state;
     Ok(())
 }
-fn resolve_attachment_paths(state: &mut DocumentState) -> Result<(), Status> {
-    let paths: HashMap<_, _> = state
-        .package_attachments()
+fn register_package_attachments(
+    state: &mut DocumentState,
+    attachments: Vec<PackageAttachment>,
+) -> Result<(), Status> {
+    if attachments.is_empty() && state.package_attachments().is_empty() {
+        return Ok(());
+    }
+    let paths: HashMap<_, _> = attachments
         .iter()
         .map(|a| (a.path.clone(), a.id.clone()))
         .collect();
@@ -1171,6 +1274,7 @@ fn resolve_attachment_paths(state: &mut DocumentState) -> Result<(), Status> {
         }
     };
     import_edit(state, |b| {
+        b.set_package_attachments(attachments)?;
         let mut groups = b.motion_groups().clone();
         let mut roots = b.motion_roots().clone();
         let mut settings = b.model3_settings().clone();

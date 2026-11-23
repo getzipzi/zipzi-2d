@@ -313,14 +313,10 @@ pub fn read_with_budget(
             expression_operations,
         ));
     }
-    // Validate in a candidate: a late bad scene cannot partially modify a caller.
+    // The final freeze validates motions and the source scenes retained in expressions.
     let mut candidate = document.builder();
     for (mut clip, other_animation, expression_operations) in clips {
         clip.preserve_source_key_range();
-        let status = candidate.validate_motion(&clip);
-        if !status.is_ok() {
-            return Err(invalid(format!("{}: {}", status.code, status.message)));
-        }
         let edit = if !registered.contains(clip.id.as_str())
             && !other_animation
             && is_expression_scene(&clip)
@@ -385,7 +381,10 @@ pub fn read_with_budget(
             .set_motion_groups(combined)
             .map_err(|s| invalid(s.message))?;
     }
-    Ok(candidate.freeze().map_err(|s| invalid(s.message))?.state)
+    Ok(candidate
+        .freeze()
+        .map_err(|s| invalid(format!("{}: {}", s.code, s.message)))?
+        .state)
 }
 
 fn motion_groups(g: &Graph<'_>, root: Node<'_>) -> Result<Vec<MotionGroup>> {
@@ -501,7 +500,12 @@ fn track(
         if let Some(options) = g.field(attribute, "optionParam")? {
             if let Some(n) = g.field(options, name)? {
                 let value: f32 = super::graph::parse(n.text().unwrap_or(""))?;
-                return Ok((value >= 0.).then_some(value / 1000.));
+                let fade = (value >= 0.).then_some(value / 1000.);
+                // Expression source scenes are serialized before final validation.
+                if fade.is_some_and(|fade| !fade.is_finite()) {
+                    return Err(invalid(format!("INVALID_MOTION_FADE: {name}")));
+                }
+                return Ok(fade);
             }
         }
         Ok(None)
@@ -628,7 +632,8 @@ mod tests {
                 ..Default::default()
             })
             .is_ok());
-        let document = read(&bytes, &document.preview().unwrap()).unwrap();
+        let base = document.freeze().unwrap().state;
+        let document = read(&bytes, &base).unwrap();
         assert!(document.motion_order().is_empty());
         let expression = document.expression(scene).unwrap().clone();
         assert_eq!(expression.entries[0].value, 0.7 - 0.5);
@@ -646,6 +651,20 @@ mod tests {
             "INVALID_EXPRESSION_SOURCE_SCENE"
         );
         assert_eq!(document.expression(scene), Some(&expression));
+
+        let invalid_duration = xml.replace(r#"xs.n="duration">8"#, r#"xs.n="duration">0"#);
+        let invalid_fade = xml.replace(
+            r#"<CMutableSequence xs.n="valueData">"#,
+            r#"<map xs.n="optionParam"><s xs.n="KEY_ATTR_FADE_IN">inf</s></map><CMutableSequence xs.n="valueData">"#,
+        );
+        for (xml, code) in [
+            (invalid_duration, "INVALID_MOTION_DURATION"),
+            (invalid_fade, "INVALID_MOTION_FADE"),
+        ] {
+            let bytes = crate::caff::encode(Vec::new(), xml.as_bytes(), 0).unwrap();
+            let error = read(&bytes, &base).unwrap_err();
+            assert!(error.to_string().contains(code), "{error}");
+        }
     }
 
     fn animation_with_sources(sources: &str, scene: &str) -> Vec<u8> {
