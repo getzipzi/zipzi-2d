@@ -143,8 +143,9 @@ impl Model<'_> {
                 .map(|(index, t)| (&t.id, index))
                 .collect();
             for (index, track) in old.display_tracks().into_iter().enumerate() {
-                if order.get(&track.id) != Some(&index) {
-                    self.motion_unlocked(&track.id)?;
+                if order.get(&track.id) != Some(&index) && self.editor_state().get(&track.id).locked
+                {
+                    return Err(Status::error("OBJECT_LOCKED", &track.id));
                 }
             }
             let tracks: std::collections::HashMap<_, _> =
@@ -153,7 +154,10 @@ impl Model<'_> {
                 clip.events.iter().map(|e| (&e.id, e)).collect();
             for t in &old.tracks {
                 if tracks.get(&t.id).copied() != Some(t) {
-                    self.motion_unlocked(&t.id)?;
+                    // The enclosing clip was checked above and owns this track.
+                    if self.editor_state().get(&t.id).locked {
+                        return Err(Status::error("OBJECT_LOCKED", &t.id));
+                    }
                     let next = tracks.get(&t.id).copied();
                     let mut locked = key_contexts(t)
                         .filter(|context| self.editor_state().get(&context.key.id).locked)
@@ -175,8 +179,8 @@ impl Model<'_> {
                 }
             }
             for e in &old.events {
-                if events.get(&e.id).copied() != Some(e) {
-                    self.motion_unlocked(&e.id)?;
+                if events.get(&e.id).copied() != Some(e) && self.editor_state().get(&e.id).locked {
+                    return Err(Status::error("OBJECT_LOCKED", &e.id));
                 }
             }
         }

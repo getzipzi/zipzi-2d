@@ -5,8 +5,7 @@ use zipzi_animation::motion_bezier_time_is_monotonic;
 use zipzi_animation::sample_motion_curve;
 use zipzi_core::document::MotionCurve;
 use zipzi_core::document::{
-    MOTION_EFFECT_GROUPS, MotionClip, MotionEvent, MotionSegment, MotionTrackTarget,
-    supported_model_motion_channel,
+    MOTION_EFFECT_GROUPS, MotionClip, MotionEvent, MotionSegment, supported_model_motion_channel,
 };
 use zipzi_sdk::MotionInterpolation;
 
@@ -211,11 +210,19 @@ impl TimelineProjection {
             events: clip.events.clone(),
             rows: Arc::new(vec![]),
         };
+        // Preserve execution order within a channel while grouping targets once.
+        let mut tracks_by_channel = HashMap::<_, Vec<_>>::new();
+        for track in &clip.tracks {
+            tracks_by_channel
+                .entry(TimelineChannelId::from_target(&track.target))
+                .or_default()
+                .push(track.id.clone());
+        }
         let parameters = document.parameters();
         for parameter in &parameters {
             let runtime_id = model.parameter(&parameter.id).unwrap().runtime_id.clone();
             result.add_channel(
-                clip,
+                &mut tracks_by_channel,
                 TimelineChannelId::Parameter(parameter.id.clone()),
                 parameter.name.clone(),
                 runtime_id,
@@ -225,7 +232,7 @@ impl TimelineProjection {
             );
         }
         result.add_channel(
-            clip,
+            &mut tracks_by_channel,
             TimelineChannelId::Model("Opacity".into()),
             "Opacity".into(),
             "Opacity".into(),
@@ -234,13 +241,14 @@ impl TimelineProjection {
             vec![],
         );
         for name in MOTION_EFFECT_GROUPS {
-            if model.model3_settings().parameter_group_named(name).is_some()
-                || clip.tracks.iter().any(|track| {
-                    matches!(&track.target, MotionTrackTarget::Model { runtime_id } if runtime_id == name)
-                })
+            if model
+                .model3_settings()
+                .parameter_group_named(name)
+                .is_some()
+                || tracks_by_channel.contains_key(&TimelineChannelId::Model(name.into()))
             {
                 result.add_channel(
-                    clip,
+                    &mut tracks_by_channel,
                     TimelineChannelId::Model(name.into()),
                     name.into(),
                     name.into(),
@@ -253,7 +261,7 @@ impl TimelineProjection {
         for id in model.part_order() {
             let part = model.part(id).unwrap();
             result.add_channel(
-                clip,
+                &mut tracks_by_channel,
                 TimelineChannelId::PartOpacity(id.clone()),
                 part.name.clone(),
                 part.runtime_id.clone(),
@@ -278,7 +286,15 @@ impl TimelineProjection {
                     }
                     _ => unreachable!("validated model target"),
                 };
-                result.add_channel(clip, id, name.clone(), name, None, 0., vec![diagnostic]);
+                result.add_channel(
+                    &mut tracks_by_channel,
+                    id,
+                    name.clone(),
+                    name,
+                    None,
+                    0.,
+                    vec![diagnostic],
+                );
             }
         }
         for track in clip.display_tracks() {
@@ -448,7 +464,7 @@ impl TimelineProjection {
 
     fn add_channel(
         &mut self,
-        clip: &MotionClip,
+        tracks_by_channel: &mut HashMap<TimelineChannelId, Vec<String>>,
         id: TimelineChannelId,
         name: String,
         runtime_id: String,
@@ -456,18 +472,13 @@ impl TimelineProjection {
         default_value: f32,
         mut diagnostics: Vec<TimelineDiagnostic>,
     ) {
-        if clip.has_extensions() {
+        if !self.editable {
             diagnostics.push(TimelineDiagnostic::OpaqueClip);
         }
-        let editable = !clip.has_extensions()
+        let editable = self.editable
             && !matches!(&id, TimelineChannelId::Unresolved { .. })
             && !matches!(&id, TimelineChannelId::Model(id) if !supported_model_motion_channel(id));
-        let tracks = clip
-            .tracks
-            .iter()
-            .filter(|track| TimelineChannelId::from_target(&track.target) == id)
-            .map(|track| track.id.clone())
-            .collect();
+        let tracks = tracks_by_channel.remove(&id).unwrap_or_default();
         Arc::make_mut(&mut self.channels).push(TimelineChannel {
             id,
             name,

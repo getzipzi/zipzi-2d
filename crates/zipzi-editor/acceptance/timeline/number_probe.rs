@@ -281,6 +281,15 @@ pub(super) fn run(h: &mut Harness, samples: usize) -> anyhow::Result<Value> {
             .unwrap()
     });
     command(h, CommandId::ModelingWorkspace)?;
+    update(h, |view, window, cx| {
+        view.dock
+            .as_ref()
+            .unwrap()
+            .parameters
+            .update(cx, |panel, cx| {
+                panel.benchmark_reveal_track(&parameter.id, window, cx);
+            });
+    })?;
     let before = h.capture()?;
     let before_canvas = h.canvas_image(&before)?;
     let origin = h.cx.update_window(h.window, |_, window, cx| {

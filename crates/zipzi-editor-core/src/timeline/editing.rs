@@ -889,8 +889,11 @@ impl Editor {
                 .preview_from_baseline(|commands| commands.edit_motion_curve(&clip_id, curve))?;
         } else {
             let (clip, curves) = edit.prepare(&command, snap)?;
-            edit.draft.preview(|commands| {
-                commands.replace_motion(clip)?;
+            let replace = clip != edit.original_candidate;
+            edit.draft.preview_from_baseline(|commands| {
+                if replace {
+                    commands.replace_motion(clip)?;
+                }
                 for curve in curves {
                     commands.edit_motion_curve(&clip_id, curve)?;
                 }
