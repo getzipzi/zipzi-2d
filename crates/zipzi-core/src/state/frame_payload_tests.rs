@@ -146,6 +146,68 @@ fn combined_parameter_sets_share_layout_without_reusing_occupied_ids() {
 }
 
 #[test]
+fn expression_and_pose_metadata_share_layout_and_validate_changed_fields() {
+    let mut builder = fixture(true).builder();
+    builder
+        .edit_expression(ExpressionEdit::Create {
+            id: id(30),
+            name: "Expression".into(),
+        })
+        .unwrap();
+    builder
+        .edit_expression(ExpressionEdit::CreateEntry {
+            owner: id(30),
+            id: id(31),
+            before: None,
+        })
+        .unwrap();
+    builder
+        .edit_pose(PoseEdit::CreateGroup {
+            pose_id: id(32),
+            id: id(33),
+            name: "Pose group".into(),
+            before: None,
+        })
+        .unwrap();
+    let base = builder.freeze().unwrap().state;
+
+    let mut expression = base.expression(&id(30)).unwrap().clone();
+    expression.entries[0].value = 0.5;
+    let mut builder = base.builder();
+    builder.replace_expression(expression.clone()).unwrap();
+    assert!(builder.validate_metadata_payload().unwrap());
+    let full = freeze_full(builder.clone()).unwrap();
+    let actual = builder.freeze().unwrap().state;
+    assert!(Arc::ptr_eq(&base.read_cache, &actual.read_cache));
+    assert_eq!(actual.expression(&id(30)), full.expression(&id(30)));
+    expression.entries[0].value = f32::NAN;
+    let mut builder = base.builder();
+    builder.replace_expression(expression).unwrap();
+    assert_eq!(
+        builder.validate_metadata_payload().unwrap_err().code,
+        "INVALID_EXPRESSION_VALUE"
+    );
+
+    let mut pose = base.pose().as_deref().unwrap().clone();
+    pose.fade_in = Some(0.5);
+    pose.groups[0].name = "Renamed group".into();
+    let mut builder = base.builder();
+    builder.set_pose(Some(Arc::new(pose.clone()))).unwrap();
+    assert!(builder.validate_metadata_payload().unwrap());
+    let full = freeze_full(builder.clone()).unwrap();
+    let actual = builder.freeze().unwrap().state;
+    assert!(Arc::ptr_eq(&base.read_cache, &actual.read_cache));
+    assert_eq!(actual.pose(), full.pose());
+    pose.groups[0].name = "\0".into();
+    let mut builder = base.builder();
+    builder.set_pose(Some(Arc::new(pose))).unwrap();
+    assert_eq!(
+        builder.validate_metadata_payload().unwrap_err().code,
+        "INVALID_POSE_GROUP_NAME"
+    );
+}
+
+#[test]
 fn unchanged_binding_payloads_are_not_revalidated_for_unrelated_edits() {
     use crate::model_validation::bindings::take_validation_counts;
     for edit in [

@@ -463,7 +463,12 @@ impl ObjectIndex {
                 );
                 for t in &x.tracks {
                     let tr = ObjectRef::new(K::MotionTrack, &t.id);
-                    s.add(tr.clone(),format!("Track {}",t.id),json!({"target":t.target,"initial":t.initial,"segments":t.segments.len(),"fade_in":t.fade_in,"fade_out":t.fade_out,"extensions":t.extensions}),None);
+                    s.add(
+                        tr.clone(),
+                        format!("Track {}", t.id),
+                        super::motions::motion_track_properties(t),
+                        None,
+                    );
                     s.edge(&r, R::Contains, tr.clone(), "");
                     for k in t.keys() {
                         let kr = ObjectRef::new(K::MotionKey, &k.id);

@@ -128,6 +128,7 @@ impl DocumentState {
 }
 impl DocumentBuilder {
     pub fn validate_motion(&self, clip: &MotionClip) -> Status {
-        self.content.model().validate_motion(clip)
+        self.scoped_motion_validation(clip)
+            .unwrap_or_else(|| self.content.model().validate_motion(clip))
     }
 }

@@ -22,6 +22,11 @@ impl Model<'_> {
                 return Status::error("INVALID_EXPRESSION_SOURCE_SCENE", &expression.id);
             }
         }
+        self.validate_expression_fields(expression)
+    }
+
+    /// The caller may reuse admission of the unchanged embedded source scene.
+    pub(crate) fn validate_expression_fields(&self, expression: &ExpressionAsset) -> Status {
         if expression.name.is_empty() || expression.name.contains('\0') {
             return Status::error("INVALID_EXPRESSION_NAME", &expression.id);
         }

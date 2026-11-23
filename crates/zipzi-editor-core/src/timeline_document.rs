@@ -7,12 +7,14 @@ impl Document {
         draft: &mut crate::runtime_host::HostedDraft,
     ) -> Result<()> {
         self.finish_edit()?;
+        let before = self.session.document();
         let receipt = draft.commit_to(&mut self.session)?;
-        self.session.acknowledge_receipts();
-        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
-            self.pristine_blank = None;
-            self.invalidate_projection(false);
+        if receipt.kind == zipzi_sdk::PublicationKind::Unchanged {
+            self.session.acknowledge_receipts();
+            return Ok(());
         }
+        self.pristine_blank = None;
+        self.consume_authoring_receipt(&receipt, Some(&before));
         Ok(())
     }
     pub(crate) fn create_timeline_clip(&mut self) -> Result<crate::OperationResult> {

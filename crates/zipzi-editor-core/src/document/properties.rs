@@ -441,7 +441,7 @@ impl Document {
             } else {
                 crate::property::mesh::payload(&self.session.document(), &object.id, &patch.scope)?
             }
-        } else if patch.uses_scalar_patch(object.kind) {
+        } else if object.kind == ObjectKind::Motion || patch.uses_scalar_patch(object.kind) {
             crate::property::inspector_payload(&self.session.document(), object)?
         } else {
             crate::property::object_payload(&self.session.document(), object)?
@@ -585,6 +585,9 @@ impl Document {
         if patch.uses_scalar_patch(object.kind) {
             let scalar = Self::scalar_patch(&edit.read_document()?, object, patch, &payload)?;
             return Ok(edit.patch_property(scalar)?);
+        }
+        if object.kind == ObjectKind::Motion {
+            return crate::property::motion::apply(edit, &object.id, payload);
         }
         if matches!(
             object.kind,
@@ -887,6 +890,7 @@ impl Document {
                 old.name == next.name && old.runtime_id == next.runtime_id
             });
         let previous_revision = self.projection_revision;
+        let before = self.session.document();
         let receipt = edit.commit_to(&mut self.session)?;
         if matches!(
             object.kind,
@@ -911,7 +915,7 @@ impl Document {
             if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
                 self.pristine_blank = None;
             }
-            self.consume_authoring_receipt(&receipt, None);
+            self.consume_authoring_receipt(&receipt, Some(&before));
             return Ok(());
         }
         self.session.acknowledge_receipts();
@@ -1164,7 +1168,15 @@ impl Document {
         let keyform_order_changed =
             self.pending.as_ref().unwrap().draw_groups_changed || patch.affects_draw_groups();
         let previous_revision = self.projection_revision;
-        if self.pending.as_ref().unwrap().property_write
+        if let PropertyPayload::Motion(intent) = payload {
+            let pending = self.pending.as_mut().unwrap();
+            pending
+                .edit
+                .preview_from_baseline(|commands| commands.edit_motion(intent))?;
+            // Older libraries may gain missing root registrations on their first edit.
+            pending.topology_changed |= pending.edit.candidate_document().motion_roots().len()
+                != self.session.document().motion_roots().len();
+        } else if self.pending.as_ref().unwrap().property_write
             == Some(crate::property::PropertyWrite::ScalarPatch)
         {
             let scalar =
@@ -1232,7 +1244,6 @@ fn replace(edit: &mut Commands<'_>, kind: ObjectKind, payload: serde_json::Value
         ObjectKind::Glue => replace!(replace_glue),
         ObjectKind::Offscreen => replace!(replace_offscreen),
         ObjectKind::Texture => replace!(replace_asset),
-        ObjectKind::Motion => replace!(replace_motion),
         ObjectKind::Expression => replace!(replace_expression),
         _ => bail!("This property is read only"),
     }
@@ -1246,6 +1257,194 @@ mod tests {
     use std::sync::atomic::Ordering;
     use zipzi_core::BindingAxisEditing;
     use zipzi_core::document::PhysicsAssetEditing;
+
+    #[test]
+    fn motion_fields_reuse_the_object_index_through_history() -> Result<()> {
+        use zipzi_core::document::{
+            MotionContainer, MotionEdit, MotionKey, MotionTrack, MotionTrackTarget,
+        };
+
+        let mut doc = Document::new_blank()?;
+        let motion = ObjectRef::new(ObjectKind::Motion, Uuid::new_v4().to_string());
+        let registration =
+            ObjectRef::new(ObjectKind::MotionRegistration, Uuid::new_v4().to_string());
+        let track = ObjectRef::new(ObjectKind::MotionTrack, Uuid::new_v4().to_string());
+        doc.session.edit("Motion fixture", None, |edit| {
+            edit.edit_motion(MotionEdit::Create {
+                id: motion.id.clone(),
+                name: "Original".into(),
+                registration_id: registration.id.clone(),
+                destination: MotionContainer::Root,
+            })?;
+            let mut clip = edit.read_document()?.motion(&motion.id).unwrap().clone();
+            clip.tracks.push(MotionTrack {
+                id: track.id.clone(),
+                target: MotionTrackTarget::Model {
+                    runtime_id: "Opacity".into(),
+                },
+                initial: MotionKey {
+                    id: Uuid::new_v4().to_string(),
+                    time: 0.,
+                    value: 1.,
+                },
+                segments: Arc::default(),
+                fade_in: None,
+                fade_out: None,
+                extensions: Default::default(),
+            });
+            edit.replace_motion(clip)
+        })?;
+        doc.invalidate_projection(false);
+        let baseline = doc.object_index();
+        let builds = doc.object_index_builds.load(Ordering::Relaxed);
+        doc.set_object_property(&motion, "fade_in", serde_json::json!(0.5))?;
+        let after_fade = doc.object_index();
+        assert_eq!(after_fade.get(&motion).unwrap().properties["fade_in"], 0.5);
+        assert!(std::ptr::eq(
+            baseline.get(&registration).unwrap(),
+            after_fade.get(&registration).unwrap()
+        ));
+        doc.set_object_property(&motion, "name", serde_json::json!("Renamed"))?;
+        assert_eq!(doc.object_index().name(&motion), "Renamed");
+        assert_eq!(doc.object_index().name(&registration), "Renamed");
+        assert_eq!(baseline.name(&motion), "Original");
+        assert_eq!(baseline.name(&registration), "Original");
+        doc.undo()?;
+        assert_eq!(doc.object_index().name(&registration), "Original");
+        doc.undo()?;
+        assert_eq!(
+            doc.object_index().get(&motion).unwrap().properties,
+            baseline.get(&motion).unwrap().properties
+        );
+        doc.redo()?;
+        doc.redo()?;
+        let redone = doc.object_index();
+        assert_eq!(redone.name(&registration), "Renamed");
+        assert_eq!(redone.get(&motion).unwrap().properties["fade_in"], 0.5);
+        assert!(std::ptr::eq(
+            baseline.get(&track).unwrap(),
+            redone.get(&track).unwrap()
+        ));
+
+        let key = ObjectRef::new(
+            ObjectKind::MotionKey,
+            &doc.motion_definition(&motion.id).unwrap().tracks[0]
+                .initial
+                .id,
+        );
+        let mut draft = doc.session.begin_draft("Timeline key value", None)?;
+        draft.apply(|edit| {
+            let mut clip = edit.read_document()?.motion(&motion.id).unwrap().clone();
+            clip.tracks[0].initial.value = 0.5;
+            Ok(edit.replace_motion(clip)?)
+        })?;
+        doc.commit_timeline_draft(&mut draft)?;
+        let updated = doc.object_index();
+        assert_eq!(
+            updated.get(&track).unwrap().properties["initial"]["value"],
+            0.5
+        );
+        assert_eq!(updated.get(&key).unwrap().properties["value"], 0.5);
+        assert_eq!(baseline.get(&key).unwrap().properties["value"], 1.);
+        doc.undo()?;
+        assert_eq!(
+            doc.object_index().get(&key).unwrap().properties["value"],
+            1.
+        );
+        doc.redo()?;
+        assert_eq!(
+            doc.object_index().get(&key).unwrap().properties["value"],
+            0.5
+        );
+        assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+
+        let mut draft = doc.session.begin_draft("Timeline track target", None)?;
+        draft.apply(|edit| {
+            let mut clip = edit.read_document()?.motion(&motion.id).unwrap().clone();
+            clip.tracks[0].target = MotionTrackTarget::Unspecified;
+            Ok(edit.replace_motion(clip)?)
+        })?;
+        doc.commit_timeline_draft(&mut draft)?;
+        assert!(doc.object_index().outgoing(&track).any(|relation| {
+            relation.kind == crate::RelationKind::MotionWrites
+                && relation.target.kind == ObjectKind::Unresolved
+        }));
+        assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds + 1);
+        Ok(())
+    }
+
+    #[test]
+    fn registration_fades_refresh_the_group_and_registration_in_place() -> Result<()> {
+        use zipzi_core::document::{MotionContainer, MotionEdit};
+
+        let mut doc = Document::new_blank()?;
+        let group = ObjectRef::new(ObjectKind::MotionGroup, Uuid::new_v4().to_string());
+        let registration =
+            ObjectRef::new(ObjectKind::MotionRegistration, Uuid::new_v4().to_string());
+        doc.session.edit("Motion fixture", None, |edit| {
+            edit.edit_motion(MotionEdit::CreateGroup {
+                id: group.id.clone(),
+                name: "Group".into(),
+            })?;
+            edit.edit_motion(MotionEdit::Create {
+                id: Uuid::new_v4().to_string(),
+                name: "Motion".into(),
+                registration_id: registration.id.clone(),
+                destination: MotionContainer::Group(group.id.clone()),
+            })
+        })?;
+        doc.invalidate_projection(false);
+        let baseline = doc.object_index();
+        let builds = doc.object_index_builds.load(Ordering::Relaxed);
+        let patch = |doc: &Document, value| -> Result<PropertyPatch> {
+            Ok(PropertyPatch {
+                scope: doc.property_scope(&registration),
+                ..doc.object_property_patch(&registration, "fade_in", &serde_json::json!(value))?
+            })
+        };
+        let serial = doc.begin_property_edit(&registration, &patch(&doc, 0.25)?)?;
+        for value in [0.25, 0.5] {
+            doc.update_property_edit(&registration, serial, &patch(&doc, value)?)?;
+            assert_eq!(
+                doc.object_index().get(&registration).unwrap().properties["fade_in"],
+                value
+            );
+            assert_eq!(
+                doc.motion_registration(&registration.id).unwrap().1.fade_in,
+                Some(value)
+            );
+            assert_eq!(
+                doc.object_index().get(&group).unwrap().properties["entries"][0]["fade_in"],
+                value
+            );
+        }
+        doc.finish_edit()?;
+        let committed = doc.object_index();
+        assert_eq!(
+            committed.get(&registration).unwrap().properties["fade_in"],
+            0.5
+        );
+        assert_eq!(
+            committed.get(&group).unwrap().properties["entries"][0]["fade_in"],
+            0.5
+        );
+        doc.undo()?;
+        let restored = doc.object_index();
+        for object in [&group, &registration] {
+            assert_eq!(
+                restored.get(object).unwrap().properties,
+                baseline.get(object).unwrap().properties
+            );
+        }
+        doc.redo()?;
+        let redone = doc.object_index();
+        assert_eq!(
+            redone.get(&group).unwrap().properties["entries"][0]["fade_in"],
+            0.5
+        );
+        assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+        Ok(())
+    }
 
     #[test]
     fn physics_field_candidates_reuse_indexes_and_keep_scalar_preview_snapshots_independent()
@@ -1341,6 +1540,27 @@ mod tests {
             assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
             assert!(Arc::ptr_eq(&topology, &doc.canvas_topology()));
         }
+        doc.set_object_properties(&object, &patch(0.3))?;
+        let node = ObjectRef::new(ObjectKind::PhysicsNode, node_id);
+        let changed = doc.object_index();
+        let rebuilt = crate::ObjectIndex::build(&doc.model());
+        for target in [&object, &node] {
+            assert_eq!(
+                changed.get(target).unwrap().properties,
+                rebuilt.get(target).unwrap().properties
+            );
+        }
+        doc.undo()?;
+        assert_eq!(
+            doc.object_index().get(&node).unwrap().properties,
+            snapshot.get(&node).unwrap().properties
+        );
+        doc.redo()?;
+        assert_eq!(
+            doc.object_index().get(&node).unwrap().properties,
+            changed.get(&node).unwrap().properties
+        );
+        assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
         Ok(())
     }
 
@@ -1497,6 +1717,12 @@ mod tests {
                     .opacity,
                 1.
             );
+            assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+            let binding_row = ObjectRef::new(ObjectKind::MeshBinding, &binding);
+            assert!(std::ptr::eq(
+                old.get(&binding_row).unwrap(),
+                doc.object_index().get(&binding_row).unwrap(),
+            ));
         }
         Ok(())
     }
@@ -1736,6 +1962,15 @@ mod tests {
                 doc.object_index().get(&object).unwrap().properties,
                 old_payload
             );
+            if object.kind == ObjectKind::Parameter {
+                assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+                doc.redo()?;
+                assert_eq!(
+                    doc.property_values(&object)?[&field],
+                    PropertyValue::Float(0.5)
+                );
+                assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+            }
         }
         Ok(())
     }

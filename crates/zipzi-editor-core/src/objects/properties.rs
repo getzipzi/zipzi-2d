@@ -60,6 +60,59 @@ impl super::ObjectIndex {
         }
     }
 
+    pub(crate) fn refresh_physics_asset(
+        &mut self,
+        model: &zipzi_core::state::DocumentState,
+        before: &zipzi_core::document::PhysicsAsset,
+    ) -> bool {
+        let Some(after) = model.physics().as_deref() else {
+            return false;
+        };
+        if before.id != after.id || before.data.settings.len() != after.data.settings.len() {
+            return false;
+        }
+        let labels_changed = before.data.meta.dictionary != after.data.meta.dictionary;
+        for (old, new) in before.data.settings.iter().zip(&after.data.settings) {
+            let same_rig = std::sync::Arc::ptr_eq(old, new);
+            if !same_rig
+                && (old.id != new.id
+                    || !old.entity_ids().eq(new.entity_ids())
+                    || old.inputs.len() != new.inputs.len()
+                    || old.outputs.len() != new.outputs.len()
+                    || !old
+                        .inputs
+                        .iter()
+                        .zip(&new.inputs)
+                        .all(|(a, b)| a.source == b.source)
+                    || !old
+                        .outputs
+                        .iter()
+                        .zip(&new.outputs)
+                        .all(|(a, b)| a.destination == b.destination && a.node_id == b.node_id))
+            {
+                return false;
+            }
+            if (!same_rig || labels_changed)
+                && !self.refresh_physics_preview(
+                    model,
+                    &super::ObjectRef::new(ObjectKind::PhysicsGroup, &new.id),
+                )
+            {
+                return false;
+            }
+        }
+        if before.data.meta.fps != after.data.meta.fps {
+            self.refresh_physics_fps(after);
+        }
+        let root = super::ObjectRef::new(ObjectKind::Physics, &after.id);
+        let Some(&slot) = self.structure.slots.get(&root) else {
+            return false;
+        };
+        self.objects[slot].properties =
+            json!({"meta":after.data.meta,"extensions":after.data.extensions});
+        true
+    }
+
     fn refresh_physics_preview(
         &mut self,
         model: &zipzi_core::state::DocumentState,
@@ -78,14 +131,19 @@ impl super::ObjectIndex {
         let fps_changed = self.objects[slot].properties["fps"] != fps;
         let info = &mut self.objects[slot];
         info.properties = json!(rig);
-        info.name = asset
+        let name = asset
             .data
             .meta
             .dictionary
             .iter()
             .find(|entry| entry.id == rig.id)
-            .map_or_else(|| rig.id.clone(), |entry| entry.name.clone());
-        info.properties["name"] = json!(info.name);
+            .map_or(rig.id.as_str(), |entry| entry.name.as_str());
+        info.name = if name.is_empty() {
+            rig.id.clone()
+        } else {
+            name.into()
+        };
+        info.properties["name"] = json!(name);
         info.properties["fps"] = fps;
         if fps_changed {
             self.refresh_physics_fps(asset);
@@ -206,6 +264,20 @@ impl super::ObjectIndex {
         let _benchmark_span = zipzi_core::benchmark::span("editor.object_index_refresh");
         if object.kind == ObjectKind::PhysicsGroup {
             return self.refresh_physics_preview(model, object);
+        }
+        if object.kind == ObjectKind::MotionRegistration {
+            let Some((owner, _)) = model.motion_registration(&object.id) else {
+                return false;
+            };
+            return self.refresh_motion_properties(model, object)
+                && match owner {
+                    zipzi_core::document::MotionContainer::Root => true,
+                    zipzi_core::document::MotionContainer::Group(id) => self
+                        .refresh_motion_properties(
+                            model,
+                            &super::ObjectRef::new(ObjectKind::MotionGroup, id),
+                        ),
+                };
         }
         if object.kind == ObjectKind::Mesh && !self.refresh_mesh_presentation(model, object) {
             return false;

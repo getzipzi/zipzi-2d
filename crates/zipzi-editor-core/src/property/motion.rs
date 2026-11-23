@@ -45,3 +45,22 @@ pub const FPS: PropertySpec =
         .preview();
 
 pub const FIELDS: &[PropertySpec] = &[NAME, DURATION, FPS, LOOPING, FADE_IN, FADE_OUT];
+
+pub(crate) fn apply(
+    edit: &mut zipzi_sdk::Commands<'_>,
+    id: &str,
+    mut payload: serde_json::Value,
+) -> anyhow::Result<()> {
+    let model = edit.read_document()?;
+    let mut clip = model
+        .motion(id)
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!("Motion no longer exists"))?;
+    clip.name = serde_json::from_value(payload["name"].take())?;
+    clip.duration = serde_json::from_value(payload["duration"].take())?;
+    clip.fps = serde_json::from_value(payload["fps"].take())?;
+    clip.looping = serde_json::from_value(payload["looping"].take())?;
+    clip.fade_in = serde_json::from_value(payload["fade_in"].take())?;
+    clip.fade_out = serde_json::from_value(payload["fade_out"].take())?;
+    Ok(edit.replace_motion(clip)?)
+}

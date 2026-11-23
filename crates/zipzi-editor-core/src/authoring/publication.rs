@@ -1,5 +1,6 @@
 //! Receipts drive the same projection updates for commands and history.
 use super::*;
+use zipzi_core::document::MotionRegistration;
 use zipzi_core::state::{DocumentState, RecordChange, RecordDomain, RootDomain, WriteSet};
 
 impl Document {
@@ -165,12 +166,60 @@ fn refresh_index(
                     })
                     && index.refresh_expression(after, id)
             }
+            RecordDomain::Motion => before
+                .motion(id)
+                .is_some_and(|old| index.refresh_motion_clip(after, old)),
+            RecordDomain::Parameter => {
+                before
+                    .parameter(id)
+                    .zip(after.parameter(id))
+                    .is_some_and(|(old, new)| {
+                        let mut original = old.clone();
+                        original.default_value = new.default_value;
+                        original.decimal_places = new.decimal_places;
+                        original == *new
+                    })
+                    && index.refresh_property_preview(
+                        after,
+                        &ObjectRef::new(ObjectKind::Parameter, id),
+                        false,
+                    )
+            }
             RecordDomain::Part => {
                 let group = ObjectRef::new(ObjectKind::DrawOrderGroup, id);
                 scene_label!(part, Part, id)
                     && (index.get(&group).is_none() || index.refresh_scene_label(after, &group))
             }
-            RecordDomain::Mesh => scene_label!(mesh, Mesh, id),
+            RecordDomain::Mesh => {
+                before
+                    .mesh(id)
+                    .zip(after.mesh(id))
+                    .is_some_and(|(old, new)| {
+                        let mut original = old.clone();
+                        original.name.clone_from(&new.name);
+                        original.appearance = new.appearance;
+                        original.enabled = new.enabled;
+                        original == *new
+                    })
+                    && index.refresh_mesh_presentation(after, &ObjectRef::new(ObjectKind::Mesh, id))
+            }
+            RecordDomain::Binding => {
+                before
+                    .binding(id)
+                    .zip(after.binding(id))
+                    .is_some_and(|(old, new)| {
+                        // The index excludes the per-keyform appearance payload.
+                        old.mesh_id == new.mesh_id
+                            && old.axes == new.axes
+                            && old.keyforms.len() == new.keyforms.len()
+                            && old.keyforms.iter().zip(&new.keyforms).all(|(a, b)| {
+                                a.keys == b.keys
+                                    && a.samples == b.samples
+                                    && a.positions == b.positions
+                                    && a.draw_order == b.draw_order
+                            })
+                    })
+            }
             RecordDomain::Transform => scene_label!(transform, Deformer, id),
             RecordDomain::Offscreen => scene_label!(offscreen, Offscreen, id),
             RecordDomain::Glue => scene_label!(glue, Glue, id),
@@ -222,19 +271,29 @@ fn refresh_root(
             old.len() == new.len()
                 && old.iter().zip(new).all(|(a, b)| {
                     a.id == b.id
-                        && a.entries == b.entries
-                        && (a.name == b.name
+                        && refresh_motion_registrations(index, after, &a.entries, &b.entries)
+                        && (a == b
                             || index.refresh_motion_properties(
                                 after,
                                 &ObjectRef::new(ObjectKind::MotionGroup, &b.id),
                             ))
                 })
         }
+        RootDomain::MotionRoots => {
+            refresh_motion_registrations(index, after, before.motion_roots(), after.motion_roots())
+        }
         RootDomain::Pose => {
             let (Some(old), Some(new)) = (before.pose().as_ref(), after.pose().as_ref()) else {
                 return false;
             };
             let mut old = old.as_ref().clone();
+            if old.fade_in != new.fade_in {
+                old.fade_in = new.fade_in;
+                if !index.refresh_pose_properties(after, &ObjectRef::new(ObjectKind::Pose, &new.id))
+                {
+                    return false;
+                }
+            }
             for (a, b) in old.groups.iter_mut().zip(&new.groups) {
                 if a.name != b.name {
                     a.name.clone_from(&b.name);
@@ -248,6 +307,10 @@ fn refresh_root(
             }
             old == **new
         }
+        RootDomain::Physics => before
+            .physics()
+            .as_deref()
+            .is_some_and(|old| index.refresh_physics_asset(after, old)),
         RootDomain::Model3Settings => {
             let mut old = before.model3_settings().clone();
             let new = after.model3_settings();
@@ -279,6 +342,25 @@ fn refresh_root(
         }
         _ => false,
     }
+}
+
+fn refresh_motion_registrations(
+    index: &mut crate::ObjectIndex,
+    model: &DocumentState,
+    before: &[MotionRegistration],
+    after: &[MotionRegistration],
+) -> bool {
+    before.len() == after.len()
+        && before.iter().zip(after).all(|(old, new)| {
+            old.id == new.id
+                && old.clip_id == new.clip_id
+                && old.sound == new.sound
+                && (old == new
+                    || index.refresh_motion_properties(
+                        model,
+                        &ObjectRef::new(ObjectKind::MotionRegistration, &new.id),
+                    ))
+        })
 }
 
 const ALL_RECORD_DOMAINS: &[RecordDomain] = &[

@@ -1,7 +1,8 @@
 use super::*;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 #[derive(Debug, Default)]
 pub(super) struct StateReadCache {
+    pub(super) motion_id_check: Mutex<Option<super::motions::MotionIdentityCheck>>,
     prepared: OnceLock<Result<crate::evaluation::PreparedEvaluation, Status>>,
     projection: OnceLock<Arc<SceneProjection>>,
     mesh_bindings: OnceLock<HashMap<String, String>>,

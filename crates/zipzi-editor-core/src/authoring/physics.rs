@@ -73,7 +73,7 @@ impl Document {
         if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
-        self.consume_authoring_receipt(&receipt, None);
+        self.consume_authoring_receipt(&receipt, Some(plan.baseline().document()));
         Ok(self.authoring_result(receipt).with_preview(plan))
     }
 }

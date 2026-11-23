@@ -24,8 +24,13 @@ impl ObjectIndex {
         let Some(&slot) = self.structure.slots.get(object) else {
             return false;
         };
-        self.objects[slot].name = name;
-        self.objects[slot].properties = properties;
+        let row = &mut self.objects[slot];
+        row.name = if name.is_empty() {
+            object.id.clone()
+        } else {
+            name
+        };
+        row.properties = properties;
         true
     }
 }

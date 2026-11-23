@@ -1,4 +1,9 @@
-use zipzi_core::{document::MotionClip, preview::PreviewState, state::PropertyPatch, ModelSetup};
+use zipzi_core::{
+    document::{MotionClip, MotionCurve, MotionKey, MotionSegment},
+    preview::PreviewState,
+    state::PropertyPatch,
+    ModelSetup,
+};
 use zipzi_sdk::AuthoringSession;
 
 fn id(n: u32) -> String {
@@ -18,7 +23,10 @@ fn fixture(source_range: bool) -> AuthoringSession {
         "looping": false, "restricted_beziers": true, "fade_in": null, "fade_out": null,
         "track_order": [], "tracks": [{"id": id(3), "target": {"kind": "model", "runtime_id": "Opacity"},
             "initial": {"id": id(4), "time": 0., "value": 0.},
-            "segments": [{"kind": "linear", "end": {"id": id(5), "time": 1.01, "value": 1.}}],
+            "segments": [MotionSegment::new(
+                MotionKey { id: id(5), time: 1.01, value: 1. },
+                MotionCurve::Linear {},
+            )],
             "fade_in": null, "fade_out": null, "extensions": {}}],
         "events": [{"id": id(6), "time": 0.75, "value": "cue", "extensions": {}}],
         "extensions": {}, "meta_extensions": {}, "opaque_source_ids": null

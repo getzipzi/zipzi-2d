@@ -159,6 +159,76 @@ fn bulk_motion_validation_excludes_only_the_current_clips_nested_keys() {
 }
 
 #[test]
+fn scoped_motion_replacement_reuses_layout_and_checks_identity_changes() {
+    let mut d = fixture();
+    let original = clip();
+    d.create_motion(original.clone()).unwrap();
+    let mut other = original.clone();
+    other.id = id(200);
+    other.name = "Other".into();
+    other.tracks[0].id = id(201);
+    other.tracks[0].initial.id = id(202);
+    other.events[0].id = id(203);
+    d.create_motion(other).unwrap();
+    let mut editor = EditorState::default();
+    editor.objects.entry(id(103)).or_default().hidden_in_editor = true;
+    d.set_editor_state(editor).unwrap();
+    let base = d.freeze().unwrap().state;
+
+    let mut next = original.clone();
+    next.tracks[0].initial.value = 0.5;
+    Arc::make_mut(&mut next.tracks[0].segments).push(MotionSegment::new(
+        MotionKey {
+            id: id(104),
+            time: 0.5,
+            value: 1.,
+        },
+        MotionCurve::Linear {},
+    ));
+    let mut update = base.builder();
+    update.replace_motion(next.clone()).unwrap();
+    assert!(update.validate_motion_payload().unwrap());
+    let frozen = update.freeze().unwrap();
+    assert_eq!(frozen.state.motion(&original.id), Some(&next));
+    assert_eq!(
+        frozen.state.evaluation_layout_id(),
+        base.evaluation_layout_id()
+    );
+    assert!(frozen.writes.animation_inputs_changed());
+
+    // The new snapshot shares the evaluation cache, but the insertion has
+    // changed ownership of the ID checked while writing the first candidate.
+    let mut other = frozen.state.motion(&id(200)).unwrap().clone();
+    other.tracks[0].initial.id = id(104);
+    let mut newer = frozen.state.builder();
+    newer.replace_motion(other).unwrap();
+    assert!(!newer.validate_motion_payload().unwrap());
+    assert_eq!(newer.freeze().unwrap_err().code, "DUPLICATE_ID");
+
+    for used in [id(202), id(12)] {
+        let mut duplicate = next.clone();
+        Arc::make_mut(&mut duplicate.tracks[0].segments)[0].end.id = used;
+        let mut invalid = base.builder();
+        invalid.replace_motion(duplicate).unwrap();
+        assert!(!invalid.validate_motion_payload().unwrap());
+        assert_eq!(invalid.freeze().unwrap_err().code, "DUPLICATE_ID");
+    }
+
+    let mut removes_referenced_event = next.clone();
+    removes_referenced_event.events.clear();
+    let mut invalid = base.builder();
+    invalid.replace_motion(removes_referenced_event).unwrap();
+    assert!(!invalid.validate_motion_payload().unwrap());
+    assert_eq!(invalid.freeze().unwrap_err().code, "INVALID_EDITOR_STATE");
+
+    let mut mixed = base.builder();
+    mixed.replace_motion(next).unwrap();
+    mixed.remove_parameter(&id(2)).unwrap();
+    assert!(!mixed.validate_motion_payload().unwrap());
+    assert!(mixed.freeze().is_err());
+}
+
+#[test]
 fn motion_curve_validation_checks_frame_counts_and_preset_provenance() {
     use crate::document::{
         MotionCurve, MotionEasingPreset, MotionFrameStep, MotionKey, MotionSegment,

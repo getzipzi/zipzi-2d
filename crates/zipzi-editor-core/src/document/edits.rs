@@ -333,6 +333,7 @@ impl Document {
                     )
                 })
             {
+                let before = self.session.document();
                 let receipt = match pending.edit.commit_to(&mut self.session) {
                     Ok(receipt) => receipt,
                     Err(error) => {
@@ -355,7 +356,7 @@ impl Document {
                 if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
                     self.pristine_blank = None;
                 }
-                self.consume_authoring_receipt(&receipt, None);
+                self.consume_authoring_receipt(&receipt, Some(&before));
                 return Ok(());
             }
             self.invalidate_projection(

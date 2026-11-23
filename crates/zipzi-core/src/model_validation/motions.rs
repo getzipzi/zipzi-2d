@@ -260,24 +260,30 @@ impl Model<'_> {
             {
                 return Status::error("INVALID_MOTION_REGISTRATION_ID", &e.id);
             }
-            if self.get_motion(&e.clip_id).is_none() {
-                return Status::error("MISSING_MOTION", &e.clip_id);
+            let status = self.validate_motion_registration(e);
+            if !status.is_ok() {
+                return status;
             }
-            if [e.fade_in, e.fade_out]
-                .into_iter()
-                .flatten()
-                .any(|v| !v.is_finite() || v < 0.)
-            {
-                return Status::error("INVALID_MOTION_FADE", &e.id);
-            }
-            if let Some(reference) = &e.sound {
-                if self
-                    .attachment_path(reference)
-                    .is_none_or(|p| !valid_attachment_path(p))
-                {
-                    return Status::error("INVALID_MOTION_SOUND", &e.id);
-                }
-            }
+        }
+        Status::ok()
+    }
+
+    pub(crate) fn validate_motion_registration(&self, entry: &MotionRegistration) -> Status {
+        if self.get_motion(&entry.clip_id).is_none() {
+            return Status::error("MISSING_MOTION", &entry.clip_id);
+        }
+        if [entry.fade_in, entry.fade_out]
+            .into_iter()
+            .flatten()
+            .any(|v| !v.is_finite() || v < 0.)
+        {
+            return Status::error("INVALID_MOTION_FADE", &entry.id);
+        }
+        if entry.sound.as_ref().is_some_and(|reference| {
+            self.attachment_path(reference)
+                .is_none_or(|path| !valid_attachment_path(path))
+        }) {
+            return Status::error("INVALID_MOTION_SOUND", &entry.id);
         }
         Status::ok()
     }

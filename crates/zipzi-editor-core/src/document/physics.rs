@@ -49,11 +49,12 @@ impl Document {
         self.finish_edit()?;
         let mut edit = self.session.begin_draft("Edit physics", None)?;
         edit.set_physics(asset)?;
+        let before = self.session.document();
         let receipt = edit.commit_to(&mut self.session)?;
         if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
-        self.consume_authoring_receipt(&receipt, None);
+        self.consume_authoring_receipt(&receipt, Some(&before));
         Ok(())
     }
 }

@@ -22,6 +22,26 @@ impl DocumentBuilder {
             if self.roots_touched.contains(&RootDomain::DisplayInfo) {
                 return self.validate_combined_parameter_payload();
             }
+            if self.roots_touched.contains(&RootDomain::Pose) {
+                let Some((old, new)) = self.base.pose().as_ref().zip(self.pose().as_ref()) else {
+                    return Ok(false);
+                };
+                if old.id != new.id
+                    || old.groups.len() != new.groups.len()
+                    || !old.groups.iter().zip(&new.groups).all(|(a, b)| {
+                        a.id == b.id
+                            && (std::ptr::eq(&*a.entries, &*b.entries) || a.entries == b.entries)
+                    })
+                {
+                    return Ok(false);
+                }
+                let status = self.content.model().validate_pose(new);
+                return if status.is_ok() {
+                    Ok(true)
+                } else {
+                    Err(status)
+                };
+            }
             if !self.roots_touched.contains(&RootDomain::EditorState) {
                 return Ok(false);
             }
@@ -106,6 +126,39 @@ impl DocumentBuilder {
                 RecordDomain::Mesh => labels!(meshes, mesh),
                 RecordDomain::Transform => labels!(transforms, transform),
                 RecordDomain::Part => labels!(parts, part),
+                RecordDomain::Glue => labels!(glues, glue),
+                RecordDomain::Offscreen => labels!(offscreens, offscreen),
+                RecordDomain::Expression => {
+                    if !self
+                        .content
+                        .expressions
+                        .shares_order(&self.base.content.expressions)
+                    {
+                        return Ok(false);
+                    }
+                    let model = self.content.model();
+                    for id in ids {
+                        let Some((old, new)) = self.base.expression(id).zip(self.expression(id))
+                        else {
+                            return Ok(false);
+                        };
+                        if old.id != new.id
+                            || old.extensions != new.extensions
+                            || old.entries.len() != new.entries.len()
+                            || !old
+                                .entries
+                                .iter()
+                                .zip(&new.entries)
+                                .all(|(a, b)| a.id == b.id && a.target == b.target)
+                        {
+                            return Ok(false);
+                        }
+                        let status = model.validate_expression_fields(new);
+                        if !status.is_ok() {
+                            return Err(status);
+                        }
+                    }
+                }
                 _ => return Ok(false),
             }
         }
