@@ -187,13 +187,16 @@ fn application_menu_view_shows_shortcuts_without_scrolling(cx: &mut TestAppConte
 #[gpui_kit::test]
 fn project_menu_switches_closes_and_does_not_trigger_window_drag(cx: &mut TestAppContext) {
     let harness = setup(cx);
-    let (first, second) = cx
+    let [first, second, third] = cx
         .update_window(harness.window, |_, window, cx| {
-            let first = harness.view.read(cx).editor.active_id().unwrap();
-            harness
-                .view
-                .update(cx, |view, cx| view.run_command(CommandId::New, window, cx));
-            (first, harness.view.read(cx).editor.active_id().unwrap())
+            harness.view.update(cx, |view, cx| {
+                let first = view.editor.active_id().unwrap();
+                let [second, third] = std::array::from_fn(|_| {
+                    view.run_command(CommandId::New, window, cx);
+                    view.editor.active_id().unwrap()
+                });
+                [first, second, third]
+            })
         })
         .unwrap();
     for id in [first, second] {
@@ -212,11 +215,33 @@ fn project_menu_switches_closes_and_does_not_trigger_window_drag(cx: &mut TestAp
     }
     cx.update_window(harness.window, |_, window, cx| {
         window.click("project-select", cx);
-        window.click("project-close", cx);
+        let first_close = window.find(format!("project-item-close-{first:?}"));
+        let second_close = window.find(format!("project-item-close-{second:?}"));
+        assert!(first_close.visible() && second_close.visible());
+        assert_eq!(first_close.bounds().right(), second_close.bounds().right());
+        window.click(format!("project-item-close-{third:?}"), cx);
     })
     .unwrap();
     cx.run_until_parked();
-    cx.update_window(harness.window, |_, _, cx| {
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.try_find("popup-menu").is_none());
+        assert_eq!(harness.view.read(cx).editor.active_id(), Some(second));
+        assert_eq!(harness.view.read(cx).editor.document_count(), 2);
+
+        window.click("project-select", cx);
+        assert!(
+            window
+                .try_find(format!("project-select-{third:?}"))
+                .is_none()
+        );
+        window.click(format!("project-item-close-{second:?}"), cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.try_find("popup-menu").is_none());
         assert_eq!(harness.view.read(cx).editor.document_count(), 1);
         assert_eq!(harness.view.read(cx).editor.active_id(), Some(first));
         let runtime = harness.view.read(cx).editor.runtime_host();
@@ -410,78 +435,84 @@ fn project_select_opens_and_clears_recent_projects(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn close_modified_project_prompts_and_cancel_preserves_it(cx: &mut TestAppContext) {
+fn closing_modified_inactive_project_preserves_the_active_project(cx: &mut TestAppContext) {
     let harness = setup(cx);
-    cx.update_window(harness.window, |_, window, cx| {
-        harness.view.update(cx, |view, cx| {
-            view.editor
-                .execute(zipzi_editor_core::EditorCommand::CreateParameter(
-                    zipzi_editor_core::NewParameter {
-                        name: "Test".into(),
-                        runtime_id: "ParamTest".into(),
-                        minimum: -1.,
-                        maximum: 1.,
-                        default_value: 0.,
-                        ..Default::default()
-                    },
-                ))
-                .unwrap();
-            view.redraw(cx);
-        });
-        window.render_frame(cx);
-        assert!(harness.view.read(cx).editor.document().unwrap().modified());
-        assert!(window.find("project-select-modified").visible());
-        window.click("project-select", cx);
-        window.click("project-close", cx);
-    })
-    .unwrap();
+    let (modified, active) = cx
+        .update_window(harness.window, |_, window, cx| {
+            harness.view.update(cx, |view, cx| {
+                view.editor
+                    .execute(zipzi_editor_core::EditorCommand::CreateParameter(
+                        zipzi_editor_core::NewParameter {
+                            name: "Test".into(),
+                            runtime_id: "ParamTest".into(),
+                            minimum: -1.,
+                            maximum: 1.,
+                            default_value: 0.,
+                            ..Default::default()
+                        },
+                    ))
+                    .unwrap();
+                view.redraw(cx);
+            });
+            window.render_frame(cx);
+            assert!(harness.view.read(cx).editor.document().unwrap().modified());
+            assert!(window.find("project-select-modified").visible());
+            let modified = harness.view.read(cx).editor.active_id().unwrap();
+            harness
+                .view
+                .update(cx, |view, cx| view.run_command(CommandId::New, window, cx));
+            let active = harness.view.read(cx).editor.active_id().unwrap();
+            window.render_frame(cx);
+            window.click("project-select", cx);
+            window.click(format!("project-item-close-{modified:?}"), cx);
+            (modified, active)
+        })
+        .unwrap();
     cx.run_until_parked();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         assert!(harness.view.read(cx).modal);
-        assert_eq!(harness.view.read(cx).editor.document_count(), 1);
+        assert_eq!(harness.view.read(cx).editor.active_id(), Some(active));
+        assert_eq!(harness.view.read(cx).editor.document_count(), 2);
         let runtime = harness.view.read(cx).editor.runtime_host();
-        assert_eq!(
-            runtime
-                .read()
-                .session_catalog(runtime.client_id())
-                .unwrap()
-                .len(),
-            1
-        );
-        assert!(runtime.read().session_catalog(runtime.client_id()).unwrap()[0].dirty);
+        let sessions = runtime.read().session_catalog(runtime.client_id()).unwrap();
+        assert_eq!(sessions.len(), 2);
+        assert!(sessions.iter().any(|session| session.dirty));
         window.click("project-select", cx);
         assert!(window.try_find("popup-menu").is_none());
-        assert_eq!(harness.view.read(cx).editor.document_count(), 1);
     })
     .unwrap();
     cx.simulate_prompt_answer("Cancel");
     cx.run_until_parked();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert!(!harness.view.read(cx).modal);
-        assert!(window.find("project-select-modified").visible());
-        assert_eq!(harness.view.read(cx).editor.document_count(), 1);
-        assert!(harness.view.read(cx).editor.document().unwrap().modified());
-        assert!(!harness.view.read(cx).editor.exiting());
+        let view = harness.view.read(cx);
+        assert!(!view.modal);
+        assert_eq!(view.editor.active_id(), Some(active));
+        assert!(
+            view.editor
+                .documents()
+                .iter()
+                .any(|doc| doc.id == modified && doc.modified)
+        );
+        assert!(!view.editor.exiting());
         window.click("project-select", cx);
-        window.click("project-close", cx);
+        window.click(format!("project-item-close-{modified:?}"), cx);
     })
     .unwrap();
     cx.simulate_prompt_answer("Discard and Close");
     cx.run_until_parked();
     harness.view.update(cx, |view, _| {
         assert!(!view.modal);
-        assert_eq!(view.editor.document_count(), 0);
-        assert!({
-            let host = view.editor.runtime_host();
-            host.read()
-                .session_catalog(host.client_id())
-                .unwrap()
-                .is_empty()
-        });
+        assert_eq!(view.editor.active_id(), Some(active));
+        assert_eq!(view.editor.document_count(), 1);
+        let host = view.editor.runtime_host();
+        assert_eq!(
+            host.read().session_catalog(host.client_id()).unwrap().len(),
+            1
+        );
         view.editor.attach_resident_sessions().unwrap();
-        assert_eq!(view.editor.document_count(), 0);
+        assert_eq!(view.editor.document_count(), 1);
         assert!(!view.editor.exiting());
     });
 }

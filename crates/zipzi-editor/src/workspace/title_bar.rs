@@ -1,5 +1,6 @@
 use super::controls::{self, WORKSPACE_SWITCHER_HEIGHT, WORKSPACE_SWITCHER_WIDTH};
 use crate::{EditorView, t, ui::compact};
+use gpui_kit::base::actions::Cancel;
 use gpui_kit::component::{
     ActiveTheme, Disableable, IconName, TitleBar,
     button::{Button, ButtonVariants},
@@ -230,14 +231,21 @@ fn render_project_select(
                     .title
                     .clone()
                     .unwrap_or_else(|| t!("editor.untitled_project").into_owned());
+                let close_label = format!("{}: {title}", t!("editor.close_project"));
+                let title = if document.modified {
+                    format!("{title}{}", t!("editor.unsaved"))
+                } else {
+                    title
+                };
                 let path = document
                     .path
                     .as_ref()
                     .map(|path| path.display().to_string());
-                let modified = document.modified;
                 let owner = owner.clone();
+                let close_owner = owner.clone();
                 menu = menu.item(
                     PopupMenuItem::element(move |_, cx| {
+                        let close_owner = close_owner.clone();
                         div()
                             .id(SharedString::from(format!("project-select-{id:?}")))
                             .test_support()
@@ -245,34 +253,53 @@ fn render_project_select(
                             .flex_shrink_1()
                             .min_w_0()
                             .flex()
-                            .flex_col()
+                            .items_center()
+                            .gap(compact::rem(compact::PADDING))
                             .py(compact::rem(2.))
                             .child(
                                 div()
+                                    .flex_1()
                                     .min_w_0()
-                                    .overflow_hidden()
-                                    .text_ellipsis()
-                                    .when(active, |label| label.font_weight(FontWeight::SEMIBOLD))
-                                    .child(format!(
-                                        "{title}{}",
-                                        if modified {
-                                            t!("editor.unsaved").into_owned()
-                                        } else {
-                                            String::new()
-                                        }
-                                    )),
+                                    .flex()
+                                    .flex_col()
+                                    .child(
+                                        div()
+                                            .truncate()
+                                            .when(active, |label| {
+                                                label.font_weight(FontWeight::SEMIBOLD)
+                                            })
+                                            .child(title.clone()),
+                                    )
+                                    .when_some(path.clone(), |labels, path| {
+                                        labels.child(
+                                            div()
+                                                .truncate()
+                                                .text_size(compact::rem(compact::CAPTION))
+                                                .text_color(cx.theme().muted_foreground)
+                                                .child(path),
+                                        )
+                                    }),
                             )
-                            .when_some(path.clone(), |row, path| {
-                                row.child(
-                                    div()
-                                        .min_w_0()
-                                        .overflow_hidden()
-                                        .text_ellipsis()
-                                        .text_size(compact::rem(compact::CAPTION))
-                                        .text_color(cx.theme().muted_foreground)
-                                        .child(path),
-                                )
-                            })
+                            .child(
+                                compact::button(Button::new(SharedString::from(format!(
+                                    "project-item-close-{id:?}"
+                                ))))
+                                .ghost()
+                                .icon(IconName::Close)
+                                .accessibility_label(close_label.clone())
+                                .tooltip(t!("editor.close_project"))
+                                .on_click(
+                                    move |_, window, cx| {
+                                        cx.stop_propagation();
+                                        window.dispatch_action(Box::new(Cancel), cx);
+                                        _ = close_owner.update(cx, |view, cx| {
+                                            if !view.modal {
+                                                view.close_document(id, window, cx);
+                                            }
+                                        });
+                                    },
+                                ),
+                            )
                     })
                     .icon(IconName::File)
                     .highlighted(active)

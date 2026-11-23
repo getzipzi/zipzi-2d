@@ -892,6 +892,8 @@ impl EditorView {
                 self.release_closed_preview_resources(id);
                 if was_active {
                     self.refresh_document(window, cx);
+                } else {
+                    cx.notify();
                 }
                 self.continue_exit(window, cx);
             }
