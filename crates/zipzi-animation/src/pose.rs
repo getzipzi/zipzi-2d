@@ -1,6 +1,8 @@
 //! Framework-style pose fade state on real or virtual Part control parameters.
 use std::collections::BTreeMap;
 
+use crate::parameter_values::set_value;
+use zipzi_core::Parameter;
 use zipzi_core::document::PosePartRef;
 use zipzi_core::state::DocumentState;
 
@@ -161,17 +163,12 @@ impl PoseRuntime {
     }
 }
 
-pub(crate) fn real_parameter_for_part(document: &DocumentState, part_id: &str) -> Option<String> {
-    let runtime_id = &document.part(part_id)?.runtime_id;
-    document
-        .parameter_order()
-        .iter()
-        .find(|id| {
-            document
-                .parameter(id)
-                .is_some_and(|parameter| &parameter.runtime_id == runtime_id)
-        })
-        .cloned()
+pub(crate) fn real_parameter_for_part<'a>(
+    document: &'a DocumentState,
+    part_id: &str,
+) -> Option<&'a Parameter> {
+    let part = document.part(part_id)?;
+    document.parameter_by_runtime_id(&part.runtime_id)
 }
 
 fn control(
@@ -180,8 +177,8 @@ fn control(
     virtual_controls: &BTreeMap<String, f32>,
     part_id: &str,
 ) -> f32 {
-    if let Some(id) = real_parameter_for_part(document, part_id) {
-        real.get(&id).copied().unwrap_or(0.0)
+    if let Some(parameter) = real_parameter_for_part(document, part_id) {
+        real.get(&parameter.id).copied().unwrap_or(0.0)
     } else {
         virtual_controls.get(part_id).copied().unwrap_or(0.0)
     }
@@ -194,9 +191,9 @@ fn set_control(
     part_id: &str,
     value: f32,
 ) {
-    if let Some(id) = real_parameter_for_part(document, part_id) {
-        real.insert(id, value);
+    if let Some(parameter) = real_parameter_for_part(document, part_id) {
+        set_value(real, &parameter.id, value);
     } else {
-        virtual_controls.insert(part_id.into(), value);
+        set_value(virtual_controls, part_id, value);
     }
 }

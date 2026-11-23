@@ -144,13 +144,10 @@ fn apply_part_opacity(
     value: f32,
     snapshot: &mut MotionSnapshot,
 ) {
-    if let Some(parameter_id) = real_parameter_for_part(document, part_id) {
-        let parameter = document
-            .parameter(&parameter_id)
-            .expect("resolved parameter");
+    if let Some(parameter) = real_parameter_for_part(document, part_id) {
         set_value(
             &mut snapshot.parameters,
-            &parameter_id,
+            &parameter.id,
             value.clamp(parameter.minimum, parameter.maximum),
         );
     } else {
