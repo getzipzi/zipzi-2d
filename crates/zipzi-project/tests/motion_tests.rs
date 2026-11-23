@@ -60,6 +60,52 @@ fn motion_import_roundtrips_segments_events_and_project() {
 }
 
 #[test]
+fn motion_edits_respect_embedded_expression_scenes_before_saving() {
+    const EXPRESSION: &str = "00000000-0000-4000-8000-000000000c04";
+    let state = import_motion3(
+        &document(),
+        MOTION,
+        "Blink",
+        include_str!("../../../fixtures/animation_cpu/typed.motion3.json"),
+    )
+    .unwrap()
+    .candidate;
+    let state =
+        zipzi_project::import_expression3(&state, EXPRESSION, "Face", r#"{"Parameters":[]}"#)
+            .unwrap()
+            .candidate;
+    let mut scene = state.motion(MOTION).unwrap().clone();
+    scene.id = EXPRESSION.into();
+    scene.name = "Smile".into();
+    scene.tracks.truncate(1);
+    scene.track_order.clear();
+    scene.tracks[0].id = uuid::Uuid::new_v4().to_string();
+    scene.tracks[0].initial.id = uuid::Uuid::new_v4().to_string();
+    scene.tracks[0].segments = Default::default();
+    scene.events.clear();
+    let mut expression = state.expression(EXPRESSION).unwrap().clone();
+    expression.preserve_source_scene(&scene);
+    let state = roundtrip(&prepare(&state, |builder| {
+        builder.replace_expression(expression)
+    }));
+    let mut clip = state.motion(MOTION).unwrap().clone();
+    clip.name = scene.name.clone();
+    let mut builder = state.builder();
+    builder.replace_authored_motion(clip.clone()).unwrap();
+    assert_eq!(builder.freeze().unwrap_err().code, "DUPLICATE_MOTION_NAME");
+
+    clip.name = "Wink".into();
+    let renamed = prepare(&state, |builder| {
+        builder.replace_authored_motion(clip.clone())
+    });
+    assert_eq!(roundtrip(&renamed).motion(MOTION), Some(&clip));
+    clip.tracks[0].initial.id = scene.tracks[0].initial.id.clone();
+    let mut builder = renamed.builder();
+    builder.replace_authored_motion(clip).unwrap();
+    assert_eq!(builder.freeze().unwrap_err().code, "DUPLICATE_ID");
+}
+
+#[test]
 fn key_ids_persist_in_project_and_reimport_allocates_fresh_identities() {
     let source = include_str!("../../../fixtures/animation_cpu/typed.motion3.json");
     let imported = import_motion3(&document(), MOTION, "Idle", source).unwrap();

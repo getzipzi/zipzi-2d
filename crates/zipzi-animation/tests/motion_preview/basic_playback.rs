@@ -110,6 +110,52 @@ fn physics_inputs_replay_with_seek_without_editing_document() {
 }
 
 #[test]
+fn disabling_a_stabilized_group_restores_the_pre_physics_parameter() {
+    use zipzi_core::document::{PhysicsPatch, PhysicsProperty, PhysicsRigPatch};
+    let output = "00000000-0000-4000-8000-000000000d0a";
+    let mut builder = document().builder();
+    builder
+        .create_parameter(Parameter {
+            id: output.into(),
+            runtime_id: "ParamY".into(),
+            minimum: -1.,
+            maximum: 1.,
+            ..Default::default()
+        })
+        .unwrap();
+    let state = import_physics3(&builder.freeze().unwrap().state, MOTION, THIRTY_PHYSICS3)
+        .unwrap()
+        .candidate;
+    let asset = state.physics().as_ref().unwrap();
+    let mut builder = state.builder();
+    builder
+        .patch_physics(&PhysicsPatch {
+            asset_id: asset.id.clone(),
+            asset_changes: vec![],
+            rig: Some(PhysicsRigPatch {
+                group_id: asset.data.settings[0].id.clone(),
+                changes: vec![PhysicsProperty::Enabled(false)],
+            }),
+        })
+        .unwrap();
+    let disabled = builder.freeze().unwrap().state;
+    let mut preview = MotionPreview::interactive(&state, 7);
+    preview.set_base_parameter(output, 0.75).unwrap();
+    preview.set_physics_stabilized_start(true);
+    assert_eq!(preview.seek(0.).unwrap().parameters[output], 0.);
+    assert_eq!(preview.seek(1.).unwrap().parameters[output], 0.);
+    assert!(preview.retarget_interactive_physics(&disabled, 1.).unwrap());
+    assert_eq!(preview.snapshot().parameters[output], 0.75);
+    assert_eq!(
+        preview
+            .advance_to_with_progress(2., |_, _| true)
+            .unwrap()
+            .parameters[output],
+        0.75
+    );
+}
+
+#[test]
 fn expression_then_physics_replays_in_one_preview() {
     let mut builder = document().builder();
     let y = "00000000-0000-4000-8000-000000000d0c";

@@ -209,6 +209,43 @@ fn fit_uses_only_visible_mesh_artwork_and_can_reach_one_percent() -> anyhow::Res
 }
 
 #[test]
+fn fit_ignores_a_distant_mesh_sampling_only_transparent_atlas_texels() -> anyhow::Result<()> {
+    let asset = uuid::Uuid::from_u128(2).to_string();
+    let (mut editor, _dir) = fixture_with_artwork(
+        None,
+        [Vec2::new(1000., -600.), Vec2::new(1200., -500.)],
+        |edit| {
+            let mut pixels = vec![0; 8 * 8 * 4];
+            pixels[(6 * 8 + 6) * 4 + 3] = 255;
+            let atlas =
+                zipzi_project::ResourceStore::default().prepare_rgba(8, 8, pixels.into())?;
+            edit.replace_image(&asset, atlas)?;
+            let mut mesh = rectangle_mesh(
+                &uuid::Uuid::from_u128(5).to_string(),
+                "Interaction",
+                &asset,
+                Vec2::new(0., 50000.),
+                Vec2::new(100., 50100.),
+            )?;
+            // The opaque texel is inside the UV bounding box but outside the triangle.
+            mesh.triangles.truncate(1);
+            mesh.uvs[..3].copy_from_slice(&[
+                Vec2::new(0.2, 0.8),
+                Vec2::new(0.85, 0.8),
+                Vec2::new(0.2, 0.15),
+            ]);
+            support::insert_fixture_mesh(edit, mesh)
+        },
+    )?;
+    editor.set_canvas_metrics(metrics(1.));
+    assert_fitted(&editor.preview()?.canvas.unwrap());
+    editor.pan_by(ViewportPoint { x: 900., y: 900. });
+    editor.dispatch(editor.command(CommandId::FitView))?;
+    assert_fitted(&editor.preview()?.canvas.unwrap());
+    Ok(())
+}
+
+#[test]
 fn content_fit_preserves_other_viewports_and_pointer_zoom_anchor() -> anyhow::Result<()> {
     let (mut editor, _dir) = fixture()?;
     editor.set_canvas_metrics(metrics(2.));

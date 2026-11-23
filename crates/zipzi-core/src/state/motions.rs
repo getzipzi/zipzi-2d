@@ -19,6 +19,14 @@ pub(super) struct MotionIdentityCheck {
 }
 
 impl DocumentState {
+    fn expression_source_scenes(&self) -> impl Iterator<Item = MotionClip> + '_ {
+        self.content
+            .expressions
+            .shared_map()
+            .values()
+            .filter_map(|expression| expression.source_scene())
+    }
+
     fn motion_id_collision(&self, added: &BTreeSet<&str>) -> bool {
         // An interactive insertion reuses the same key and optional track ID
         // throughout its gesture. Remember that query without indexing the
@@ -35,7 +43,10 @@ impl DocumentState {
                 return check.occupied;
             }
         }
-        let occupied = self.contains_any_identity(added);
+        let occupied = self.contains_any_identity(added)
+            || self
+                .expression_source_scenes()
+                .any(|scene| clip_ids(&scene).any(|id| added.contains(id)));
         if let Some(cache) = cache.as_mut() {
             **cache = Some(MotionIdentityCheck {
                 source: self.content_id,
@@ -133,8 +144,7 @@ impl DocumentBuilder {
         Ok(true)
     }
 
-    /// A replacement against an admitted base only needs its own clip rules
-    /// and checks for identities added to or removed from that clip.
+    /// Check a replacement against the admitted clip and its dependents.
     pub(super) fn scoped_motion_validation(&self, clip: &MotionClip) -> Option<Status> {
         if self.setup_touched
             || !self.roots_touched.is_empty()
@@ -170,6 +180,15 @@ impl DocumentBuilder {
             if !added.is_empty() && self.base.motion_id_collision(&added) {
                 return None;
             }
+        }
+        // CAN3 expression source scenes are also validated as motions on load.
+        if old.name != clip.name
+            && self
+                .base
+                .expression_source_scenes()
+                .any(|scene| scene.name == clip.name)
+        {
+            return Some(Status::error("DUPLICATE_MOTION_NAME", &clip.name));
         }
         Some(self.content.model().validate_admitted_motion(clip))
     }

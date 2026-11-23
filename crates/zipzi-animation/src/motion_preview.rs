@@ -610,12 +610,14 @@ impl MotionPreview {
         let mut virtual_controls = BTreeMap::new();
         self.pose
             .reset(&self.document, &mut parameters, &mut virtual_controls);
+        // Motion retains its output between frames. Equilibrium belongs to the
+        // physics stage and must disappear when its group is switched off.
+        self.motion.reset(parameters.clone());
         self.physics.reset(&self.document);
         if self.physics_enabled && self.physics_stabilized_start {
             self.physics.stabilize(&self.document, &mut parameters);
         }
         self.expressions.reset();
-        self.motion.reset(parameters.clone());
         self.snapshot = MotionSnapshot {
             physics: Vec::new(),
             time: 0.0,
@@ -678,7 +680,7 @@ impl MotionPreview {
                 dt,
                 &mut self.snapshot.coverage,
             );
-            if reapply_physics {
+            if reapply_physics || (dt == 0. && self.physics_stabilized_start) {
                 self.physics
                     .reapply_outputs(&self.document, &mut self.snapshot.parameters);
             }

@@ -4,6 +4,7 @@ mod controls;
 mod geometry;
 mod hit;
 mod scene;
+mod texture_coverage;
 
 #[cfg(test)]
 mod tests;
@@ -168,8 +169,7 @@ impl CanvasScene {
             .map(Arc::as_ref)
             .collect()
     }
-    /// Bounds for fitting visible mesh artwork. Fully transparent textures can
-    /// belong to interactive meshes far outside the artwork.
+    /// Bounds for fitting mesh artwork that samples visible texels.
     pub fn content_bounds(&self) -> Option<[f32; 4]> {
         let mut result: Option<[f32; 4]> = None;
         let mut texture_has_nonzero_alpha = HashMap::new();
@@ -192,6 +192,9 @@ impl CanvasScene {
                     .chunks_exact(4)
                     .any(|pixel| pixel[3] != 0)
             }) {
+                continue;
+            }
+            if !texture_coverage::samples_alpha(drawable, &self.source.textures[slot]) {
                 continue;
             }
             result = Some(match result {
